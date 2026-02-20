@@ -85,10 +85,16 @@ export function useCells(churchId?: string) {
   };
 
   const fetchReports = async (cellId?: string) => {
+    if (!churchId) {
+      setReports([]);
+      return;
+    }
     try {
+      // Reports don't have church_id directly - filter via cells that belong to this church
       let query = supabase
         .from("cell_reports")
-        .select("*")
+        .select("*, cell:cells!inner(church_id)")
+        .eq("cell.church_id", churchId)
         .order("report_date", { ascending: false });
       
       if (cellId) {
@@ -101,6 +107,7 @@ export function useCells(churchId?: string) {
       setReports((data as CellReport[]) || []);
     } catch (error: any) {
       console.error("Error fetching reports:", error);
+      setReports([]);
     }
   };
 
