@@ -44,40 +44,84 @@ export default function Login() {
   const handleSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });
 
       if (error) {
-        if (error.message === "Invalid login credentials") {
-          toast({
-            title: "Erro de autenticação",
-            description: "Email ou senha incorretos.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Erro",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
+        console.error("Login error:", error.message, (error as any).details, (error as any).hint);
+        toast({
+          title: "Erro de autenticação",
+          description: error.message === "Invalid login credentials"
+            ? "Email ou senha incorretos."
+            : error.message,
+          variant: "destructive",
+        });
         return;
       }
-
-      toast({
-        title: "Bem-vindo!",
-        description: "Login realizado com sucesso.",
-      });
 
       // If user came from an invite link, redirect to accept-invite
       if (inviteToken) {
         navigate(`/accept-invite?token=${encodeURIComponent(inviteToken)}`, { replace: true });
+        return;
+      }
+
+      // Fetch profile to check church_id
+      const userId = authData.user?.id;
+      if (userId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("church_id")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        console.log("[Login] profile.church_id:", profile?.church_id);
+
+        if (!profile?.church_id) {
+          // No church — send to registration/onboarding
+          toast({
+            title: "Bem-vindo!",
+            description: "Você ainda não tem uma igreja vinculada.",
+          });
+          navigate("/app"); // Will be caught by NoChurchScreen
+          return;
+        }
+
+        // Fetch roles to determine correct dashboard
+        const { data: rolesData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", userId)
+          .eq("church_id", profile.church_id);
+
+        const roles = rolesData?.map((r: any) => r.role) || [];
+        console.log("[Login] roles:", roles);
+
+        toast({
+          title: "Bem-vindo!",
+          description: "Login realizado com sucesso.",
+        });
+
+        // Role-based redirect
+        if (roles.includes("admin") || roles.includes("pastor")) {
+          navigate("/app");
+        } else if (roles.includes("tesoureiro")) {
+          navigate("/financeiro");
+        } else if (roles.includes("secretario")) {
+          navigate("/secretaria");
+        } else if (roles.includes("consolidacao")) {
+          navigate("/consolidacao");
+        } else if (roles.includes("lider_celula")) {
+          navigate("/celulas");
+        } else {
+          navigate("/meu-app");
+        }
       } else {
         navigate("/app");
       }
     } catch (error: any) {
+      console.error("Login catch:", error?.message, error?.details, error?.hint);
       toast({
         title: "Erro",
         description: "Ocorreu um erro ao fazer login.",
