@@ -1,25 +1,9 @@
 import { useState, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard,
-  Users,
-  Heart,
-  GraduationCap,
-  Grid3X3,
-  DollarSign,
-  Calendar,
-  User,
-  Settings,
-  ChevronLeft,
-  ChevronRight,
-  Church,
-  LogOut,
-  Crown,
-  Handshake,
-  BookOpen,
-  Home,
-  Armchair,
-  Bell,
+  LayoutDashboard, Users, Heart, GraduationCap, Grid3X3, DollarSign,
+  Calendar, User, Settings, ChevronLeft, ChevronRight, Church, LogOut,
+  Crown, Handshake, BookOpen, Home, Armchair, Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -38,7 +22,7 @@ const allMenuItems: MenuItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/app" },
   { icon: Users, label: "Secretaria", path: "/secretaria", allowedRoles: ["admin", "pastor", "secretario", "consolidacao"] },
   { icon: Heart, label: "Ministérios", path: "/ministerios", allowedRoles: ["admin", "pastor", "lider_ministerio"] },
-  { icon: Grid3X3, label: "Células", path: "/celulas", allowedRoles: ["admin", "pastor", "lider_celula", "consolidacao"] },
+  { icon: Grid3X3, label: "Células", path: "/celulas", allowedRoles: ["admin", "pastor", "lider_celula", "consolidacao", "secretario"] },
   { icon: Handshake, label: "Consolidação", path: "/consolidacao", allowedRoles: ["admin", "pastor", "consolidacao"] },
   { icon: GraduationCap, label: "Ensino", path: "/ensino", allowedRoles: ["admin", "pastor", "secretario"] },
   { icon: DollarSign, label: "Financeiro", path: "/financeiro", allowedRoles: ["admin", "pastor", "tesoureiro"] },
@@ -60,29 +44,23 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { church, signOut, roles, isAdmin, currentChurchId } = useAuth();
 
+  const userRoles = useMemo(() => roles.map(r => r.role), [roles]);
+
   const menuItems = useMemo(() => {
-    if (isAdmin()) {
-      return allMenuItems;
-    }
-    
-    const userRoles = roles.map(r => r.role);
+    if (isAdmin()) return allMenuItems;
     return allMenuItems.filter(item => {
       if (!item.allowedRoles) return true;
       return item.allowedRoles.some(role => userRoles.includes(role));
     });
-  }, [roles, isAdmin]);
+  }, [userRoles, isAdmin]);
 
   const filteredBottomItems = useMemo(() => {
-    if (isAdmin()) {
-      return bottomItems;
-    }
-    
-    const userRoles = roles.map(r => r.role);
+    if (isAdmin()) return bottomItems;
     return bottomItems.filter(item => {
       if (!item.allowedRoles) return true;
       return item.allowedRoles.some(role => userRoles.includes(role));
     });
-  }, [roles, isAdmin]);
+  }, [userRoles, isAdmin]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -90,12 +68,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside
-      className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-sidebar transition-all duration-300 flex flex-col",
-        collapsed ? "w-20" : "w-64"
-      )}
-    >
+    <aside className={cn("fixed left-0 top-0 z-40 h-screen bg-sidebar transition-all duration-300 flex flex-col", collapsed ? "w-20" : "w-64")}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center w-full")}>
@@ -112,13 +85,9 @@ export function Sidebar() {
           )}
         </div>
         <Button
-          variant="ghost"
-          size="icon"
+          variant="ghost" size="icon"
           onClick={() => setCollapsed(!collapsed)}
-          className={cn(
-            "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent",
-            collapsed && "absolute -right-3 top-6 bg-sidebar rounded-full shadow-lg"
-          )}
+          className={cn("text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent", collapsed && "absolute -right-3 top-6 bg-sidebar rounded-full shadow-lg")}
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </Button>
@@ -138,18 +107,9 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {menuItems.map((item) => {
-          const isActive = location.pathname === item.path || 
-            (item.path === "/app" && location.pathname === "/");
+          const isActive = location.pathname === item.path || (item.path === "/app" && location.pathname === "/");
           return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn(
-                "nav-item",
-                isActive && "nav-item-active",
-                collapsed && "justify-center px-3"
-              )}
-            >
+            <Link key={item.path} to={item.path} className={cn("nav-item", isActive && "nav-item-active", collapsed && "justify-center px-3")}>
               <item.icon className="w-5 h-5 flex-shrink-0" />
               {!collapsed && <span>{item.label}</span>}
             </Link>
@@ -162,27 +122,13 @@ export function Sidebar() {
         {filteredBottomItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn(
-                "nav-item",
-                isActive && "nav-item-active",
-                collapsed && "justify-center px-3"
-              )}
-            >
+            <Link key={item.path} to={item.path} className={cn("nav-item", isActive && "nav-item-active", collapsed && "justify-center px-3")}>
               <item.icon className="w-5 h-5 flex-shrink-0" />
               {!collapsed && <span>{item.label}</span>}
             </Link>
           );
         })}
-        <button
-          onClick={handleSignOut}
-          className={cn(
-            "nav-item w-full text-destructive/80 hover:text-destructive hover:bg-destructive/10",
-            collapsed && "justify-center px-3"
-          )}
-        >
+        <button onClick={handleSignOut} className={cn("nav-item w-full text-destructive/80 hover:text-destructive hover:bg-destructive/10", collapsed && "justify-center px-3")}>
           <LogOut className="w-5 h-5 flex-shrink-0" />
           {!collapsed && <span>Sair</span>}
         </button>

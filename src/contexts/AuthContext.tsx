@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("[Auth] event:", event, "user:", session?.user?.id);
+        console.log("[Auth] event:", event, "user:", session?.user?.id, "churchId will be re-fetched");
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -114,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (profileData) {
         setProfile(profileData as Profile);
+        console.log("[Auth] profile loaded, churchId:", profileData.church_id);
         
         // 2. Fetch church info ONLY if profile has church_id
         if (profileData.church_id) {
@@ -135,6 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .eq("church_id", profileData.church_id);
           
           if (rolesData) {
+            console.log("[Auth] roles loaded:", rolesData.map((r: any) => r.role));
             setRoles(rolesData as UserRole[]);
           } else {
             setRoles([]);
