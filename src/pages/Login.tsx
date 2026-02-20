@@ -30,10 +30,16 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [searchParams] = useSearchParams();
-  const redirectUrl = searchParams.get("redirect");
+  const rawRedirect = searchParams.get("redirect");
   const inviteToken = searchParams.get("invite_token"); // legacy support
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Persist redirect on mount so it survives the login round-trip
+  const redirectUrl = rawRedirect ? decodeURIComponent(rawRedirect) : null;
+  if (redirectUrl) {
+    sessionStorage.setItem("post_login_redirect", redirectUrl);
+  }
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -63,7 +69,7 @@ export default function Login() {
         return;
       }
 
-      // Check for pending invite token in sessionStorage
+      // 1) Check for pending invite token in sessionStorage
       const pendingToken = sessionStorage.getItem("pending_invite_token");
       console.log("[Login] pending_invite_token", pendingToken);
 
@@ -72,13 +78,17 @@ export default function Login() {
         return;
       }
 
-      // If there's a redirect URL (e.g., from accept-invite), go there
-      if (redirectUrl) {
-        navigate(redirectUrl, { replace: true });
+      // 2) Check for persisted redirect (decoded) from sessionStorage
+      const storedRedirect = sessionStorage.getItem("post_login_redirect");
+      console.log("[Login] post_login_redirect", storedRedirect);
+
+      if (storedRedirect) {
+        sessionStorage.removeItem("post_login_redirect");
+        navigate(storedRedirect, { replace: true });
         return;
       }
 
-      // Legacy: invite_token param
+      // 3) Legacy: invite_token param
       if (inviteToken) {
         navigate(`/accept-invite?token=${encodeURIComponent(inviteToken)}`, { replace: true });
         return;
