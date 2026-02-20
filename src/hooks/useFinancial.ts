@@ -46,18 +46,18 @@ export function useFinancial(churchId?: string) {
   const { toast } = useToast();
 
   const fetchTransactions = async () => {
+    if (!churchId) {
+      setTransactions([]);
+      setIsLoading(false);
+      return;
+    }
     try {
       setIsLoading(true);
-      let query = supabase
+      const { data, error } = await supabase
         .from("financial_transactions")
         .select("*")
+        .eq("church_id", churchId)
         .order("transaction_date", { ascending: false });
-      
-      if (churchId) {
-        query = query.eq("church_id", churchId);
-      }
-      
-      const { data, error } = await query;
       
       if (error) throw error;
       setTransactions((data as FinancialTransaction[]) || []);
@@ -74,18 +74,17 @@ export function useFinancial(churchId?: string) {
   };
 
   const fetchCategories = async () => {
+    if (!churchId) {
+      setCategories([]);
+      return;
+    }
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from("financial_categories")
         .select("*")
         .eq("is_active", true)
+        .eq("church_id", churchId)
         .order("name");
-      
-      if (churchId) {
-        query = query.eq("church_id", churchId);
-      }
-      
-      const { data, error } = await query;
       
       if (error) throw error;
       setCategories((data as FinancialCategory[]) || []);

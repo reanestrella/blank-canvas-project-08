@@ -31,20 +31,20 @@ export function useCongregations(churchId?: string) {
   const { toast } = useToast();
 
   const fetchCongregations = async () => {
+    if (!churchId) {
+      setCongregations([]);
+      setIsLoading(false);
+      return;
+    }
     try {
       setIsLoading(true);
-      let query = supabase
+      const { data, error } = await supabase
         .from("congregations")
         .select("*")
         .eq("is_active", true)
+        .eq("church_id", churchId)
         .order("is_main", { ascending: false })
         .order("name");
-      
-      if (churchId) {
-        query = query.eq("church_id", churchId);
-      }
-      
-      const { data, error } = await query;
       
       if (error) throw error;
       setCongregations((data as Congregation[]) || []);

@@ -57,18 +57,18 @@ export function useCells(churchId?: string) {
   const { toast } = useToast();
 
   const fetchCells = async () => {
+    if (!churchId) {
+      setCells([]);
+      setIsLoading(false);
+      return;
+    }
     try {
       setIsLoading(true);
-      let query = supabase
+      const { data, error } = await supabase
         .from("cells")
         .select("*")
+        .eq("church_id", churchId)
         .order("name");
-      
-      if (churchId) {
-        query = query.eq("church_id", churchId);
-      }
-      
-      const { data, error } = await query;
       
       if (error) throw error;
       setCells((data as Cell[]) || []);

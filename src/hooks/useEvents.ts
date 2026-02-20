@@ -32,18 +32,18 @@ export function useEvents(churchId?: string) {
   const { toast } = useToast();
 
   const fetchEvents = async () => {
+    if (!churchId) {
+      setEvents([]);
+      setIsLoading(false);
+      return;
+    }
     try {
       setIsLoading(true);
-      let query = supabase
+      const { data, error } = await supabase
         .from("events")
         .select("*")
+        .eq("church_id", churchId)
         .order("event_date", { ascending: true });
-      
-      if (churchId) {
-        query = query.eq("church_id", churchId);
-      }
-      
-      const { data, error } = await query;
       
       if (error) throw error;
       setEvents((data as Event[]) || []);

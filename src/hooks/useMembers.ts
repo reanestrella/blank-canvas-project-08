@@ -61,18 +61,18 @@ export function useMembers(churchId?: string) {
   const { toast } = useToast();
 
   const fetchMembers = async () => {
+    if (!churchId) {
+      setMembers([]);
+      setIsLoading(false);
+      return;
+    }
     try {
       setIsLoading(true);
-      let query = supabase
+      const { data, error } = await supabase
         .from("members")
         .select("*")
+        .eq("church_id", churchId)
         .order("full_name");
-      
-      if (churchId) {
-        query = query.eq("church_id", churchId);
-      }
-      
-      const { data, error } = await query;
       
       if (error) throw error;
       setMembers((data as Member[]) || []);
