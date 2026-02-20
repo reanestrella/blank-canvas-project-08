@@ -31,12 +31,15 @@ interface AuthContextType {
   profile: Profile | null;
   church: Church | null;
   roles: UserRole[];
+  currentChurchId: string | null;
   isLoading: boolean;
+  hasNoChurch: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   hasRole: (role: UserRole["role"]) => boolean;
   isAdmin: () => boolean;
   refreshChurch: () => Promise<void>;
+  refreshUserData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -49,15 +52,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Single source of truth for church_id
+  const currentChurchId = profile?.church_id ?? null;
+  const hasNoChurch = !isLoading && !!user && !currentChurchId;
+
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch profile and roles
           setTimeout(async () => {
             await fetchUserData(session.user.id);
           }, 0);
@@ -71,7 +76,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Then check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -88,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserData = async (userId: string) => {
     try {
-      // Fetch profile
+      // 1. Fetch profile — single source of church_id
       const { data: profileData } = await supabase
         .from("profiles")
         .select("*")
@@ -98,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (profileData) {
         setProfile(profileData as Profile);
         
-        // Fetch church info if profile has church_id
+        // 2. Fetch church info ONLY if profile has church_id
         if (profileData.church_id) {
           const { data: churchData } = await supabase
             .from("churches")
@@ -109,17 +113,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (churchData) {
             setChurch(churchData as Church);
           }
-        }
-      }
 
-      // Fetch roles
-      const { data: rolesData } = await supabase
-        .from("user_roles")
-        .select("role, church_id")
-        .eq("user_id", userId);
-      
-      if (rolesData) {
-        setRoles(rolesData as UserRole[]);
+          // 3. Fetch roles FILTERED by this church_id
+          const { data: rolesData } = await supabase
+            .from("user_roles")
+            .select("role, church_id")
+            .eq("user_id", userId)
+            .eq("church_id", profileData.church_id);
+          
+          if (rolesData) {
+            setRoles(rolesData as UserRole[]);
+          } else {
+            setRoles([]);
+          }
+        } else {
+          setChurch(null);
+          setRoles([]);
+        }
+      } else {
+        setProfile(null);
+        setChurch(null);
+        setRoles([]);
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -150,16 +164,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const refreshChurch = async () => {
-    if (!profile?.church_id) return;
+    if (!currentChurchId) return;
     
     const { data: churchData } = await supabase
       .from("churches")
       .select("id, name, logo_url")
-      .eq("id", profile.church_id)
+      .eq("id", currentChurchId)
       .single();
     
     if (churchData) {
       setChurch(churchData as Church);
+    }
+  };
+
+  const refreshUserData = async () => {
+    if (user) {
+      await fetchUserData(user.id);
     }
   };
 
@@ -171,12 +191,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profile,
         church,
         roles,
+        currentChurchId,
         isLoading,
+        hasNoChurch,
         signIn,
         signOut,
         hasRole,
         isAdmin,
         refreshChurch,
+        refreshUserData,
       }}
     >
       {children}

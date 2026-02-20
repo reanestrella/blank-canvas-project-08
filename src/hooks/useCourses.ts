@@ -30,18 +30,18 @@ export function useCourses(churchId?: string) {
   const { toast } = useToast();
 
   const fetchCourses = async () => {
+    if (!churchId) {
+      setCourses([]);
+      setIsLoading(false);
+      return;
+    }
     try {
       setIsLoading(true);
-      let query = supabase
+      const { data, error } = await supabase
         .from("courses")
         .select("*")
+        .eq("church_id", churchId)
         .order("name");
-      
-      if (churchId) {
-        query = query.eq("church_id", churchId);
-      }
-      
-      const { data, error } = await query;
       
       if (error) throw error;
       setCourses((data as Course[]) || []);

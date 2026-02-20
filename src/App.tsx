@@ -40,6 +40,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/registro" element={<Registro />} />
             <Route path="/convite/:token" element={<Convite />} />
+            <Route path="/accept-invite" element={<Convite />} />
             <Route path="/instalar" element={<Instalar />} />
             
             {/* App Routes */}

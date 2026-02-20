@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface DashboardStats {
   totalMembers: number;
@@ -44,15 +45,24 @@ export function useDashboardStats(congregationId?: string | null) {
   const [members, setMembers] = useState<Member[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { currentChurchId } = useAuth();
 
   useEffect(() => {
+    if (!currentChurchId) {
+      setMembers([]);
+      setAlerts([]);
+      setIsLoading(false);
+      return;
+    }
+
     const fetchData = async () => {
       setIsLoading(true);
       try {
         let membersQuery = supabase
           .from("members")
           .select("id, full_name, birth_date, wedding_date, spiritual_status, network, gender, congregation_id, photo_url, baptism_date")
-          .eq("is_active", true);
+          .eq("is_active", true)
+          .eq("church_id", currentChurchId);
         
         if (congregationId) {
           membersQuery = membersQuery.eq("congregation_id", congregationId);
@@ -64,6 +74,7 @@ export function useDashboardStats(congregationId?: string | null) {
         const { data: alertsData } = await supabase
           .from("member_alerts")
           .select("*")
+          .eq("church_id", currentChurchId)
           .eq("is_read", false)
           .order("created_at", { ascending: false })
           .limit(10);
@@ -77,7 +88,7 @@ export function useDashboardStats(congregationId?: string | null) {
     };
 
     fetchData();
-  }, [congregationId]);
+  }, [congregationId, currentChurchId]);
 
   const stats = useMemo<DashboardStats>(() => {
     const now = new Date();

@@ -58,7 +58,7 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { church, signOut, roles, isAdmin } = useAuth();
+  const { church, signOut, roles, isAdmin, currentChurchId } = useAuth();
 
   const menuItems = useMemo(() => {
     if (isAdmin()) {

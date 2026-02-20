@@ -56,7 +56,6 @@ export default function Convite() {
   const { token: pathToken } = useParams<{ token: string }>();
   const [searchParams] = useSearchParams();
   const queryToken = searchParams.get("token");
-  // Support both /convite/:token and /convite?token=xxx
   const token = pathToken || queryToken;
 
   const navigate = useNavigate();
@@ -85,7 +84,6 @@ export default function Convite() {
       }
 
       try {
-        // Use validate_invitation RPC — server-side expiration check
         const { data, error: rpcError } = await supabase.rpc("validate_invitation" as any, {
           p_token: token,
         } as any);
@@ -104,7 +102,6 @@ export default function Convite() {
         const invitationRow = Array.isArray(data) ? data[0] : data;
         setInvitation(invitationRow as InvitationData);
 
-        // Pre-fill name if provided
         if (invitationRow.full_name) {
           form.setValue("full_name", invitationRow.full_name);
         }
@@ -124,7 +121,7 @@ export default function Convite() {
 
     setIsSubmitting(true);
     try {
-      // 1. Create user account
+      // 1. Create user account (do NOT pass church_name in metadata to avoid setup_new_church trigger)
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: invitation.email,
         password: data.password,
@@ -132,7 +129,7 @@ export default function Convite() {
           emailRedirectTo: window.location.origin,
           data: {
             full_name: data.full_name,
-            church_id: invitation.church_id,
+            // Do NOT include church_name — prevent setup_new_church from running
           },
         },
       });
@@ -140,43 +137,25 @@ export default function Convite() {
       if (signUpError) throw signUpError;
       if (!authData.user) throw new Error("Erro ao criar conta");
 
-      // 2. Create profile and assign role
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .upsert({
-          user_id: authData.user.id,
-          church_id: invitation.church_id,
-          full_name: data.full_name,
-          email: invitation.email,
-          congregation_id: invitation.congregation_id || null,
-          member_id: invitation.member_id || null,
-        } as any, { onConflict: "user_id" });
+      // 2. Call accept_invitation RPC — handles profile, role, and marking invitation used
+      const { data: acceptResult, error: acceptError } = await supabase.rpc(
+        "accept_invitation" as any,
+        { p_token: token } as any
+      );
 
-      if (profileError) {
-        console.error("Profile creation error:", profileError);
-      }
-
-      // 3. Assign role in user_roles
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .upsert({
-          user_id: authData.user.id,
-          church_id: invitation.church_id,
-          role: invitation.role,
-        } as any, { onConflict: "user_id,church_id" });
-
-      if (roleError) {
-        console.error("Role assignment error:", roleError);
-      }
-
-      // 4. Mark invitation as used ONLY after successful registration
-      const { error: markError } = await supabase.rpc("mark_invitation_used" as any, {
-        p_token: token,
-      } as any);
-
-      if (markError) {
-        console.error("mark_invitation_used error:", markError);
-        // Non-blocking — registration still succeeded
+      if (acceptError) {
+        console.error("accept_invitation RPC error:", acceptError);
+        // Non-blocking: the user was created, try manual fallback
+        toast({
+          title: "Aviso",
+          description: "Conta criada, mas houve um erro ao vincular à igreja. Entre em contato com o administrador.",
+          variant: "destructive",
+        });
+      } else {
+        const result = acceptResult as any;
+        if (result && !result.success) {
+          console.error("accept_invitation returned error:", result.error);
+        }
       }
 
       toast({

@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { NoChurchScreen } from "./NoChurchScreen";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -10,6 +14,23 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, isLoading, hasNoChurch } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (hasNoChurch) {
+    return <NoChurchScreen />;
+  }
 
   return (
     <div className="min-h-screen bg-background">

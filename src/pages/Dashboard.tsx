@@ -26,7 +26,9 @@ import { useNavigate } from "react-router-dom";
 
 // Dashboard for Pastor/Admin - full view
 function PastorDashboard() {
-  const { congregations, selectedCongregation, setSelectedCongregation } = useCongregations();
+  const { profile } = useAuth();
+  const churchId = profile?.church_id;
+  const { congregations, selectedCongregation, setSelectedCongregation } = useCongregations(churchId || undefined);
   const { stats, isLoading } = useDashboardStats(selectedCongregation);
 
   const statCards = [
