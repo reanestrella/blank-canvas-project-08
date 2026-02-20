@@ -37,16 +37,26 @@ export default function AcceptInvite() {
   const acceptInvitation = async (inviteToken: string) => {
     setStatus("processing");
     try {
-      console.log("Calling accept_invitation RPC with token:", inviteToken);
+      console.log("Calling accept_invitation RPC with p_token:", inviteToken);
       const { data, error } = await supabase.rpc("accept_invitation" as any, {
-        invite_token: inviteToken,
+        p_token: inviteToken,
       } as any);
 
       console.log("rpc result data:", data);
       console.log("rpc result error:", error);
 
       if (error) {
+        console.error("accept_invitation RPC error:", error?.message, error?.details, error?.hint, error);
         setErrorMsg(error.message || "Erro ao aceitar convite.");
+        setStatus("error");
+        return;
+      }
+
+      // Check RPC response for success flag
+      const result = data as any;
+      if (result && result.success === false) {
+        console.error("accept_invitation returned failure:", result.error);
+        setErrorMsg(result.error || "Erro ao aceitar convite.");
         setStatus("error");
         return;
       }
