@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -34,13 +34,15 @@ interface InvitationData {
   email: string;
   role: string;
   church_id: string;
-  token: string;
   full_name: string | null;
   congregation_id: string | null;
-  church_name: string;
+  member_id: string | null;
+  expires_at: string;
+  used_at: string | null;
 }
 
 const roleLabels: Record<string, string> = {
+  admin: "Administrador",
   pastor: "Pastor/Administrador",
   tesoureiro: "Tesoureiro(a)",
   secretario: "Secretário(a)",
@@ -51,7 +53,12 @@ const roleLabels: Record<string, string> = {
 };
 
 export default function Convite() {
-  const { token } = useParams<{ token: string }>();
+  const { token: pathToken } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
+  const queryToken = searchParams.get("token");
+  // Support both /convite/:token and /convite?token=xxx
+  const token = pathToken || queryToken;
+
   const navigate = useNavigate();
   const { toast } = useToast();
   const [invitation, setInvitation] = useState<InvitationData | null>(null);
@@ -78,31 +85,31 @@ export default function Convite() {
       }
 
       try {
-        // Use RPC function that bypasses RLS for public access
-        const { data, error } = await supabase.rpc("get_invitation_by_token", {
-          _token: token,
-        });
+        // Use validate_invitation RPC — server-side expiration check
+        const { data, error: rpcError } = await supabase.rpc("validate_invitation" as any, {
+          p_token: token,
+        } as any);
 
-        if (error) {
-          console.error("Error fetching invitation:", error);
+        if (rpcError) {
+          console.error("validate_invitation error:", rpcError);
+          setError("Erro ao validar convite. Tente novamente.");
+          return;
+        }
+
+        if (!data || (Array.isArray(data) && data.length === 0)) {
           setError("Convite inválido, expirado ou já utilizado.");
           return;
         }
 
-        if (!data || data.length === 0) {
-          setError("Convite inválido, expirado ou já utilizado.");
-          return;
-        }
+        const invitationRow = Array.isArray(data) ? data[0] : data;
+        setInvitation(invitationRow as InvitationData);
 
-        const invitationData = data[0] as InvitationData;
-        setInvitation(invitationData);
-        
-        // Pre-fill name if provided in invitation
-        if (invitationData.full_name) {
-          form.setValue("full_name", invitationData.full_name);
+        // Pre-fill name if provided
+        if (invitationRow.full_name) {
+          form.setValue("full_name", invitationRow.full_name);
         }
       } catch (err) {
-        console.error("Fetch error:", err);
+        console.error("Fetch invitation error:", err);
         setError("Erro ao carregar convite.");
       } finally {
         setIsLoading(false);
@@ -113,7 +120,7 @@ export default function Convite() {
   }, [token, form]);
 
   const handleSubmit = async (data: RegisterFormData) => {
-    if (!invitation) return;
+    if (!invitation || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
@@ -123,20 +130,54 @@ export default function Convite() {
         password: data.password,
         options: {
           emailRedirectTo: window.location.origin,
+          data: {
+            full_name: data.full_name,
+            church_id: invitation.church_id,
+          },
         },
       });
 
       if (signUpError) throw signUpError;
       if (!authData.user) throw new Error("Erro ao criar conta");
 
-      // 2. Use RPC to register (bypasses RLS) - creates profile, assigns role, marks invitation used
-      const { error: rpcError } = await supabase.rpc("register_invited_user", {
-        _invitation_token: invitation.token,
-        _user_id: authData.user.id,
-        _full_name: data.full_name,
-      });
+      // 2. Create profile and assign role
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .upsert({
+          user_id: authData.user.id,
+          church_id: invitation.church_id,
+          full_name: data.full_name,
+          email: invitation.email,
+          congregation_id: invitation.congregation_id || null,
+          member_id: invitation.member_id || null,
+        } as any, { onConflict: "user_id" });
 
-      if (rpcError) throw rpcError;
+      if (profileError) {
+        console.error("Profile creation error:", profileError);
+      }
+
+      // 3. Assign role in user_roles
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .upsert({
+          user_id: authData.user.id,
+          church_id: invitation.church_id,
+          role: invitation.role,
+        } as any, { onConflict: "user_id,church_id" });
+
+      if (roleError) {
+        console.error("Role assignment error:", roleError);
+      }
+
+      // 4. Mark invitation as used ONLY after successful registration
+      const { error: markError } = await supabase.rpc("mark_invitation_used" as any, {
+        p_token: token,
+      } as any);
+
+      if (markError) {
+        console.error("mark_invitation_used error:", markError);
+        // Non-blocking — registration still succeeded
+      }
 
       toast({
         title: "Conta criada com sucesso!",
@@ -174,10 +215,13 @@ export default function Convite() {
             </div>
             <CardTitle>Convite Inválido</CardTitle>
             <CardDescription>
-              {error || "Este convite não existe ou já foi utilizado."}
+              {error || "Este convite não existe, já foi utilizado ou expirou."}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex justify-center">
+          <CardContent className="flex flex-col items-center gap-3">
+            <p className="text-sm text-muted-foreground text-center">
+              Solicite um novo convite ao administrador da sua igreja.
+            </p>
             <Button asChild>
               <Link to="/">Ir para página inicial</Link>
             </Button>
@@ -196,7 +240,7 @@ export default function Convite() {
           </div>
           <CardTitle>Bem-vindo(a)!</CardTitle>
           <CardDescription>
-            Você foi convidado para fazer parte de <strong>{invitation.church_name}</strong> como <strong>{roleLabels[invitation.role]}</strong>.
+            Você foi convidado como <strong>{roleLabels[invitation.role] || invitation.role}</strong>.
           </CardDescription>
         </CardHeader>
         <CardContent>
