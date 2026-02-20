@@ -64,9 +64,12 @@ export default function Registro() {
       });
 
       if (authError) {
+        console.error("Signup error:", authError.message, (authError as any).details, (authError as any).hint);
         toast({
           title: "Erro no cadastro",
-          description: authError.message,
+          description: authError.message === "User already registered"
+            ? "Este email já está cadastrado. Tente fazer login."
+            : "Não foi possível criar a conta. Tente novamente.",
           variant: "destructive",
         });
         return;
@@ -89,39 +92,37 @@ export default function Registro() {
       });
 
       if (setupError) {
-        console.error("Error setting up church:", setupError);
+        console.error("Setup church error:", setupError.message, setupError.details, setupError.hint);
         toast({
-          title: "Aviso",
-          description: "Conta criada, mas houve erro ao configurar a igreja. Faça login e tente novamente.",
+          title: "Erro ao configurar igreja",
+          description: "A conta foi criada mas não foi possível configurar a igreja. Entre em contato com o suporte.",
           variant: "destructive",
         });
-        navigate("/login");
-        return;
+        return; // Don't navigate — user needs to retry or contact support
       }
 
       const result = setupResult as { success: boolean; error?: string; church_id?: string } | null;
       
       if (result && !result.success) {
-        console.error("Setup failed:", result.error);
+        console.error("Setup RPC returned failure:", result.error);
         toast({
-          title: "Aviso",
+          title: "Erro ao configurar igreja",
           description: result.error || "Houve erro ao configurar a igreja.",
           variant: "destructive",
         });
-        navigate("/login");
         return;
       }
 
       toast({
-        title: "Conta criada!",
-        description: "Sua conta foi criada com sucesso. Você já pode fazer login.",
+        title: "Conta criada com sucesso!",
+        description: "Faça login para acessar o sistema.",
       });
       navigate("/login");
     } catch (error: any) {
-      console.error("Registration error:", error);
+      console.error("Registration error:", error?.message, error?.details, error?.hint);
       toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao criar a conta.",
+        title: "Erro inesperado",
+        description: "Ocorreu um erro ao criar a conta. Tente novamente.",
         variant: "destructive",
       });
     } finally {

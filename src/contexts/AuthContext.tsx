@@ -58,14 +58,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const hasNoChurch = !isLoading && !!user && !currentChurchId;
 
   useEffect(() => {
+    let initialLoad = true;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("[Auth] event:", event, "user:", session?.user?.id, "churchId will be re-fetched");
+        console.log("[Auth] event:", event, "user:", session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
         
         if (event === "SIGNED_OUT") {
-          // Clear ALL state on sign out — prevent stale church data
           setProfile(null);
           setChurch(null);
           setRoles([]);
@@ -74,29 +75,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         
         if (session?.user) {
-          // Always re-fetch on SIGNED_IN / TOKEN_REFRESHED to pick up new church
+          // Defer to avoid deadlock inside onAuthStateChange
           setTimeout(async () => {
             await fetchUserData(session.user.id);
+            setIsLoading(false);
           }, 0);
         } else {
           setProfile(null);
           setChurch(null);
           setRoles([]);
+          setIsLoading(false);
         }
-        
-        setIsLoading(false);
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchUserData(session.user.id);
+        await fetchUserData(session.user.id);
       }
       
       setIsLoading(false);
+      initialLoad = false;
     });
 
     return () => subscription.unsubscribe();
