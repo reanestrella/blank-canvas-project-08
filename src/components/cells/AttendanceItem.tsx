@@ -1,5 +1,6 @@
-import { Checkbox } from "@/components/ui/checkbox";
+import { memo } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Check } from "lucide-react";
 
 interface AttendanceItemProps {
   memberName: string;
@@ -7,7 +8,7 @@ interface AttendanceItemProps {
   onToggle: () => void;
 }
 
-export function AttendanceItem({ memberName, isPresent, onToggle }: AttendanceItemProps) {
+export const AttendanceItem = memo(function AttendanceItem({ memberName, isPresent, onToggle }: AttendanceItemProps) {
   const initials = (memberName || "?")
     .split(" ")
     .map((n) => n?.[0] ?? "")
@@ -18,7 +19,11 @@ export function AttendanceItem({ memberName, isPresent, onToggle }: AttendanceIt
     <div
       role="button"
       tabIndex={0}
-      onClick={onToggle}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onToggle();
+      }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
@@ -31,7 +36,15 @@ export function AttendanceItem({ memberName, isPresent, onToggle }: AttendanceIt
           : "bg-muted/30 border-transparent hover:bg-muted/50"
       }`}
     >
-      <Checkbox checked={isPresent} tabIndex={-1} className="pointer-events-none" />
+      <div
+        className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+          isPresent
+            ? "bg-success border-success text-success-foreground"
+            : "border-muted-foreground/30 bg-background"
+        }`}
+      >
+        {isPresent && <Check className="w-3 h-3" />}
+      </div>
       <Avatar className="w-7 h-7">
         <AvatarFallback
           className={`text-xs ${isPresent ? "bg-success text-success-foreground" : "bg-muted"}`}
@@ -44,4 +57,4 @@ export function AttendanceItem({ memberName, isPresent, onToggle }: AttendanceIt
       </span>
     </div>
   );
-}
+});

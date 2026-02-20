@@ -171,7 +171,8 @@ export function useInvitations() {
   };
 
   const getInviteLink = (token: string) => {
-    return `${window.location.origin}/convite/${token}`;
+    const baseUrl = import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin;
+    return `${baseUrl}/convite/${token}`;
   };
 
   useEffect(() => {

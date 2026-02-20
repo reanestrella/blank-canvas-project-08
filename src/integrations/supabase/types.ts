@@ -1939,6 +1939,13 @@ export type Database = {
     Functions: {
       accept_invitation: { Args: { p_token: string }; Returns: Json }
       get_current_church_id: { Args: never; Returns: string }
+      get_my_roles: {
+        Args: never
+        Returns: {
+          role: string
+        }[]
+      }
+      has_role: { Args: { role_name: string }; Returns: boolean }
       mark_invitation_used: { Args: { p_token: string }; Returns: undefined }
       reissue_invitation: {
         Args: {

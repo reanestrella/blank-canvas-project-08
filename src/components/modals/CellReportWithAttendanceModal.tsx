@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -139,25 +139,17 @@ export function CellReportWithAttendanceModal({
     return () => { cancelled = true; };
   }, [selectedCellId]);
 
-  // Toggle attendance — optimistic with error recovery
-  const togglePresenca = (memberId: string) => {
-    try {
-      setPresencas(prev => ({
-        ...prev,
-        [memberId]: !prev[memberId],
-      }));
-    } catch (err) {
-      console.error("Erro ao alternar presença:", err);
-      toast({
-        title: "Erro",
-        description: "Não foi possível alterar a presença. Tente novamente.",
-        variant: "destructive",
-      });
-    }
-  };
+  // Toggle attendance — stable callback, no risk of loop
+  const togglePresenca = useCallback((memberId: string) => {
+    setPresencas(prev => {
+      const next = { ...prev };
+      next[memberId] = !prev[memberId];
+      return next;
+    });
+  }, []);
 
   // Save attendance records using safe batch upsert
-  const saveAttendance = async (reportId: string) => {
+  const saveAttendance = useCallback(async (reportId: string) => {
     const entries = members.map((m) => ({
       memberId: m.memberId,
       present: !!presencas[m.memberId],
@@ -173,9 +165,9 @@ export function CellReportWithAttendanceModal({
         variant: "destructive",
       });
     }
-  };
+  }, [members, presencas, toast]);
 
-  const handleSubmit = async (data: ReportFormData) => {
+  const handleSubmit = useCallback(async (data: ReportFormData) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
@@ -222,7 +214,7 @@ export function CellReportWithAttendanceModal({
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [isSubmitting, presencas, onSubmit, saveAttendance, form, onOpenChange, toast]);
 
   const activeCells = useMemo(() => (cells ?? []).filter((c) => c.is_active), [cells]);
 
