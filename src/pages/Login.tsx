@@ -63,6 +63,15 @@ export default function Login() {
         return;
       }
 
+      // Check for pending invite token in sessionStorage
+      const pendingToken = sessionStorage.getItem("pending_invite_token");
+      console.log("[Login] pending_invite_token", pendingToken);
+
+      if (pendingToken) {
+        navigate(`/accept-invite?token=${encodeURIComponent(pendingToken)}`, { replace: true });
+        return;
+      }
+
       // If there's a redirect URL (e.g., from accept-invite), go there
       if (redirectUrl) {
         navigate(redirectUrl, { replace: true });
