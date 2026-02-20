@@ -1937,6 +1937,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: {
+        Args: { p_token: string }
+        Returns: {
+          church_id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }[]
+      }
+      get_current_church_id: { Args: never; Returns: string }
       mark_invitation_used: { Args: { p_token: string }; Returns: undefined }
       reissue_invitation: {
         Args: {
