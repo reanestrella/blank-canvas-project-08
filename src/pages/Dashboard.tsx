@@ -320,11 +320,14 @@ function MemberDashboard() {
 }
 
 export default function Dashboard() {
-  const { roles, isAdmin, hasRole } = useAuth();
+  const { roles, isAdmin, hasRole, hasAnyRole, currentChurchId } = useAuth();
 
-  // Determine which dashboard sections to show based on ALL roles (combined)
+  const userRoles = roles.map(r => r.role);
+  console.log("[Dashboard] roles:", userRoles, "churchId:", currentChurchId);
+
+  // Determine which dashboard sections to show based on ALL roles (combined/summed)
   const dashboardSections = useMemo(() => {
-    // Pastor sees everything
+    // Pastor/admin sees everything
     if (isAdmin() || hasRole("pastor")) return [PastorDashboard];
     
     const sections: React.FC[] = [];
@@ -341,6 +344,20 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="space-y-6">
+        {dashboardSections.length > 1 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-muted-foreground">Seus painéis:</span>
+            {dashboardSections.map((Section, i) => (
+              <Badge key={i} variant="secondary" className="text-xs">
+                {Section === SecretaryDashboard && "Secretaria"}
+                {Section === TreasurerDashboard && "Tesouraria"}
+                {Section === CellLeaderDashboard && "Célula"}
+                {Section === MinistryLeaderDashboard && "Ministério"}
+                {Section === ConsolidationDashboard && "Consolidação"}
+              </Badge>
+            ))}
+          </div>
+        )}
         {dashboardSections.map((Section, index) => (
           <Section key={index} />
         ))}
