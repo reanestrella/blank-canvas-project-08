@@ -21,7 +21,7 @@ interface Church {
 }
 
 interface UserRole {
-  role: "pastor" | "tesoureiro" | "secretario" | "lider_celula" | "lider_ministerio" | "consolidacao" | "membro";
+  role: "admin" | "pastor" | "tesoureiro" | "secretario" | "lider_celula" | "lider_ministerio" | "consolidacao" | "membro" | "member";
   church_id: string;
 }
 
@@ -146,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const isAdmin = () => {
-    return hasRole("pastor");
+    return hasRole("admin") || hasRole("pastor");
   };
 
   const refreshChurch = async () => {

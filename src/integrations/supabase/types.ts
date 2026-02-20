@@ -18,16 +18,19 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          logo_url: string | null
           name: string
         }
         Insert: {
           created_at?: string | null
           id?: string
+          logo_url?: string | null
           name: string
         }
         Update: {
           created_at?: string | null
           id?: string
+          logo_url?: string | null
           name?: string
         }
         Relationships: []
@@ -111,12 +114,74 @@ export type Database = {
           },
         ]
       }
+      signup_error_log: {
+        Row: {
+          created_at: string
+          id: number
+          message: string | null
+          sqlstate: string | null
+          stage: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          message?: string | null
+          sqlstate?: string | null
+          stage?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          message?: string | null
+          sqlstate?: string | null
+          stage?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          church_id: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          church_id: string
+          created_at?: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          church_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      setup_new_church: {
+        Args: { _church_name: string; _email: string; _full_name: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
