@@ -320,9 +320,11 @@ export type Database = {
         Row: {
           attendance: number
           cell_id: string
+          church_id: string
           conversions: number
           created_at: string
           created_by: string | null
+          decided: Json | null
           id: string
           notes: string | null
           offering: number | null
@@ -332,9 +334,11 @@ export type Database = {
         Insert: {
           attendance?: number
           cell_id: string
+          church_id: string
           conversions?: number
           created_at?: string
           created_by?: string | null
+          decided?: Json | null
           id?: string
           notes?: string | null
           offering?: number | null
@@ -344,9 +348,11 @@ export type Database = {
         Update: {
           attendance?: number
           cell_id?: string
+          church_id?: string
           conversions?: number
           created_at?: string
           created_by?: string | null
+          decided?: Json | null
           id?: string
           notes?: string | null
           offering?: number | null
@@ -359,6 +365,13 @@ export type Database = {
             columns: ["cell_id"]
             isOneToOne: false
             referencedRelation: "cells"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_church_fk"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
             referencedColumns: ["id"]
           },
         ]
@@ -436,7 +449,7 @@ export type Database = {
       cells: {
         Row: {
           address: string | null
-          church_id: string | null
+          church_id: string
           created_at: string | null
           day_of_week: string | null
           id: string
@@ -450,7 +463,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
-          church_id?: string | null
+          church_id: string
           created_at?: string | null
           day_of_week?: string | null
           id?: string
@@ -464,7 +477,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
-          church_id?: string | null
+          church_id?: string
           created_at?: string | null
           day_of_week?: string | null
           id?: string
@@ -477,6 +490,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "cells_church_fk"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "cells_church_id_fkey"
             columns: ["church_id"]
@@ -1158,6 +1178,7 @@ export type Database = {
           invited_by: string
           member_id: string | null
           role: Database["public"]["Enums"]["app_role"]
+          roles: string[] | null
           token: string
           used_at: string | null
         }
@@ -1172,6 +1193,7 @@ export type Database = {
           invited_by: string
           member_id?: string | null
           role: Database["public"]["Enums"]["app_role"]
+          roles?: string[] | null
           token?: string
           used_at?: string | null
         }
@@ -1186,6 +1208,7 @@ export type Database = {
           invited_by?: string
           member_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          roles?: string[] | null
           token?: string
           used_at?: string | null
         }
@@ -1265,7 +1288,7 @@ export type Database = {
           baptism_date: string | null
           baptism_location: string | null
           birth_date: string | null
-          church_id: string | null
+          church_id: string
           city: string | null
           congregation_id: string | null
           conversion_date: string | null
@@ -1294,7 +1317,7 @@ export type Database = {
           baptism_date?: string | null
           baptism_location?: string | null
           birth_date?: string | null
-          church_id?: string | null
+          church_id: string
           city?: string | null
           congregation_id?: string | null
           conversion_date?: string | null
@@ -1323,7 +1346,7 @@ export type Database = {
           baptism_date?: string | null
           baptism_location?: string | null
           birth_date?: string | null
-          church_id?: string | null
+          church_id?: string
           city?: string | null
           congregation_id?: string | null
           conversion_date?: string | null
@@ -1347,6 +1370,13 @@ export type Database = {
           wedding_date?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "members_church_fk"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "members_church_id_fkey"
             columns: ["church_id"]
@@ -1937,7 +1967,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      accept_invitation: { Args: { p_token: string }; Returns: Json }
+      accept_invitation:
+        | { Args: { invite_token: string }; Returns: undefined }
+        | { Args: { p_token: string }; Returns: Json }
       get_current_church_id: { Args: never; Returns: string }
       get_my_roles: {
         Args: never
@@ -1968,6 +2000,7 @@ export type Database = {
           invited_by: string
           member_id: string | null
           role: Database["public"]["Enums"]["app_role"]
+          roles: string[] | null
           token: string
           used_at: string | null
         }

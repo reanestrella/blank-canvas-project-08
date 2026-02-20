@@ -6,10 +6,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
+import { RequireAnyRole } from "@/components/guards/RequireAnyRole";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
 import Convite from "./pages/Convite";
+import AcceptInvite from "./pages/AcceptInvite";
 import Dashboard from "./pages/Dashboard";
 import Secretaria from "./pages/Secretaria";
 import Ministerios from "./pages/Ministerios";
@@ -55,24 +57,74 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/registro" element={<Registro />} />
               <Route path="/convite/:token" element={<Convite />} />
-              <Route path="/accept-invite" element={<Convite />} />
+              <Route path="/accept-invite" element={<AcceptInvite />} />
               <Route path="/instalar" element={<Instalar />} />
               
-              {/* App Routes */}
+              {/* Always accessible to any authenticated user */}
               <Route path="/app" element={<Dashboard />} />
-              <Route path="/secretaria" element={<Secretaria />} />
-              <Route path="/ministerios" element={<Ministerios />} />
-              <Route path="/celulas" element={<Celulas />} />
-              <Route path="/ensino" element={<Ensino />} />
-              <Route path="/financeiro" element={<Financeiro />} />
-              <Route path="/eventos" element={<Eventos />} />
-              <Route path="/consolidacao" element={<Consolidacao />} />
-              <Route path="/discipulados" element={<Discipulados />} />
-              <Route path="/visitas" element={<Visitas />} />
-              <Route path="/gabinete" element={<Gabinete />} />
-              <Route path="/lembretes" element={<Lembretes />} />
               <Route path="/meu-app" element={<MeuApp />} />
-              <Route path="/configuracoes" element={<Configuracoes />} />
+
+              {/* Role-protected routes */}
+              <Route path="/secretaria" element={
+                <RequireAnyRole allowedRoles={["admin", "pastor", "secretario", "consolidacao"]}>
+                  <Secretaria />
+                </RequireAnyRole>
+              } />
+              <Route path="/ministerios" element={
+                <RequireAnyRole allowedRoles={["admin", "pastor", "lider_ministerio"]}>
+                  <Ministerios />
+                </RequireAnyRole>
+              } />
+              <Route path="/celulas" element={
+                <RequireAnyRole allowedRoles={["admin", "pastor", "lider_celula", "consolidacao", "secretario"]}>
+                  <Celulas />
+                </RequireAnyRole>
+              } />
+              <Route path="/ensino" element={
+                <RequireAnyRole allowedRoles={["admin", "pastor", "secretario"]}>
+                  <Ensino />
+                </RequireAnyRole>
+              } />
+              <Route path="/financeiro" element={
+                <RequireAnyRole allowedRoles={["admin", "pastor", "tesoureiro"]}>
+                  <Financeiro />
+                </RequireAnyRole>
+              } />
+              <Route path="/eventos" element={
+                <RequireAnyRole allowedRoles={["admin", "pastor", "secretario", "lider_ministerio"]}>
+                  <Eventos />
+                </RequireAnyRole>
+              } />
+              <Route path="/consolidacao" element={
+                <RequireAnyRole allowedRoles={["admin", "pastor", "consolidacao"]}>
+                  <Consolidacao />
+                </RequireAnyRole>
+              } />
+              <Route path="/discipulados" element={
+                <RequireAnyRole allowedRoles={["admin", "pastor", "secretario"]}>
+                  <Discipulados />
+                </RequireAnyRole>
+              } />
+              <Route path="/visitas" element={
+                <RequireAnyRole allowedRoles={["admin", "pastor", "secretario"]}>
+                  <Visitas />
+                </RequireAnyRole>
+              } />
+              <Route path="/gabinete" element={
+                <RequireAnyRole allowedRoles={["admin", "pastor", "secretario"]}>
+                  <Gabinete />
+                </RequireAnyRole>
+              } />
+              <Route path="/lembretes" element={
+                <RequireAnyRole allowedRoles={["admin", "pastor", "secretario"]}>
+                  <Lembretes />
+                </RequireAnyRole>
+              } />
+              <Route path="/configuracoes" element={
+                <RequireAnyRole allowedRoles={["admin", "pastor"]}>
+                  <Configuracoes />
+                </RequireAnyRole>
+              } />
               
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />

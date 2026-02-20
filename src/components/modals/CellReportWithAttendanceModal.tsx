@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -28,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CellReportErrorBoundary } from "@/components/cells/ErrorBoundary";
@@ -39,8 +40,6 @@ import type { Cell, CellReport, CreateCellReportData } from "@/hooks/useCells";
 const reportSchema = z.object({
   cell_id: z.string().min(1, "Selecione uma célula"),
   report_date: z.string().min(1, "Data é obrigatória"),
-  visitors: z.string().min(1, "Visitantes é obrigatório"),
-  conversions: z.string().min(1, "Decisões é obrigatório"),
   offering: z.string().optional().or(z.literal("")),
   notes: z.string().max(500).optional().or(z.literal("")),
 });
@@ -72,6 +71,10 @@ export function CellReportWithAttendanceModal({
   const [members, setMembers] = useState<MemberEntry[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [presencas, setPresencas] = useState<Record<string, boolean>>({});
+  const [visitorNames, setVisitorNames] = useState<string[]>([]);
+  const [decidedNames, setDecidedNames] = useState<string[]>([]);
+  const [newVisitor, setNewVisitor] = useState("");
+  const [newDecided, setNewDecided] = useState("");
   const { toast } = useToast();
 
   const form = useForm<ReportFormData>({
@@ -79,8 +82,6 @@ export function CellReportWithAttendanceModal({
     defaultValues: {
       cell_id: defaultCellId || "",
       report_date: new Date().toISOString().split("T")[0],
-      visitors: "0",
-      conversions: "0",
       offering: "",
       notes: "",
     },
@@ -139,24 +140,16 @@ export function CellReportWithAttendanceModal({
     return () => { cancelled = true; };
   }, [selectedCellId]);
 
-  // Toggle attendance — stable callback, no risk of loop
   const togglePresenca = useCallback((memberId: string) => {
-    setPresencas(prev => {
-      const next = { ...prev };
-      next[memberId] = !prev[memberId];
-      return next;
-    });
+    setPresencas(prev => ({ ...prev, [memberId]: !prev[memberId] }));
   }, []);
 
-  // Save attendance records using safe batch upsert
   const saveAttendance = useCallback(async (reportId: string) => {
     const entries = members.map((m) => ({
       memberId: m.memberId,
       present: !!presencas[m.memberId],
     }));
-
     if (entries.length === 0) return;
-
     const result = await batchUpsertAttendance(reportId, entries);
     if (!result.success) {
       toast({
@@ -167,21 +160,46 @@ export function CellReportWithAttendanceModal({
     }
   }, [members, presencas, toast]);
 
+  const addVisitor = useCallback(() => {
+    const name = newVisitor.trim();
+    if (name) {
+      setVisitorNames(prev => [...prev, name]);
+      setNewVisitor("");
+    }
+  }, [newVisitor]);
+
+  const removeVisitor = useCallback((index: number) => {
+    setVisitorNames(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const addDecided = useCallback(() => {
+    const name = newDecided.trim();
+    if (name) {
+      setDecidedNames(prev => [...prev, name]);
+      setNewDecided("");
+    }
+  }, [newDecided]);
+
+  const removeDecided = useCallback((index: number) => {
+    setDecidedNames(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
   const handleSubmit = useCallback(async (data: ReportFormData) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const visitors = parseInt(data.visitors, 10) || 0;
       const presentCount = Object.values(presencas).filter(Boolean).length;
 
       const cleanedData: CreateCellReportData = {
         cell_id: data.cell_id,
         report_date: data.report_date,
-        attendance: presentCount + visitors,
-        visitors,
-        conversions: parseInt(data.conversions, 10) || 0,
+        attendance: presentCount + visitorNames.length,
+        visitors: visitorNames.length,
+        conversions: decidedNames.length,
         offering: data.offering ? parseFloat(data.offering) : undefined,
         notes: data.notes || undefined,
+        decided: decidedNames.length > 0 ? decidedNames : undefined,
+        visitor_names: visitorNames.length > 0 ? visitorNames : undefined,
       };
 
       const result = await onSubmit(cleanedData);
@@ -195,7 +213,6 @@ export function CellReportWithAttendanceModal({
         return;
       }
 
-      // Save individual attendance after report is created
       if (result.data?.id) {
         await saveAttendance(result.data.id);
       }
@@ -203,6 +220,8 @@ export function CellReportWithAttendanceModal({
       form.reset();
       setPresencas({});
       setMembers([]);
+      setVisitorNames([]);
+      setDecidedNames([]);
       onOpenChange(false);
     } catch (err) {
       console.error("Exceção ao enviar relatório:", err);
@@ -214,7 +233,7 @@ export function CellReportWithAttendanceModal({
     } finally {
       setIsSubmitting(false);
     }
-  }, [isSubmitting, presencas, onSubmit, saveAttendance, form, onOpenChange, toast]);
+  }, [isSubmitting, presencas, visitorNames, decidedNames, onSubmit, saveAttendance, form, onOpenChange, toast]);
 
   const activeCells = useMemo(() => (cells ?? []).filter((c) => c.is_active), [cells]);
 
@@ -224,7 +243,7 @@ export function CellReportWithAttendanceModal({
         <DialogHeader>
           <DialogTitle>Relatório Semanal da Célula</DialogTitle>
           <DialogDescription>
-            Marque os membros presentes e preencha as informações da reunião.
+            Marque os membros presentes, adicione visitantes e decisões.
           </DialogDescription>
         </DialogHeader>
 
@@ -282,48 +301,78 @@ export function CellReportWithAttendanceModal({
                 />
               )}
 
-              <div className="space-y-4 mt-4 flex-shrink-0">
-                <div className="grid grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="visitors"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Visitantes *</FormLabel>
-                        <FormControl>
-                          <Input type="number" min="0" placeholder="0" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="conversions"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Decisões *</FormLabel>
-                        <FormControl>
-                          <Input type="number" min="0" placeholder="0" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="offering"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Oferta (R$)</FormLabel>
-                        <FormControl>
-                          <Input type="number" step="0.01" min="0" placeholder="0,00" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <div className="space-y-4 mt-4 flex-shrink-0 overflow-y-auto max-h-[300px]">
+                {/* Visitors */}
+                <div className="border rounded-lg p-3 space-y-2">
+                  <FormLabel>Visitantes</FormLabel>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Nome do visitante"
+                      value={newVisitor}
+                      onChange={(e) => setNewVisitor(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addVisitor(); } }}
+                    />
+                    <Button type="button" variant="outline" size="icon" onClick={addVisitor}>
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  {visitorNames.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {visitorNames.map((name, i) => (
+                        <Badge key={i} variant="secondary" className="gap-1">
+                          {name}
+                          <button type="button" onClick={() => removeVisitor(i)}>
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">{visitorNames.length} visitante(s)</p>
                 </div>
+
+                {/* Decided */}
+                <div className="border rounded-lg p-3 space-y-2">
+                  <FormLabel>Decisões (Novos Convertidos)</FormLabel>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Nome do decidido"
+                      value={newDecided}
+                      onChange={(e) => setNewDecided(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addDecided(); } }}
+                    />
+                    <Button type="button" variant="outline" size="icon" onClick={addDecided}>
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  {decidedNames.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {decidedNames.map((name, i) => (
+                        <Badge key={i} variant="secondary" className="gap-1 bg-success/10 text-success">
+                          {name}
+                          <button type="button" onClick={() => removeDecided(i)}>
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">{decidedNames.length} decisão(ões)</p>
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="offering"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Oferta (R$)</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" min="0" placeholder="0,00" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}
