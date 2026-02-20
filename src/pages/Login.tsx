@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Church, Loader2, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getRoleBasedRedirect } from "@/lib/getRoleBasedRedirect";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -29,7 +30,8 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [searchParams] = useSearchParams();
-  const inviteToken = searchParams.get("invite_token");
+  const redirectUrl = searchParams.get("redirect");
+  const inviteToken = searchParams.get("invite_token"); // legacy support
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -61,7 +63,13 @@ export default function Login() {
         return;
       }
 
-      // If user came from an invite link, redirect to accept-invite
+      // If there's a redirect URL (e.g., from accept-invite), go there
+      if (redirectUrl) {
+        navigate(redirectUrl, { replace: true });
+        return;
+      }
+
+      // Legacy: invite_token param
       if (inviteToken) {
         navigate(`/accept-invite?token=${encodeURIComponent(inviteToken)}`, { replace: true });
         return;
@@ -103,20 +111,9 @@ export default function Login() {
           description: "Login realizado com sucesso.",
         });
 
-        // Role-based redirect
-        if (roles.includes("admin") || roles.includes("pastor")) {
-          navigate("/app");
-        } else if (roles.includes("tesoureiro")) {
-          navigate("/financeiro");
-        } else if (roles.includes("secretario")) {
-          navigate("/secretaria");
-        } else if (roles.includes("consolidacao")) {
-          navigate("/consolidacao");
-        } else if (roles.includes("lider_celula")) {
-          navigate("/celulas");
-        } else {
-          navigate("/meu-app");
-        }
+        const redirectTo = getRoleBasedRedirect(roles);
+        console.log("[Login] redirecting to:", redirectTo);
+        navigate(redirectTo);
       } else {
         navigate("/app");
       }
