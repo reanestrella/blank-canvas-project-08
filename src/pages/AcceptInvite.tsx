@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, AlertCircle, Church } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { isValidUUID, getRoleBasedRedirect } from "@/lib/getRoleBasedRedirect";
 
 export default function AcceptInvite() {
   const [searchParams] = useSearchParams();
@@ -13,12 +14,13 @@ export default function AcceptInvite() {
   const navigate = useNavigate();
   const { user, isLoading: authLoading, refreshUserData } = useAuth();
   const { toast } = useToast();
-  const [status, setStatus] = useState<"loading" | "processing" | "error" | "no-token">("loading");
+  const [status, setStatus] = useState<"loading" | "processing" | "error" | "invalid-token">("loading");
   const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
-    if (!token) {
-      setStatus("no-token");
+    if (!token || !isValidUUID(token)) {
+      console.log("token:", token, "- inválido ou ausente");
+      setStatus("invalid-token");
       return;
     }
 
@@ -27,7 +29,9 @@ export default function AcceptInvite() {
     if (authLoading) return;
 
     if (!user) {
-      navigate(`/login?invite_token=${encodeURIComponent(token)}`, { replace: true });
+      // Preserve full return path including token
+      const returnUrl = `/accept-invite?token=${encodeURIComponent(token)}`;
+      navigate(`/login?redirect=${encodeURIComponent(returnUrl)}`, { replace: true });
       return;
     }
 
@@ -46,14 +50,15 @@ export default function AcceptInvite() {
       console.log("rpc result error:", error);
 
       if (error) {
-        console.error("accept_invitation RPC error:", error?.message, error?.details, error?.hint, error);
+        console.error("accept_invitation RPC error:", error?.message, (error as any)?.details, (error as any)?.hint, error);
         setErrorMsg(error.message || "Erro ao aceitar convite.");
         setStatus("error");
         return;
       }
 
-      // Check RPC response for success flag
       const result = data as any;
+      console.log("accept_invite result", result);
+
       if (result && result.success === false) {
         console.error("accept_invitation returned failure:", result.error);
         setErrorMsg(result.error || "Erro ao aceitar convite.");
@@ -61,11 +66,17 @@ export default function AcceptInvite() {
         return;
       }
 
-      // Reload profile + roles before navigating
+      // Reload profile (church_id) + roles
       await refreshUserData();
 
       toast({ title: "Convite aceito!", description: "Você foi vinculado à igreja com sucesso." });
-      navigate("/app", { replace: true });
+
+      // Role-based redirect
+      const roles: string[] = result?.roles || [];
+      console.log("roles from RPC:", roles);
+      const redirectTo = getRoleBasedRedirect(roles);
+      console.log("redirecting to:", redirectTo);
+      navigate(redirectTo, { replace: true });
     } catch (err: any) {
       console.error("AcceptInvite exception:", err);
       setErrorMsg(err.message || "Erro inesperado ao aceitar convite.");
@@ -73,7 +84,7 @@ export default function AcceptInvite() {
     }
   };
 
-  if (status === "no-token") {
+  if (status === "invalid-token") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
         <Card className="w-full max-w-md">
@@ -81,7 +92,7 @@ export default function AcceptInvite() {
             <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
               <AlertCircle className="w-6 h-6 text-destructive" />
             </div>
-            <CardTitle>Token não encontrado</CardTitle>
+            <CardTitle>Convite inválido</CardTitle>
             <CardDescription>O link do convite está incompleto ou inválido.</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
