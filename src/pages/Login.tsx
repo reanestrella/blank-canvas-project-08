@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -28,6 +28,8 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get("invite_token");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -68,7 +70,13 @@ export default function Login() {
         title: "Bem-vindo!",
         description: "Login realizado com sucesso.",
       });
-      navigate("/app");
+
+      // If user came from an invite link, redirect to accept-invite
+      if (inviteToken) {
+        navigate(`/accept-invite?token=${encodeURIComponent(inviteToken)}`, { replace: true });
+      } else {
+        navigate("/app");
+      }
     } catch (error: any) {
       toast({
         title: "Erro",

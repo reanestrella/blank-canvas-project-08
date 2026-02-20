@@ -48,6 +48,8 @@ export interface CreateCellReportData {
   conversions: number;
   offering?: number;
   notes?: string;
+  decided?: string[];
+  visitor_names?: string[];
 }
 
 export function useCells(churchId?: string) {
@@ -192,26 +194,42 @@ export function useCells(churchId?: string) {
   };
 
   const createReport = async (data: CreateCellReportData) => {
+    if (!churchId) {
+      toast({ title: "Erro", description: "Igreja não identificada.", variant: "destructive" });
+      return { data: null, error: new Error("church_id missing") };
+    }
     try {
+      const payload: Record<string, any> = {
+        cell_id: data.cell_id,
+        report_date: data.report_date,
+        attendance: data.attendance,
+        visitors: data.visitors,
+        conversions: data.conversions,
+        church_id: churchId,
+      };
+      if (data.offering !== undefined) payload.offering = data.offering;
+      if (data.notes) payload.notes = data.notes;
+      if (data.decided) payload.decided = data.decided;
+
       const { data: newReport, error } = await supabase
         .from("cell_reports")
-        .insert([data])
+        .insert([payload])
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase report insert error:", error.message, (error as any).details, (error as any).hint);
+        throw error;
+      }
       
       setReports((prev) => [newReport as CellReport, ...prev]);
-      toast({
-        title: "Sucesso",
-        description: "Relatório enviado com sucesso!",
-      });
+      toast({ title: "Sucesso", description: "Relatório enviado com sucesso!" });
       return { data: newReport as CellReport, error: null };
     } catch (error: any) {
       console.error("Error creating report:", error);
       toast({
-        title: "Erro",
-        description: error.message || "Não foi possível enviar o relatório.",
+        title: "Erro ao enviar relatório",
+        description: error.message || "Não foi possível enviar o relatório. Tente novamente.",
         variant: "destructive",
       });
       return { data: null, error };
