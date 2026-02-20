@@ -27,24 +27,26 @@ export function useCellMembers(cellId?: string) {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
-  .from("cell_members")
-  .select(`
-    id,
-    cell_id,
-    member_id,
-    joined_at,
-    member:members!inner (
-      id,
-      full_name,
-      phone
-    )
-  `)
-  .eq("cell_id", cellId);
+        .from("cell_members")
+        .select(`
+          id,
+          cell_id,
+          member_id,
+          joined_at,
+          member:members!inner (
+            id,
+            full_name,
+            phone
+          )
         `)
         .eq("cell_id", cellId);
 
       if (error) throw error;
-      setCellMembers((data as CellMemberWithDetails[]) || []);
+      const mapped = (data || []).map((item: any) => ({
+        ...item,
+        member: Array.isArray(item.member) ? item.member[0] : item.member,
+      }));
+      setCellMembers(mapped as CellMemberWithDetails[]);
     } catch (error: any) {
       console.error("Error fetching cell members:", error);
     } finally {
