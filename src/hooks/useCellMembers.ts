@@ -27,13 +27,19 @@ export function useCellMembers(cellId?: string) {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
-        .from("cell_members")
-        .select(`
-          id,
-          cell_id,
-          member_id,
-          joined_at,
-          member:members(id, full_name, phone)
+  .from("cell_members")
+  .select(`
+    id,
+    cell_id,
+    member_id,
+    joined_at,
+    member:members!inner (
+      id,
+      full_name,
+      phone
+    )
+  `)
+  .eq("cell_id", cellId);
         `)
         .eq("cell_id", cellId);
 
