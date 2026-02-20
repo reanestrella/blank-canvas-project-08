@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,71 +16,15 @@ export default function InviteGate() {
   const { toast } = useToast();
   const [status, setStatus] = useState<"idle" | "processing" | "error" | "invalid-token">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const autoAcceptRan = useRef(false);
 
-  console.log("[InviteGate] token", token);
+  const validToken = token && isValidUUID(token);
+
+  console.log("[InviteGate] token", token, "valid", validToken);
   console.log("[InviteGate] session", user?.id);
 
-  // Invalid or missing token
-  if (!token || !isValidUUID(token)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
-              <AlertCircle className="w-6 h-6 text-destructive" />
-            </div>
-            <CardTitle>Convite inválido</CardTitle>
-            <CardDescription>O link do convite está incompleto ou inválido.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center">
-            <Button onClick={() => navigate("/")}>Ir para página inicial</Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Still loading auth
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 gradient-primary rounded-full flex items-center justify-center mb-4">
-              <Church className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <CardTitle>Carregando...</CardTitle>
-          </CardHeader>
-          <CardContent className="flex justify-center py-6">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Not logged in — save token and redirect to login
-  if (!user) {
-    sessionStorage.setItem("pending_invite_token", token);
-    const returnUrl = `/accept-invite?token=${encodeURIComponent(token)}`;
-    navigate(`/login?redirect=${encodeURIComponent(returnUrl)}`, { replace: true });
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle>Faça login para aceitar o convite</CardTitle>
-            <CardDescription>Redirecionando para a página de login...</CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center py-6">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // User is logged in — show accept screen
-  const handleAccept = async () => {
+  const handleAccept = useCallback(async () => {
+    if (!token) return;
     setStatus("processing");
     try {
       console.log("[InviteGate] calling accept_invitation with p_token:", token);
@@ -104,15 +48,11 @@ export default function InviteGate() {
         return;
       }
 
-      // Clear pending token
       sessionStorage.removeItem("pending_invite_token");
-
-      // Reload profile + roles
       await refreshUserData();
 
       toast({ title: "Convite aceito!", description: "Você foi vinculado à igreja com sucesso." });
 
-      // Redirect based on roles
       const roles: string[] = result?.roles || [];
       const redirectTo = getRoleBasedRedirect(roles);
       console.log("[InviteGate] redirecting to:", redirectTo);
@@ -122,13 +62,69 @@ export default function InviteGate() {
       setErrorMsg(err.message || "Erro inesperado ao aceitar convite.");
       setStatus("error");
     }
-  };
+  }, [token, refreshUserData, toast, navigate]);
 
-  const handleSwitchAccount = async () => {
+  const handleSwitchAccount = useCallback(async () => {
+    if (!token) return;
     sessionStorage.setItem("pending_invite_token", token);
     await signOut();
     navigate(`/login?redirect=${encodeURIComponent(`/accept-invite?token=${encodeURIComponent(token)}`)}`, { replace: true });
-  };
+  }, [token, signOut, navigate]);
+
+  // Auto-accept when user is authenticated and token is valid
+  useEffect(() => {
+    if (!user || !validToken || authLoading || autoAcceptRan.current) return;
+    autoAcceptRan.current = true;
+    handleAccept();
+  }, [user, validToken, authLoading, handleAccept]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (authLoading || user || !validToken) return;
+    sessionStorage.setItem("pending_invite_token", token!);
+    const returnUrl = `/accept-invite?token=${encodeURIComponent(token!)}`;
+    navigate(`/login?redirect=${encodeURIComponent(returnUrl)}`, { replace: true });
+  }, [authLoading, user, validToken, token, navigate]);
+
+  // Invalid or missing token
+  if (!validToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
+              <AlertCircle className="w-6 h-6 text-destructive" />
+            </div>
+            <CardTitle>Convite inválido</CardTitle>
+            <CardDescription>O link do convite está incompleto ou inválido.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <Button onClick={() => navigate("/")}>Ir para página inicial</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Loading / processing / redirecting to login
+  if (authLoading || !user || status === "processing") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 gradient-primary rounded-full flex items-center justify-center mb-4">
+              <Church className="w-6 h-6 text-primary-foreground" />
+            </div>
+            <CardTitle>Aceitando convite...</CardTitle>
+            <CardDescription>Aguarde enquanto processamos seu convite.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center py-6">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (status === "error") {
     return (
@@ -142,7 +138,7 @@ export default function InviteGate() {
             <CardDescription>{errorMsg}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-3">
-            <Button onClick={handleAccept}>Tentar novamente</Button>
+            <Button onClick={() => { autoAcceptRan.current = false; handleAccept(); }}>Tentar novamente</Button>
             <Button variant="ghost" onClick={() => navigate("/")}>Ir para página inicial</Button>
           </CardContent>
         </Card>
@@ -150,6 +146,7 @@ export default function InviteGate() {
     );
   }
 
+  // Fallback: manual accept (shouldn't normally show due to auto-accept)
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
       <Card className="w-full max-w-md">
@@ -165,20 +162,10 @@ export default function InviteGate() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-3">
-          <Button
-            className="w-full"
-            onClick={handleAccept}
-            disabled={status === "processing"}
-          >
-            {status === "processing" && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+          <Button className="w-full" onClick={handleAccept}>
             Aceitar convite
           </Button>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={handleSwitchAccount}
-            disabled={status === "processing"}
-          >
+          <Button variant="outline" className="w-full" onClick={handleSwitchAccount}>
             <LogOut className="w-4 h-4 mr-2" />
             Sair e entrar com outra conta
           </Button>
