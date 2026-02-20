@@ -22,33 +22,36 @@ export default function AcceptInvite() {
       return;
     }
 
+    console.log("token:", token);
+
     if (authLoading) return;
 
     if (!user) {
-      // Not logged in — redirect to login preserving the token
       navigate(`/login?invite_token=${encodeURIComponent(token)}`, { replace: true });
       return;
     }
 
-    // User is logged in — accept the invitation
     acceptInvitation(token);
   }, [token, user, authLoading]);
 
   const acceptInvitation = async (inviteToken: string) => {
     setStatus("processing");
     try {
-      const { error } = await supabase.rpc("accept_invitation" as any, {
+      console.log("Calling accept_invitation RPC with token:", inviteToken);
+      const { data, error } = await supabase.rpc("accept_invitation" as any, {
         invite_token: inviteToken,
       } as any);
 
+      console.log("rpc result data:", data);
+      console.log("rpc result error:", error);
+
       if (error) {
-        console.error("accept_invitation error:", error);
         setErrorMsg(error.message || "Erro ao aceitar convite.");
         setStatus("error");
         return;
       }
 
-      // Reload user data (profile + roles) before navigating
+      // Reload profile + roles before navigating
       await refreshUserData();
 
       toast({ title: "Convite aceito!", description: "Você foi vinculado à igreja com sucesso." });
