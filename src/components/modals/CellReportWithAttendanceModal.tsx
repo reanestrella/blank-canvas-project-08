@@ -33,6 +33,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CellReportErrorBoundary } from "@/components/cells/ErrorBoundary";
 import { AttendanceList } from "@/components/cells/AttendanceList";
+import { batchUpsertAttendance } from "@/services/attendance";
 import type { Cell, CellReport, CreateCellReportData } from "@/hooks/useCells";
 
 const reportSchema = z.object({
@@ -155,36 +156,20 @@ export function CellReportWithAttendanceModal({
     }
   };
 
-  // Save attendance records to cell_report_attendance using upsert
+  // Save attendance records using safe batch upsert
   const saveAttendance = async (reportId: string) => {
-    const attendanceEntries = members.map((m) => ({
-      report_id: reportId,
-      member_id: m.memberId,
+    const entries = members.map((m) => ({
+      memberId: m.memberId,
       present: !!presencas[m.memberId],
     }));
 
-    if (attendanceEntries.length === 0) return;
+    if (entries.length === 0) return;
 
-    try {
-      const { error } = await supabase
-        .from("cell_report_attendance")
-        .upsert(attendanceEntries, {
-          onConflict: "report_id,member_id",
-        });
-
-      if (error) {
-        console.error("Erro ao salvar presença (cell_report_attendance):", error);
-        toast({
-          title: "Aviso",
-          description: "Relatório salvo, mas houve um erro ao registrar a lista de presença individual.",
-          variant: "destructive",
-        });
-      }
-    } catch (err) {
-      console.error("Exceção ao salvar presença:", err);
+    const result = await batchUpsertAttendance(reportId, entries);
+    if (!result.success) {
       toast({
         title: "Aviso",
-        description: "Relatório salvo, mas erro ao registrar presenças.",
+        description: `Relatório salvo, mas houve um erro ao registrar presenças: ${result.error}`,
         variant: "destructive",
       });
     }

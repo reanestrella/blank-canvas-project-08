@@ -59,10 +59,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("[Auth] event:", event, "user:", session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
         
+        if (event === "SIGNED_OUT") {
+          // Clear ALL state on sign out — prevent stale church data
+          setProfile(null);
+          setChurch(null);
+          setRoles([]);
+          setIsLoading(false);
+          return;
+        }
+        
         if (session?.user) {
+          // Always re-fetch on SIGNED_IN / TOKEN_REFRESHED to pick up new church
           setTimeout(async () => {
             await fetchUserData(session.user.id);
           }, 0);
@@ -92,6 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserData = async (userId: string) => {
     try {
+      console.log("[Auth] fetchUserData for:", userId);
       // 1. Fetch profile — single source of church_id
       const { data: profileData } = await supabase
         .from("profiles")

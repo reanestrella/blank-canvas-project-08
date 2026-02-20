@@ -16,6 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Eye, EyeOff, Church, AlertCircle } from "lucide-react";
 
 const registerSchema = z.object({
@@ -60,6 +61,7 @@ export default function Convite() {
 
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { refreshUserData } = useAuth();
   const [invitation, setInvitation] = useState<InvitationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -163,6 +165,8 @@ export default function Convite() {
         description: "Você já pode acessar o sistema.",
       });
 
+      // Re-fetch user data (profile, church, roles) BEFORE navigating
+      await refreshUserData();
       navigate("/app");
     } catch (error: any) {
       console.error("Registration error:", error);
