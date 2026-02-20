@@ -13,6 +13,9 @@ export interface Invitation {
   expires_at: string;
   used_at: string | null;
   created_at: string;
+  full_name?: string | null;
+  congregation_id?: string | null;
+  member_id?: string | null;
 }
 
 export interface CreateInvitationData {
@@ -60,39 +63,35 @@ export function useInvitations() {
     }
 
     try {
-      // Build invitation data with optional fields
-      const invitationData: Record<string, any> = {
-        email: data.email,
-        role: data.role,
-        church_id: profile.church_id,
-        invited_by: user.id,
-      };
+      // Use RPC reissue_invitation to create/reissue invitation
+      const { data: newInvitation, error } = await supabase.rpc(
+        "reissue_invitation" as any,
+        {
+          p_church_id: profile.church_id,
+          p_email: data.email,
+          p_full_name: data.full_name || null,
+          p_role: data.role,
+          p_congregation_id: (data.congregation_id && data.congregation_id !== "_all") ? data.congregation_id : null,
+          p_member_id: data.member_id || null,
+          p_invited_by: user.id,
+        } as any
+      );
       
-      // Add optional fields if provided
-      if (data.full_name) {
-        invitationData.full_name = data.full_name;
+      if (error) {
+        console.error("Error in reissue_invitation RPC:", error);
+        throw error;
       }
-      if (data.congregation_id && data.congregation_id !== "_all") {
-        invitationData.congregation_id = data.congregation_id;
-      }
-      if (data.member_id) {
-        invitationData.member_id = data.member_id;
-      }
-
-      const { data: newInvitation, error } = await (supabase
-        .from("invitations" as any)
-        .insert([invitationData])
-        .select()
-        .single() as any);
       
-      if (error) throw error;
+      const invitation = newInvitation as unknown as Invitation;
       
-      setInvitations((prev) => [newInvitation as Invitation, ...prev]);
+      // Refresh list to get updated data
+      await fetchInvitations();
+      
       toast({
         title: "Convite criado!",
         description: `Link de convite gerado para ${data.email}.`,
       });
-      return { data: newInvitation as Invitation, error: null };
+      return { data: invitation, error: null };
     } catch (error: any) {
       console.error("Error creating invitation:", error);
       toast({
@@ -132,16 +131,22 @@ export function useInvitations() {
 
   const getInvitationByToken = async (token: string) => {
     try {
-      const { data, error } = await (supabase
-        .from("invitations" as any)
-        .select("*, churches(name)")
-        .eq("token", token)
-        .is("used_at", null)
-        .gt("expires_at", new Date().toISOString())
-        .single() as any);
-      
-      if (error) throw error;
-      return { data, error: null };
+      // Use validate_invitation RPC for server-side validation
+      const { data, error } = await supabase.rpc("validate_invitation" as any, {
+        p_token: token,
+      } as any);
+
+      if (error) {
+        console.error("Error in validate_invitation RPC:", error);
+        throw error;
+      }
+
+      if (!data || (Array.isArray(data) && data.length === 0)) {
+        return { data: null, error: new Error("Convite inválido, expirado ou já utilizado.") };
+      }
+
+      const invitation = Array.isArray(data) ? data[0] : data;
+      return { data: invitation, error: null };
     } catch (error: any) {
       console.error("Error fetching invitation:", error);
       return { data: null, error };
@@ -150,12 +155,14 @@ export function useInvitations() {
 
   const markInvitationAsUsed = async (token: string) => {
     try {
-      const { error } = await (supabase
-        .from("invitations" as any)
-        .update({ used_at: new Date().toISOString() })
-        .eq("token", token) as any);
+      const { error } = await supabase.rpc("mark_invitation_used" as any, {
+        p_token: token,
+      } as any);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error in mark_invitation_used RPC:", error);
+        throw error;
+      }
       return { error: null };
     } catch (error: any) {
       console.error("Error marking invitation as used:", error);

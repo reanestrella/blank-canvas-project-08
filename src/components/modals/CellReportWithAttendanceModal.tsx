@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { CellReportErrorBoundary } from "@/components/cells/ErrorBoundary";
 import { AttendanceList } from "@/components/cells/AttendanceList";
 import type { Cell, CellReport, CreateCellReportData } from "@/hooks/useCells";
@@ -69,8 +70,8 @@ export function CellReportWithAttendanceModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [members, setMembers] = useState<MemberEntry[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
-  // Simple Record-based state — no Set, no complex structures
   const [presencas, setPresencas] = useState<Record<string, boolean>>({});
+  const { toast } = useToast();
 
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -86,7 +87,7 @@ export function CellReportWithAttendanceModal({
 
   const selectedCellId = form.watch("cell_id");
 
-  // Fetch members only when cell changes — no dependency on presencas
+  // Fetch members only when cell changes
   useEffect(() => {
     if (!selectedCellId) {
       setMembers([]);
@@ -106,7 +107,7 @@ export function CellReportWithAttendanceModal({
 
         if (cancelled) return;
         if (error) {
-          console.error("Erro ao buscar membros:", error);
+          console.error("Erro ao buscar membros da célula:", error);
           setMembers([]);
           return;
         }
@@ -137,15 +138,60 @@ export function CellReportWithAttendanceModal({
     return () => { cancelled = true; };
   }, [selectedCellId]);
 
-  // Ultra-simple toggle — no side effects, no async
+  // Toggle attendance — optimistic with error recovery
   const togglePresenca = (memberId: string) => {
-    setPresencas(prev => ({
-      ...prev,
-      [memberId]: !prev[memberId],
+    try {
+      setPresencas(prev => ({
+        ...prev,
+        [memberId]: !prev[memberId],
+      }));
+    } catch (err) {
+      console.error("Erro ao alternar presença:", err);
+      toast({
+        title: "Erro",
+        description: "Não foi possível alterar a presença. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Save attendance records to cell_report_attendance using upsert
+  const saveAttendance = async (reportId: string) => {
+    const attendanceEntries = members.map((m) => ({
+      report_id: reportId,
+      member_id: m.memberId,
+      present: !!presencas[m.memberId],
     }));
+
+    if (attendanceEntries.length === 0) return;
+
+    try {
+      const { error } = await supabase
+        .from("cell_report_attendance")
+        .upsert(attendanceEntries, {
+          onConflict: "report_id,member_id",
+        });
+
+      if (error) {
+        console.error("Erro ao salvar presença (cell_report_attendance):", error);
+        toast({
+          title: "Aviso",
+          description: "Relatório salvo, mas houve um erro ao registrar a lista de presença individual.",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error("Exceção ao salvar presença:", err);
+      toast({
+        title: "Aviso",
+        description: "Relatório salvo, mas erro ao registrar presenças.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSubmit = async (data: ReportFormData) => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
     try {
       const visitors = parseInt(data.visitors, 10) || 0;
@@ -162,14 +208,32 @@ export function CellReportWithAttendanceModal({
       };
 
       const result = await onSubmit(cleanedData);
-      if (!result.error) {
-        form.reset();
-        setPresencas({});
-        setMembers([]);
-        onOpenChange(false);
+      if (result.error) {
+        console.error("Erro ao enviar relatório:", result.error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível enviar o relatório. Tente novamente.",
+          variant: "destructive",
+        });
+        return;
       }
+
+      // Save individual attendance after report is created
+      if (result.data?.id) {
+        await saveAttendance(result.data.id);
+      }
+
+      form.reset();
+      setPresencas({});
+      setMembers([]);
+      onOpenChange(false);
     } catch (err) {
-      console.error("Erro ao enviar relatório:", err);
+      console.error("Exceção ao enviar relatório:", err);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro inesperado. A tela foi preservada.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
