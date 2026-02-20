@@ -11,7 +11,7 @@ import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
 import Convite from "./pages/Convite";
-import AcceptInvite from "./pages/AcceptInvite";
+import InviteGate from "./pages/InviteGate";
 import Dashboard from "./pages/Dashboard";
 import Secretaria from "./pages/Secretaria";
 import Ministerios from "./pages/Ministerios";
@@ -57,7 +57,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/registro" element={<Registro />} />
               <Route path="/convite/:token" element={<Convite />} />
-              <Route path="/accept-invite" element={<AcceptInvite />} />
+              <Route path="/accept-invite" element={<InviteGate />} />
               <Route path="/instalar" element={<Instalar />} />
               
               {/* Always accessible to any authenticated user */}
