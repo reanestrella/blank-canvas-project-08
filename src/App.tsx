@@ -26,6 +26,7 @@ import Discipulados from "./pages/Discipulados";
 import Visitas from "./pages/Visitas";
 import Gabinete from "./pages/Gabinete";
 import Lembretes from "./pages/Lembretes";
+import Cadastrar from "./pages/Cadastrar";
 import Instalar from "./pages/Instalar";
 import NotFound from "./pages/NotFound";
 
@@ -58,6 +59,7 @@ const App = () => (
               <Route path="/registro" element={<Registro />} />
               <Route path="/convite/:token" element={<Convite />} />
               <Route path="/accept-invite" element={<InviteGate />} />
+              <Route path="/cadastrar" element={<Cadastrar />} />
               <Route path="/instalar" element={<Instalar />} />
               
               {/* Always accessible to any authenticated user */}
@@ -66,62 +68,62 @@ const App = () => (
 
               {/* Role-protected routes */}
               <Route path="/secretaria" element={
-                <RequireAnyRole allowedRoles={["admin", "pastor", "secretario", "consolidacao"]}>
+                <RequireAnyRole allowedRoles={["pastor", "secretario", "consolidacao"]}>
                   <Secretaria />
                 </RequireAnyRole>
               } />
               <Route path="/ministerios" element={
-                <RequireAnyRole allowedRoles={["admin", "pastor", "lider_ministerio"]}>
+                <RequireAnyRole allowedRoles={["pastor", "lider_ministerio"]}>
                   <Ministerios />
                 </RequireAnyRole>
               } />
               <Route path="/celulas" element={
-                <RequireAnyRole allowedRoles={["admin", "pastor", "lider_celula", "consolidacao", "secretario"]}>
+                <RequireAnyRole allowedRoles={["pastor", "lider_celula", "consolidacao", "secretario"]}>
                   <Celulas />
                 </RequireAnyRole>
               } />
               <Route path="/ensino" element={
-                <RequireAnyRole allowedRoles={["admin", "pastor", "secretario"]}>
+                <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
                   <Ensino />
                 </RequireAnyRole>
               } />
               <Route path="/financeiro" element={
-                <RequireAnyRole allowedRoles={["admin", "pastor", "tesoureiro"]}>
+                <RequireAnyRole allowedRoles={["pastor", "tesoureiro"]}>
                   <Financeiro />
                 </RequireAnyRole>
               } />
               <Route path="/eventos" element={
-                <RequireAnyRole allowedRoles={["admin", "pastor", "secretario", "lider_ministerio"]}>
+                <RequireAnyRole allowedRoles={["pastor", "secretario", "lider_ministerio"]}>
                   <Eventos />
                 </RequireAnyRole>
               } />
               <Route path="/consolidacao" element={
-                <RequireAnyRole allowedRoles={["admin", "pastor", "consolidacao"]}>
+                <RequireAnyRole allowedRoles={["pastor", "consolidacao"]}>
                   <Consolidacao />
                 </RequireAnyRole>
               } />
               <Route path="/discipulados" element={
-                <RequireAnyRole allowedRoles={["admin", "pastor", "secretario"]}>
+                <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
                   <Discipulados />
                 </RequireAnyRole>
               } />
               <Route path="/visitas" element={
-                <RequireAnyRole allowedRoles={["admin", "pastor", "secretario"]}>
+                <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
                   <Visitas />
                 </RequireAnyRole>
               } />
               <Route path="/gabinete" element={
-                <RequireAnyRole allowedRoles={["admin", "pastor", "secretario"]}>
+                <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
                   <Gabinete />
                 </RequireAnyRole>
               } />
               <Route path="/lembretes" element={
-                <RequireAnyRole allowedRoles={["admin", "pastor", "secretario"]}>
+                <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
                   <Lembretes />
                 </RequireAnyRole>
               } />
               <Route path="/configuracoes" element={
-                <RequireAnyRole allowedRoles={["admin", "pastor"]}>
+                <RequireAnyRole allowedRoles={["pastor"]}>
                   <Configuracoes />
                 </RequireAnyRole>
               } />

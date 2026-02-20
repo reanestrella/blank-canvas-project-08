@@ -20,22 +20,22 @@ interface MenuItem {
 
 const allMenuItems: MenuItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/app" },
-  { icon: Users, label: "Secretaria", path: "/secretaria", allowedRoles: ["admin", "pastor", "secretario", "consolidacao"] },
-  { icon: Heart, label: "Ministérios", path: "/ministerios", allowedRoles: ["admin", "pastor", "lider_ministerio"] },
-  { icon: Grid3X3, label: "Células", path: "/celulas", allowedRoles: ["admin", "pastor", "lider_celula", "consolidacao", "secretario"] },
-  { icon: Handshake, label: "Consolidação", path: "/consolidacao", allowedRoles: ["admin", "pastor", "consolidacao"] },
-  { icon: GraduationCap, label: "Ensino", path: "/ensino", allowedRoles: ["admin", "pastor", "secretario"] },
-  { icon: DollarSign, label: "Financeiro", path: "/financeiro", allowedRoles: ["admin", "pastor", "tesoureiro"] },
-  { icon: Calendar, label: "Eventos", path: "/eventos", allowedRoles: ["admin", "pastor", "secretario", "lider_ministerio"] },
-  { icon: BookOpen, label: "Discipulados", path: "/discipulados", allowedRoles: ["admin", "pastor", "secretario"] },
-  { icon: Home, label: "Visitas", path: "/visitas", allowedRoles: ["admin", "pastor", "secretario"] },
-  { icon: Armchair, label: "Gabinete", path: "/gabinete", allowedRoles: ["admin", "pastor", "secretario"] },
-  { icon: Bell, label: "Lembretes", path: "/lembretes", allowedRoles: ["admin", "pastor", "secretario"] },
+  { icon: Users, label: "Secretaria", path: "/secretaria", allowedRoles: ["pastor", "secretario", "consolidacao"] },
+  { icon: Heart, label: "Ministérios", path: "/ministerios", allowedRoles: ["pastor", "lider_ministerio"] },
+  { icon: Grid3X3, label: "Células", path: "/celulas", allowedRoles: ["pastor", "lider_celula", "consolidacao", "secretario"] },
+  { icon: Handshake, label: "Consolidação", path: "/consolidacao", allowedRoles: ["pastor", "consolidacao"] },
+  { icon: GraduationCap, label: "Ensino", path: "/ensino", allowedRoles: ["pastor", "secretario"] },
+  { icon: DollarSign, label: "Financeiro", path: "/financeiro", allowedRoles: ["pastor", "tesoureiro"] },
+  { icon: Calendar, label: "Eventos", path: "/eventos", allowedRoles: ["pastor", "secretario", "lider_ministerio"] },
+  { icon: BookOpen, label: "Discipulados", path: "/discipulados", allowedRoles: ["pastor", "secretario"] },
+  { icon: Home, label: "Visitas", path: "/visitas", allowedRoles: ["pastor", "secretario"] },
+  { icon: Armchair, label: "Gabinete", path: "/gabinete", allowedRoles: ["pastor", "secretario"] },
+  { icon: Bell, label: "Lembretes", path: "/lembretes", allowedRoles: ["pastor", "secretario"] },
   { icon: User, label: "Meu App", path: "/meu-app" },
 ];
 
 const bottomItems: MenuItem[] = [
-  { icon: Settings, label: "Configurações", path: "/configuracoes", allowedRoles: ["admin", "pastor"] },
+  { icon: Settings, label: "Configurações", path: "/configuracoes", allowedRoles: ["pastor"] },
 ];
 
 export function Sidebar() {

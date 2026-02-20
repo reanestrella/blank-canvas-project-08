@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, Church, LogOut } from "lucide-react";
+import { Loader2, AlertCircle, Church, LogOut, LogIn, UserPlus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { isValidUUID, getRoleBasedRedirect } from "@/lib/getRoleBasedRedirect";
@@ -14,7 +14,7 @@ export default function InviteGate() {
   const navigate = useNavigate();
   const { user, isLoading: authLoading, refreshUserData, signOut } = useAuth();
   const { toast } = useToast();
-  const [status, setStatus] = useState<"idle" | "processing" | "error" | "invalid-token">("idle");
+  const [status, setStatus] = useState<"idle" | "processing" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const autoAcceptRan = useRef(false);
 
@@ -78,14 +78,6 @@ export default function InviteGate() {
     handleAccept();
   }, [user, validToken, authLoading, handleAccept]);
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (authLoading || user || !validToken) return;
-    sessionStorage.setItem("pending_invite_token", token!);
-    const returnUrl = `/accept-invite?token=${encodeURIComponent(token!)}`;
-    navigate(`/login?redirect=${encodeURIComponent(returnUrl)}`, { replace: true });
-  }, [authLoading, user, validToken, token, navigate]);
-
   // Invalid or missing token
   if (!validToken) {
     return (
@@ -106,8 +98,64 @@ export default function InviteGate() {
     );
   }
 
-  // Loading / processing / redirecting to login
-  if (authLoading || !user || status === "processing") {
+  // Still loading auth state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 gradient-primary rounded-full flex items-center justify-center mb-4">
+              <Church className="w-6 h-6 text-primary-foreground" />
+            </div>
+            <CardTitle>Carregando...</CardTitle>
+          </CardHeader>
+          <CardContent className="flex justify-center py-6">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Not authenticated — show login/signup options (DON'T auto-redirect)
+  if (!user) {
+    const returnUrl = `/accept-invite?token=${encodeURIComponent(token)}`;
+    const redirectParam = encodeURIComponent(returnUrl);
+
+    // Save token for recovery
+    sessionStorage.setItem("pending_invite_token", token);
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 gradient-primary rounded-full flex items-center justify-center mb-4">
+              <Church className="w-6 h-6 text-primary-foreground" />
+            </div>
+            <CardTitle>Você foi convidado!</CardTitle>
+            <CardDescription>
+              Você recebeu um convite para entrar em uma igreja.
+              <br />
+              Faça login ou crie uma conta para aceitar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-3">
+            <Button className="w-full" onClick={() => navigate(`/login?redirect=${redirectParam}`)}>
+              <LogIn className="w-4 h-4 mr-2" />
+              Entrar
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => navigate(`/cadastrar?redirect=${redirectParam}`)}>
+              <UserPlus className="w-4 h-4 mr-2" />
+              Criar conta
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Processing
+  if (status === "processing") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
         <Card className="w-full max-w-md">
@@ -146,7 +194,7 @@ export default function InviteGate() {
     );
   }
 
-  // Fallback: manual accept (shouldn't normally show due to auto-accept)
+  // Fallback: manual accept with account confirmation
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
       <Card className="w-full max-w-md">
