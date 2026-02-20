@@ -37,6 +37,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   hasRole: (role: UserRole["role"]) => boolean;
+  hasAnyRole: (...roles: UserRole["role"][]) => boolean;
   isAdmin: () => boolean;
   refreshChurch: () => Promise<void>;
   refreshUserData: () => Promise<void>;
@@ -171,6 +172,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return roles.some((r) => r.role === role);
   };
 
+  const hasAnyRole = (...checkRoles: UserRole["role"][]) => {
+    return checkRoles.some((role) => roles.some((r) => r.role === role));
+  };
+
   const isAdmin = () => {
     return hasRole("admin") || hasRole("pastor");
   };
@@ -209,6 +214,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signOut,
         hasRole,
+        hasAnyRole,
         isAdmin,
         refreshChurch,
         refreshUserData,
