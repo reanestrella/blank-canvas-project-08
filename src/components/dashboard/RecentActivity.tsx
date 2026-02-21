@@ -1,81 +1,76 @@
-import { Users, Heart, DollarSign, Calendar, Grid3X3 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Users, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
-const activities = [
-  {
-    id: 1,
-    type: "member",
-    icon: Users,
-    title: "Novo membro cadastrado",
-    description: "Maria Silva foi adicionada à secretaria",
-    time: "Há 5 min",
-    iconBg: "bg-info/10 text-info",
-  },
-  {
-    id: 2,
-    type: "cell",
-    icon: Grid3X3,
-    title: "Relatório de célula",
-    description: "Célula Vida Nova - 12 presentes, 2 visitantes",
-    time: "Há 30 min",
-    iconBg: "bg-success/10 text-success",
-  },
-  {
-    id: 3,
-    type: "finance",
-    icon: DollarSign,
-    title: "Dízimo registrado",
-    description: "R$ 500,00 - João Santos",
-    time: "Há 1 hora",
-    iconBg: "bg-secondary/10 text-secondary",
-  },
-  {
-    id: 4,
-    type: "ministry",
-    icon: Heart,
-    title: "Escala atualizada",
-    description: "Ministério de Louvor - próximo domingo",
-    time: "Há 2 horas",
-    iconBg: "bg-primary/10 text-primary",
-  },
-  {
-    id: 5,
-    type: "event",
-    icon: Calendar,
-    title: "Evento criado",
-    description: "Encontro de Casais - 15/02/2024",
-    time: "Há 3 horas",
-    iconBg: "bg-warning/10 text-warning",
-  },
-];
+interface ActivityItem {
+  id: string;
+  description: string;
+  created_at: string;
+}
 
 export function RecentActivity() {
+  const { profile } = useAuth();
+  const churchId = profile?.church_id;
+  const [members, setMembers] = useState<ActivityItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!churchId) { setIsLoading(false); return; }
+    const fetch = async () => {
+      setIsLoading(true);
+      const { data } = await supabase
+        .from("members")
+        .select("id, full_name, created_at")
+        .eq("church_id", churchId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      setMembers((data || []).map(m => ({
+        id: m.id,
+        description: `${m.full_name} foi cadastrado(a)`,
+        created_at: m.created_at || "",
+      })));
+      setIsLoading(false);
+    };
+    fetch();
+  }, [churchId]);
+
+  if (isLoading) {
+    return (
+      <div className="card-elevated p-6 animate-slide-up">
+        <h3 className="text-lg font-semibold mb-4">Atividade Recente</h3>
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (members.length === 0) {
+    return (
+      <div className="card-elevated p-6 animate-slide-up">
+        <h3 className="text-lg font-semibold mb-4">Atividade Recente</h3>
+        <p className="text-sm text-muted-foreground text-center py-4">Sem atividade recente.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="card-elevated p-6 animate-slide-up">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold">Atividade Recente</h3>
-        <button className="text-sm text-secondary hover:underline font-medium">
-          Ver tudo
-        </button>
-      </div>
-      <div className="space-y-4">
-        {activities.map((activity) => (
-          <div
-            key={activity.id}
-            className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
-          >
-            <div className={cn("p-2 rounded-lg", activity.iconBg)}>
-              <activity.icon className="w-4 h-4" />
+      <h3 className="text-lg font-semibold mb-4">Atividade Recente</h3>
+      <div className="space-y-3">
+        {members.map((item) => (
+          <div key={item.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+            <div className="p-2 rounded-lg bg-primary/10 text-primary">
+              <Users className="w-4 h-4" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">{activity.title}</p>
-              <p className="text-sm text-muted-foreground truncate">
-                {activity.description}
+              <p className="text-sm font-medium truncate">{item.description}</p>
+              <p className="text-xs text-muted-foreground">
+                {item.created_at ? new Date(item.created_at).toLocaleDateString("pt-BR") : ""}
               </p>
             </div>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {activity.time}
-            </span>
           </div>
         ))}
       </div>

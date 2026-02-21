@@ -14,7 +14,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Church, Loader2, Eye, EyeOff } from "lucide-react";
+import { Church, Loader2, Eye, EyeOff, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -33,101 +33,132 @@ type SignupFormData = z.infer<typeof signupSchema>;
 export default function Cadastrar() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
+  const [signupError, setSignupError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Persist redirect on mount
   const rawRedirect = searchParams.get("redirect");
   const redirectUrl = rawRedirect ? decodeURIComponent(rawRedirect) : null;
+
+  // Extract token from redirect URL if present
+  const pendingToken = (() => {
+    if (redirectUrl && redirectUrl.includes("/accept-invite")) {
+      try {
+        const url = new URL(redirectUrl, window.location.origin);
+        return url.searchParams.get("token") || null;
+      } catch { return null; }
+    }
+    return sessionStorage.getItem("pending_invite_token") || null;
+  })();
+
+  // Persist redirect & token
   if (redirectUrl) {
     sessionStorage.setItem("post_login_redirect", redirectUrl);
+  }
+  if (pendingToken) {
+    sessionStorage.setItem("pending_invite_token", pendingToken);
   }
 
   const form = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
-    defaultValues: {
-      fullName: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
+    defaultValues: { fullName: "", email: "", password: "", confirmPassword: "" },
   });
 
   const handleSubmit = async (data: SignupFormData) => {
     setIsLoading(true);
+    setSignupError(null);
     try {
+      const emailRedirectTo = pendingToken
+        ? `${window.location.origin}/accept-invite?token=${encodeURIComponent(pendingToken)}`
+        : window.location.origin;
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
-          emailRedirectTo: window.location.origin,
-          data: {
-            full_name: data.fullName,
-          },
+          emailRedirectTo,
+          data: { full_name: data.fullName },
         },
       });
 
       if (authError) {
-        console.error("Signup error:", authError.message);
-        toast({
-          title: "Erro no cadastro",
-          description: authError.message === "User already registered"
-            ? "Este email já está cadastrado. Tente fazer login."
-            : "Não foi possível criar a conta. Tente novamente.",
-          variant: "destructive",
-        });
+        console.error("[Cadastrar] signUp error:", authError.message);
+        setSignupError(authError.message);
         return;
       }
 
       if (!authData.user) {
-        toast({
-          title: "Erro",
-          description: "Não foi possível criar a conta.",
-          variant: "destructive",
-        });
+        setSignupError("Não foi possível criar a conta.");
         return;
       }
 
-      // Update profile name
-      await supabase
-        .from("profiles")
-        .update({ full_name: data.fullName, email: data.email })
-        .eq("user_id", authData.user.id);
+      // If session came back immediately (no email confirmation required)
+      if (authData.session) {
+        // Update profile
+        await supabase
+          .from("profiles")
+          .update({ full_name: data.fullName, email: data.email })
+          .eq("user_id", authData.user.id);
 
-      toast({
-        title: "Conta criada com sucesso!",
-        description: "Processando seu convite...",
-      });
+        // If there's a pending invite token, go accept it
+        if (pendingToken) {
+          toast({ title: "Conta criada!", description: "Processando seu convite..." });
+          navigate(`/accept-invite?token=${encodeURIComponent(pendingToken)}`, { replace: true });
+          return;
+        }
 
-      // Check for redirect (invite flow)
-      const storedRedirect = sessionStorage.getItem("post_login_redirect");
-      if (storedRedirect) {
-        sessionStorage.removeItem("post_login_redirect");
-        navigate(storedRedirect, { replace: true });
-        return;
+        const storedRedirect = sessionStorage.getItem("post_login_redirect");
+        if (storedRedirect) {
+          sessionStorage.removeItem("post_login_redirect");
+          navigate(storedRedirect, { replace: true });
+          return;
+        }
+
+        navigate("/app", { replace: true });
+      } else {
+        // Email confirmation required - show message
+        setNeedsConfirmation(true);
       }
-
-      // Check for pending invite token
-      const pendingToken = sessionStorage.getItem("pending_invite_token");
-      if (pendingToken) {
-        navigate(`/accept-invite?token=${encodeURIComponent(pendingToken)}`, { replace: true });
-        return;
-      }
-
-      // No invite — go to app
-      navigate("/app", { replace: true });
     } catch (error: any) {
-      console.error("Signup error:", error?.message);
-      toast({
-        title: "Erro inesperado",
-        description: "Ocorreu um erro ao criar a conta. Tente novamente.",
-        variant: "destructive",
-      });
+      console.error("[Cadastrar] exception:", error?.message);
+      setSignupError(error?.message || "Erro inesperado ao criar a conta.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Show confirmation screen
+  if (needsConfirmation) {
+    const loginUrl = pendingToken
+      ? `/login?redirect=${encodeURIComponent(`/accept-invite?token=${encodeURIComponent(pendingToken)}`)}`
+      : "/login";
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary/5 to-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-success/10 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle className="w-6 h-6 text-success" />
+            </div>
+            <CardTitle>Conta criada com sucesso!</CardTitle>
+            <CardDescription>
+              Verifique seu email para confirmar a conta. Depois, faça login para concluir{pendingToken ? " o convite" : ""}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-3">
+            <Button className="w-full" onClick={() => navigate(loginUrl)}>
+              Ir para Login
+            </Button>
+            <Button variant="ghost" onClick={() => navigate("/")}>
+              Voltar ao site
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary/5 to-background p-4">
@@ -138,10 +169,16 @@ export default function Cadastrar() {
           </Link>
           <CardTitle className="text-2xl">Criar Conta</CardTitle>
           <CardDescription>
-            Crie sua conta para aceitar o convite
+            {pendingToken ? "Crie sua conta para aceitar o convite" : "Crie sua conta"}
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {signupError && (
+            <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+              {signupError}
+            </div>
+          )}
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
               <FormField

@@ -1,97 +1,77 @@
-import { Grid3X3, Users, TrendingUp, MapPin } from "lucide-react";
+import { Grid3X3, Users, TrendingUp, MapPin, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-
-const cells = [
-  {
-    id: 1,
-    name: "Célula Vida Nova",
-    leader: "João Silva",
-    members: 12,
-    maxMembers: 15,
-    visitors: 3,
-    location: "Zona Norte",
-    growth: 15,
-  },
-  {
-    id: 2,
-    name: "Célula Renovação",
-    leader: "Maria Santos",
-    members: 10,
-    maxMembers: 15,
-    visitors: 1,
-    location: "Centro",
-    growth: 8,
-  },
-  {
-    id: 3,
-    name: "Célula Esperança",
-    leader: "Pedro Costa",
-    members: 14,
-    maxMembers: 15,
-    visitors: 2,
-    location: "Zona Sul",
-    growth: 20,
-  },
-  {
-    id: 4,
-    name: "Célula Fé",
-    leader: "Ana Lima",
-    members: 8,
-    maxMembers: 15,
-    visitors: 4,
-    location: "Zona Leste",
-    growth: 25,
-  },
-];
+import { useAuth } from "@/contexts/AuthContext";
+import { useCells } from "@/hooks/useCells";
 
 export function CellsOverview() {
+  const { profile } = useAuth();
+  const churchId = profile?.church_id;
+  const { cells, isLoading } = useCells(churchId || undefined);
+
+  const activeCells = cells.filter(c => c.is_active);
+
+  if (isLoading) {
+    return (
+      <div className="card-elevated p-6 animate-slide-up">
+        <div className="flex items-center gap-2 mb-6">
+          <Grid3X3 className="w-5 h-5 text-secondary" />
+          <h3 className="text-lg font-semibold">Células</h3>
+        </div>
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (activeCells.length === 0) {
+    return (
+      <div className="card-elevated p-6 animate-slide-up">
+        <div className="flex items-center gap-2 mb-6">
+          <Grid3X3 className="w-5 h-5 text-secondary" />
+          <h3 className="text-lg font-semibold">Células</h3>
+        </div>
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <Grid3X3 className="w-10 h-10 text-muted-foreground mb-3 opacity-50" />
+          <p className="text-sm text-muted-foreground">Nenhuma célula cadastrada ainda.</p>
+          <p className="text-xs text-muted-foreground mt-1">Cadastre células para ver indicadores aqui.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="card-elevated p-6 animate-slide-up">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <Grid3X3 className="w-5 h-5 text-secondary" />
-          <h3 className="text-lg font-semibold">Células em Destaque</h3>
+          <h3 className="text-lg font-semibold">Células ({activeCells.length})</h3>
         </div>
-        <button className="text-sm text-secondary hover:underline font-medium">
-          Ver todas
-        </button>
       </div>
       <div className="grid gap-4">
-        {cells.map((cell) => (
+        {activeCells.slice(0, 5).map((cell) => (
           <div
             key={cell.id}
             className="p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
           >
-            <div className="flex items-start justify-between mb-3">
+            <div className="flex items-start justify-between mb-2">
               <div>
                 <h4 className="font-semibold">{cell.name}</h4>
-                <p className="text-sm text-muted-foreground">
-                  Líder: {cell.leader}
-                </p>
-              </div>
-              <div className="flex items-center gap-1 text-success text-sm font-medium">
-                <TrendingUp className="w-4 h-4" />
-                +{cell.growth}%
+                {cell.network && (
+                  <p className="text-xs text-muted-foreground mt-0.5">{cell.network}</p>
+                )}
               </div>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <Users className="w-4 h-4" />
-                  <span>{cell.members}/{cell.maxMembers} membros</span>
-                </div>
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <MapPin className="w-4 h-4" />
-                  <span>{cell.location}</span>
-                </div>
-              </div>
-              <Progress 
-                value={(cell.members / cell.maxMembers) * 100} 
-                className="h-2"
-              />
-              <p className="text-xs text-secondary font-medium">
-                {cell.visitors} visitantes esta semana
-              </p>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              {cell.day_of_week && (
+                <span>{cell.day_of_week}</span>
+              )}
+              {cell.address && (
+                <span className="flex items-center gap-1 truncate">
+                  <MapPin className="w-3 h-3 flex-shrink-0" />
+                  <span className="truncate">{cell.address}</span>
+                </span>
+              )}
             </div>
           </div>
         ))}

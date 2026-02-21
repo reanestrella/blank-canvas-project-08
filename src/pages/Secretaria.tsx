@@ -237,22 +237,22 @@ export default function Secretaria() {
         </div>
 
         {/* Network Stats */}
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {Object.entries(stats.networks).map(([network, count]) => {
             const config = networkConfig[network as keyof typeof networkConfig];
             return (
               <button
                 key={network}
                 onClick={() => setNetworkFilter(networkFilter === network ? "all" : network)}
-                className={`flex items-center gap-2 p-3 rounded-lg border transition-all ${
+                className={`flex items-center gap-2 p-3 rounded-lg border transition-all min-w-0 ${
                   networkFilter === network 
                     ? "border-primary bg-primary/5" 
                     : "border-border hover:border-primary/50"
                 }`}
               >
-                <config.icon className={`w-4 h-4 ${config.color}`} />
-                <span className="text-sm font-medium">{config.label}</span>
-                <Badge variant="secondary" className="ml-auto">{count}</Badge>
+                <config.icon className={`w-4 h-4 flex-shrink-0 ${config.color}`} />
+                <span className="text-sm font-medium truncate">{config.label}</span>
+                <Badge variant="secondary" className="ml-auto flex-shrink-0">{count}</Badge>
               </button>
             );
           })}
