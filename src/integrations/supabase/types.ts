@@ -1689,7 +1689,7 @@ export type Database = {
           congregation_id: string | null
           created_at: string | null
           email: string | null
-          full_name: string
+          full_name: string | null
           id: string
           member_id: string | null
           phone: string | null
@@ -1702,7 +1702,7 @@ export type Database = {
           congregation_id?: string | null
           created_at?: string | null
           email?: string | null
-          full_name: string
+          full_name?: string | null
           id?: string
           member_id?: string | null
           phone?: string | null
@@ -1715,7 +1715,7 @@ export type Database = {
           congregation_id?: string | null
           created_at?: string | null
           email?: string | null
-          full_name?: string
+          full_name?: string | null
           id?: string
           member_id?: string | null
           phone?: string | null

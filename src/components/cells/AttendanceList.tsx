@@ -1,6 +1,7 @@
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Users, UserCheck, UserPlus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, Users, UserCheck, UserPlus, Search } from "lucide-react";
 import { AttendanceItem } from "./AttendanceItem";
 
 interface MemberEntry {
@@ -17,6 +18,7 @@ interface AttendanceListProps {
 }
 
 export function AttendanceList({ members, loading, presencas, onToggle }: AttendanceListProps) {
+  const [search, setSearch] = useState("");
   const presentCount = Object.values(presencas).filter(Boolean).length;
 
   if (loading) {
@@ -37,21 +39,39 @@ export function AttendanceList({ members, loading, presencas, onToggle }: Attend
     );
   }
 
+  const filtered = search.trim()
+    ? members.filter(m => m.memberName.toLowerCase().includes(search.toLowerCase()))
+    : members;
+
   return (
-    <div className="mt-4 border rounded-lg p-4 flex-1 overflow-hidden flex flex-col min-h-0">
+    <div className="mt-4 border rounded-lg p-3 sm:p-4 flex-1 overflow-hidden flex flex-col min-h-0">
+      {/* Header with counter */}
       <div className="flex items-center justify-between mb-3 flex-shrink-0">
-        <h4 className="font-medium flex items-center gap-2">
+        <h4 className="font-medium flex items-center gap-2 text-sm sm:text-base">
           <Users className="w-4 h-4" />
           Lista de Presença
         </h4>
-        <Badge variant="secondary" className="text-sm">
+        <Badge variant="secondary" className="text-xs sm:text-sm">
           <UserCheck className="w-3 h-3 mr-1" />
-          {presentCount} presentes
+          {presentCount} / {members.length}
         </Badge>
       </div>
-      <ScrollArea className="flex-1">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pr-4">
-          {members.map((m) => (
+
+      {/* Search */}
+      <div className="relative mb-3 flex-shrink-0">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar membro..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 h-9 text-sm"
+        />
+      </div>
+
+      {/* Members list */}
+      <div className="flex-1 overflow-y-auto -mx-1 px-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {filtered.map((m) => (
             <AttendanceItem
               key={m.memberId}
               memberName={m.memberName}
@@ -60,7 +80,10 @@ export function AttendanceList({ members, loading, presencas, onToggle }: Attend
             />
           ))}
         </div>
-      </ScrollArea>
+        {filtered.length === 0 && search && (
+          <p className="text-sm text-muted-foreground text-center py-4">Nenhum membro encontrado.</p>
+        )}
+      </div>
     </div>
   );
 }
