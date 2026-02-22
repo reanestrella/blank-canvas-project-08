@@ -55,14 +55,19 @@ export default function Celulas() {
   const [selectedCell, setSelectedCell] = useState<Cell | null>(null);
   const [selectedCellId, setSelectedCellId] = useState<string | undefined>();
 
-  const { profile, hasRole } = useAuth();
+  const { profile, hasRole, user } = useAuth();
   const churchId = profile?.church_id;
 
   // Cell leaders who are NOT pastors should only see their own cells
   const isOnlyCellLeader = hasRole("lider_celula") && !hasRole("pastor");
-  const leaderMemberId = isOnlyCellLeader ? profile?.member_id : undefined;
+  // Pass member_id if cell leader; null (not undefined) if member_id is unresolved to show nothing
+  const leaderMemberId = isOnlyCellLeader
+    ? (profile?.member_id ?? null)
+    : undefined;
+  // Pass user.id as fallback when member_id is null
+  const leaderUserId = isOnlyCellLeader && !profile?.member_id ? (user?.id ?? null) : undefined;
 
-  const { cells, reports, isLoading, createCell, updateCell, deleteCell, createReport, fetchReports } = useCells(churchId || undefined, leaderMemberId);
+  const { cells, reports, isLoading, createCell, updateCell, deleteCell, createReport, fetchReports } = useCells(churchId || undefined, leaderMemberId, leaderUserId);
   const { members } = useMembers(churchId || undefined);
 
   // Get member name by ID
