@@ -24,12 +24,23 @@ serve(async (req) => {
     const { report_id, church_id } = await req.json();
     if (!report_id || !church_id) throw new Error("report_id e church_id são obrigatórios");
 
-    // Check AI access
+    // Check AI access (including trial)
     const { data: churchFeature } = await supabase
       .from("church_features")
-      .select("ai_enabled")
+      .select("ai_enabled, ai_trial_enabled, ai_trial_end")
       .eq("church_id", church_id)
       .maybeSingle();
+
+    let churchHasAi = !!churchFeature?.ai_enabled;
+    if (!churchHasAi && churchFeature?.ai_trial_enabled && churchFeature?.ai_trial_end) {
+      const now = new Date();
+      const trialEnd = new Date(churchFeature.ai_trial_end);
+      if (now <= trialEnd) {
+        churchHasAi = true;
+      } else {
+        await supabase.from("church_features").update({ ai_trial_enabled: false }).eq("church_id", church_id);
+      }
+    }
 
     const { data: userFeature } = await supabase
       .from("user_features")
@@ -38,7 +49,7 @@ serve(async (req) => {
       .eq("church_id", church_id)
       .maybeSingle();
 
-    if (!churchFeature?.ai_enabled && !userFeature?.ai_enabled) {
+    if (!churchHasAi && !userFeature?.ai_enabled) {
       return new Response(JSON.stringify({ error: "premium_required", message: "Recurso disponível no plano premium." }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -18,13 +18,22 @@ export function useAiFeatureAccess() {
     try {
       const { data: churchFeature } = await supabase
         .from("church_features")
-        .select("ai_enabled")
+        .select("ai_enabled, ai_trial_enabled, ai_trial_end")
         .eq("church_id", currentChurchId)
         .maybeSingle();
 
+      // Check direct enable OR active trial
       if (churchFeature?.ai_enabled) {
         setHasAccess(true);
         return true;
+      }
+
+      if (churchFeature?.ai_trial_enabled && churchFeature?.ai_trial_end) {
+        const trialEnd = new Date(churchFeature.ai_trial_end);
+        if (new Date() <= trialEnd) {
+          setHasAccess(true);
+          return true;
+        }
       }
 
       const { data: userFeature } = await supabase
