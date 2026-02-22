@@ -11,6 +11,7 @@ import { BirthdayCard } from "@/components/dashboard/BirthdayCard";
 import { WeddingAnniversaryCard } from "@/components/dashboard/WeddingAnniversaryCard";
 import { NetworkOverview } from "@/components/dashboard/NetworkOverview";
 import { AlertsCard } from "@/components/dashboard/AlertsCard";
+import { AiAlertsCard } from "@/components/ai/AiAlertsCard";
 import { CongregationSelector } from "@/components/layout/CongregationSelector";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useCongregations } from "@/hooks/useCongregations";
@@ -59,6 +60,8 @@ function PastorDashboard() {
       </div>
 
       {stats.recentAlerts.length > 0 && <AlertsCard alerts={stats.recentAlerts} />}
+
+      <AiAlertsCard />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
