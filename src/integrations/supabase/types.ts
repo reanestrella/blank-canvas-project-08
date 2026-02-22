@@ -1967,7 +1967,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      accept_invitation: { Args: { p_token: string }; Returns: Json }
+      accept_invitation: { Args: { p_token: string }; Returns: undefined }
       get_current_church_id: { Args: never; Returns: string }
       get_my_roles: {
         Args: never
