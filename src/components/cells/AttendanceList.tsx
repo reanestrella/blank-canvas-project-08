@@ -44,7 +44,7 @@ export function AttendanceList({ members, loading, presencas, onToggle }: Attend
     : members;
 
   return (
-    <div className="mt-2 border rounded-lg p-3 sm:p-4 flex-1 overflow-hidden flex flex-col min-h-[250px] max-h-[400px]">
+    <div className="mt-2 border rounded-lg p-3 sm:p-4 overflow-hidden flex flex-col">
       {/* Header with counter */}
       <div className="flex items-center justify-between mb-3 flex-shrink-0">
         <h4 className="font-medium flex items-center gap-2 text-sm sm:text-base">
