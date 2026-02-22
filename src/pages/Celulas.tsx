@@ -60,14 +60,10 @@ export default function Celulas() {
 
   // Cell leaders who are NOT pastors should only see their own cells
   const isOnlyCellLeader = hasRole("lider_celula") && !hasRole("pastor");
-  // Pass member_id if cell leader; null (not undefined) if member_id is unresolved to show nothing
-  const leaderMemberId = isOnlyCellLeader
-    ? (profile?.member_id ?? null)
-    : undefined;
-  // Pass user.id as fallback when member_id is null
-  const leaderUserId = isOnlyCellLeader && !profile?.member_id ? (user?.id ?? null) : undefined;
+  // Pass user.id to filter by leader_user_id; null means "show nothing"; undefined means "show all"
+  const leaderUserId = isOnlyCellLeader ? (user?.id ?? null) : undefined;
 
-  const { cells, reports, isLoading, createCell, updateCell, deleteCell, createReport, fetchReports } = useCells(churchId || undefined, leaderMemberId, leaderUserId);
+  const { cells, reports, isLoading, createCell, updateCell, deleteCell, createReport, fetchReports } = useCells(churchId || undefined, leaderUserId);
   const { members } = useMembers(churchId || undefined);
 
   // Get member name by ID

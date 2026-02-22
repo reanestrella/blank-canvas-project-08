@@ -52,7 +52,7 @@ export interface CreateCellReportData {
   visitor_names?: string[];
 }
 
-export function useCells(churchId?: string, leaderMemberId?: string | null, leaderUserId?: string | null) {
+export function useCells(churchId?: string, leaderUserId?: string | null) {
   const [cells, setCells] = useState<Cell[]>([]);
   const [reports, setReports] = useState<CellReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,41 +67,18 @@ export function useCells(churchId?: string, leaderMemberId?: string | null, lead
     try {
       setIsLoading(true);
 
-      if (leaderMemberId) {
-        // Direct filter by member_id (resolved)
+      if (leaderUserId) {
+        // Cell leader: filter by leader_user_id (auth uid)
         const { data, error } = await supabase
           .from("cells")
           .select("*")
           .eq("church_id", churchId)
-          .eq("leader_id", leaderMemberId)
+          .eq("leader_user_id", leaderUserId)
           .order("name");
         if (error) throw error;
         setCells((data as Cell[]) || []);
-      } else if (leaderMemberId === null && leaderUserId) {
-        // member_id not resolved — find member via profiles link or match by auth user
-        // First find member_ids linked to this user via profiles
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("member_id")
-          .eq("user_id", leaderUserId)
-          .single();
-
-        if (profileData?.member_id) {
-          const { data, error } = await supabase
-            .from("cells")
-            .select("*")
-            .eq("church_id", churchId)
-            .eq("leader_id", profileData.member_id)
-            .order("name");
-          if (error) throw error;
-          setCells((data as Cell[]) || []);
-        } else {
-          // No member link at all — show nothing (strict: no fallback)
-          console.warn("[useCells] Cell leader has no member_id link, showing no cells");
-          setCells([]);
-        }
-      } else if (leaderMemberId === null && !leaderUserId) {
-        // Cell leader but no identifiers — show nothing
+      } else if (leaderUserId === null) {
+        // Explicitly null = cell leader but no user id — show nothing
         setCells([]);
       } else {
         // undefined means "no filter" (pastor/admin) — show all
@@ -278,7 +255,7 @@ export function useCells(churchId?: string, leaderMemberId?: string | null, lead
   useEffect(() => {
     fetchCells();
     fetchReports();
-  }, [churchId, leaderMemberId, leaderUserId]);
+  }, [churchId, leaderUserId]);
 
   return {
     cells,
