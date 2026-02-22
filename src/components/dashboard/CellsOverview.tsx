@@ -7,9 +7,8 @@ export function CellsOverview() {
   const { profile, hasRole, user } = useAuth();
   const churchId = profile?.church_id;
   const isOnlyCellLeader = hasRole("lider_celula") && !hasRole("pastor");
-  const leaderMemberId = isOnlyCellLeader ? (profile?.member_id ?? null) : undefined;
-  const leaderUserId = isOnlyCellLeader && !profile?.member_id ? (user?.id ?? null) : undefined;
-  const { cells, isLoading } = useCells(churchId || undefined, leaderMemberId, leaderUserId);
+  const leaderUserId = isOnlyCellLeader ? (user?.id ?? null) : undefined;
+  const { cells, isLoading } = useCells(churchId || undefined, leaderUserId);
 
   const activeCells = cells.filter(c => c.is_active);
 

@@ -576,9 +576,11 @@ export type Database = {
           id: string
           is_active: boolean
           leader_id: string | null
+          leader_user_id: string | null
           name: string
           network: string | null
           supervisor_id: string | null
+          supervisor_user_id: string | null
           time: string | null
           updated_at: string
         }
@@ -590,9 +592,11 @@ export type Database = {
           id?: string
           is_active?: boolean
           leader_id?: string | null
+          leader_user_id?: string | null
           name: string
           network?: string | null
           supervisor_id?: string | null
+          supervisor_user_id?: string | null
           time?: string | null
           updated_at?: string
         }
@@ -604,9 +608,11 @@ export type Database = {
           id?: string
           is_active?: boolean
           leader_id?: string | null
+          leader_user_id?: string | null
           name?: string
           network?: string | null
           supervisor_id?: string | null
+          supervisor_user_id?: string | null
           time?: string | null
           updated_at?: string
         }
