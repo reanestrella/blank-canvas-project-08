@@ -29,6 +29,7 @@ import Lembretes from "./pages/Lembretes";
 import Cadastrar from "./pages/Cadastrar";
 import Instalar from "./pages/Instalar";
 import NotFound from "./pages/NotFound";
+import { AiChatFab } from "@/components/ai/AiChatFab";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <AiChatFab />
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<LandingPage />} />

@@ -14,6 +14,124 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_chat_history: {
+        Row: {
+          church_id: string
+          created_at: string
+          id: string
+          message: string
+          response: string
+          user_id: string
+        }
+        Insert: {
+          church_id: string
+          created_at?: string
+          id?: string
+          message: string
+          response: string
+          user_id: string
+        }
+        Update: {
+          church_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          response?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_chat_history_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_member_alerts: {
+        Row: {
+          church_id: string
+          created_at: string
+          days_absent: number | null
+          id: string
+          last_attendance_date: string | null
+          member_id: string
+          message: string | null
+          resolved: boolean
+          risk_level: string
+        }
+        Insert: {
+          church_id: string
+          created_at?: string
+          days_absent?: number | null
+          id?: string
+          last_attendance_date?: string | null
+          member_id: string
+          message?: string | null
+          resolved?: boolean
+          risk_level?: string
+        }
+        Update: {
+          church_id?: string
+          created_at?: string
+          days_absent?: number | null
+          id?: string
+          last_attendance_date?: string | null
+          member_id?: string
+          message?: string | null
+          resolved?: boolean
+          risk_level?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_member_alerts_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_member_alerts_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_usage_control: {
+        Row: {
+          church_id: string
+          executions_today: number
+          id: string
+          last_reset_date: string
+          user_id: string
+        }
+        Insert: {
+          church_id: string
+          executions_today?: number
+          id?: string
+          last_reset_date?: string
+          user_id: string
+        }
+        Update: {
+          church_id?: string
+          executions_today?: number
+          id?: string
+          last_reset_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_control_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcements: {
         Row: {
           church_id: string
@@ -318,6 +436,7 @@ export type Database = {
       }
       cell_reports: {
         Row: {
+          ai_report: string | null
           attendance: number
           cell_id: string
           church_id: string
@@ -332,6 +451,7 @@ export type Database = {
           visitors: number
         }
         Insert: {
+          ai_report?: string | null
           attendance?: number
           cell_id: string
           church_id: string
@@ -346,6 +466,7 @@ export type Database = {
           visitors?: number
         }
         Update: {
+          ai_report?: string | null
           attendance?: number
           cell_id?: string
           church_id?: string
@@ -516,6 +637,32 @@ export type Database = {
             columns: ["supervisor_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      church_features: {
+        Row: {
+          ai_enabled: boolean
+          church_id: string
+          id: string
+        }
+        Insert: {
+          ai_enabled?: boolean
+          church_id: string
+          id?: string
+        }
+        Update: {
+          ai_enabled?: boolean
+          church_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "church_features_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: true
+            referencedRelation: "churches"
             referencedColumns: ["id"]
           },
         ]
@@ -1753,6 +1900,44 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          church_id: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          church_id: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          church_id?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reminders: {
         Row: {
           assigned_to: string | null
@@ -1926,6 +2111,35 @@ export type Database = {
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_features: {
+        Row: {
+          ai_enabled: boolean
+          church_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          ai_enabled?: boolean
+          church_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          ai_enabled?: boolean
+          church_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_features_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
             referencedColumns: ["id"]
           },
         ]
