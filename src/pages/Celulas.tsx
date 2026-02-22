@@ -155,13 +155,15 @@ export default function Celulas() {
               <FileText className="w-4 h-4 mr-2" />
               Enviar Relatório
             </Button>
-            <Button 
-              className="gradient-accent text-secondary-foreground shadow-lg hover:shadow-xl transition-all"
-              onClick={handleOpenNewCell}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Nova Célula
-            </Button>
+            {!isOnlyCellLeader && (
+              <Button 
+                className="gradient-accent text-secondary-foreground shadow-lg hover:shadow-xl transition-all"
+                onClick={handleOpenNewCell}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Nova Célula
+              </Button>
+            )}
           </div>
         </div>
 
@@ -267,15 +269,19 @@ export default function Celulas() {
                               <FileText className="w-4 h-4 mr-2" />
                               Enviar relatório
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleOpenEditCell(cell)}>
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-destructive"
-                              onClick={() => setDeletingCell(cell)}
-                            >
-                              Excluir
-                            </DropdownMenuItem>
+                            {!isOnlyCellLeader && (
+                              <>
+                                <DropdownMenuItem onClick={() => handleOpenEditCell(cell)}>
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  className="text-destructive"
+                                  onClick={() => setDeletingCell(cell)}
+                                >
+                                  Excluir
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
