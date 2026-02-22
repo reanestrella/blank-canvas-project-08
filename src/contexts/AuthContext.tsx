@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { queryClient } from "@/App";
 
 interface Profile {
   id: string;
@@ -71,6 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(null);
           setChurch(null);
           setRoles([]);
+          queryClient.clear();
           setIsLoading(false);
           return;
         }
@@ -83,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile(null);
             setChurch(null);
             setRoles([]);
+            queryClient.clear();
           }
           prevUserIdRef.current = newUserId;
           // Defer to avoid deadlock inside onAuthStateChange
@@ -189,6 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null);
     setChurch(null);
     setRoles([]);
+    queryClient.clear();
   };
 
   const hasRole = (role: UserRole["role"]) => {
