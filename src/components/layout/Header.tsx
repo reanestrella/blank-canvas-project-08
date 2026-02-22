@@ -20,7 +20,8 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const navigate = useNavigate();
-  const { profile, church, signOut, roles } = useAuth();
+  const { profile, church, signOut, roles, user } = useAuth();
+  const displayName = profile?.full_name || user?.email || "Usuário";
 
   const getInitials = (name: string) => {
     return name
@@ -113,7 +114,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden md:flex flex-col items-start">
-                  <span className="text-sm font-medium">{profile?.full_name || "Usuário"}</span>
+                  <span className="text-sm font-medium">{displayName}</span>
                   <span className="text-xs text-muted-foreground">{getRoleLabel()}</span>
                 </div>
               </Button>
@@ -121,14 +122,14 @@ export function Header({ onMenuClick }: HeaderProps) {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col">
-                  <span>{profile?.full_name || "Minha Conta"}</span>
+                  <span>{displayName}</span>
                   {church && (
                     <span className="text-xs font-normal text-muted-foreground">{church.name}</span>
                   )}
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("/meu-app")}>
+              <DropdownMenuItem onClick={() => navigate("/perfil")}>
                 <User className="w-4 h-4 mr-2" />
                 Perfil
               </DropdownMenuItem>

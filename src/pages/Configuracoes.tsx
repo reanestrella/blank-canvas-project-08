@@ -78,6 +78,9 @@ export default function Configuracoes() {
   const [aiEnabled, setAiEnabled] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSaving, setAiSaving] = useState(false);
+  const [aiTrialEnabled, setAiTrialEnabled] = useState(false);
+  const [aiTrialEnd, setAiTrialEnd] = useState<string | null>(null);
+  const [aiTrialActivating, setAiTrialActivating] = useState(false);
 
   // Church form state
   const [churchName, setChurchName] = useState("");
@@ -112,10 +115,13 @@ export default function Configuracoes() {
       try {
         const { data } = await supabase
           .from("church_features")
-          .select("ai_enabled")
+          .select("ai_enabled, ai_trial_enabled, ai_trial_end")
           .eq("church_id", churchId)
           .maybeSingle();
         setAiEnabled(!!data?.ai_enabled);
+        const trialActive = !!data?.ai_trial_enabled && data?.ai_trial_end && new Date(data.ai_trial_end) > new Date();
+        setAiTrialEnabled(!!trialActive);
+        setAiTrialEnd(data?.ai_trial_end || null);
       } finally {
         setAiLoading(false);
       }
@@ -154,6 +160,24 @@ export default function Configuracoes() {
       toast({ title: "Erro", description: "Não foi possível alterar o status da IA.", variant: "destructive" });
     } finally {
       setAiSaving(false);
+    }
+  };
+
+  const handleActivateTrial = async () => {
+    if (!churchId) return;
+    setAiTrialActivating(true);
+    try {
+      const { error } = await supabase.rpc("enable_ai_trial", { p_church_id: churchId, p_trial_days: 30 });
+      if (error) throw error;
+      setAiTrialEnabled(true);
+      const end = new Date();
+      end.setDate(end.getDate() + 30);
+      setAiTrialEnd(end.toISOString());
+      toast({ title: "Teste gratuito ativado!", description: "A Inteligência Ministerial está disponível por 30 dias." });
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message || "Não foi possível ativar o teste.", variant: "destructive" });
+    } finally {
+      setAiTrialActivating(false);
     }
   };
 
@@ -532,7 +556,34 @@ export default function Configuracoes() {
                         disabled={aiSaving}
                       />
                     </div>
-                    {aiEnabled && (
+                    {/* Trial Section */}
+                    {!aiEnabled && (
+                      <div className="p-4 rounded-lg border border-dashed space-y-3">
+                        {aiTrialEnabled && aiTrialEnd ? (
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium text-foreground">
+                              ✅ Teste gratuito da Inteligência Ministerial ativo.
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Válido até: {new Date(aiTrialEnd).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <p className="font-medium">Experimente grátis por 30 dias</p>
+                            <p className="text-sm text-muted-foreground">
+                              Ative o teste gratuito para experimentar todos os recursos de Inteligência Ministerial sem compromisso.
+                            </p>
+                            <Button onClick={handleActivateTrial} disabled={aiTrialActivating} variant="outline">
+                              {aiTrialActivating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                              Ativar teste gratuito da IA
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {(aiEnabled || aiTrialEnabled) && (
                       <div className="p-4 rounded-lg bg-muted/50 space-y-2">
                         <p className="text-sm font-medium text-foreground">Recursos habilitados:</p>
                         <ul className="text-sm text-muted-foreground space-y-1">

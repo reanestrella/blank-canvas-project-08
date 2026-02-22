@@ -239,7 +239,7 @@ export function CellReportWithAttendanceModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[95vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[90vh] sm:max-h-[95vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Relatório Semanal da Célula</DialogTitle>
           <DialogDescription>
@@ -392,11 +392,11 @@ export function CellReportWithAttendanceModal({
                 />
               </div>
 
-              <DialogFooter className="flex-shrink-0">
+              <DialogFooter className="flex-shrink-0 sticky bottom-0 bg-background pt-4 pb-2 border-t -mx-1 px-1">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting} className="min-h-[44px]">
                   {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Enviar Relatório
                 </Button>

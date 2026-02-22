@@ -650,16 +650,25 @@ export type Database = {
       church_features: {
         Row: {
           ai_enabled: boolean
+          ai_trial_enabled: boolean
+          ai_trial_end: string | null
+          ai_trial_start: string | null
           church_id: string
           id: string
         }
         Insert: {
           ai_enabled?: boolean
+          ai_trial_enabled?: boolean
+          ai_trial_end?: string | null
+          ai_trial_start?: string | null
           church_id: string
           id?: string
         }
         Update: {
           ai_enabled?: boolean
+          ai_trial_enabled?: boolean
+          ai_trial_end?: string | null
+          ai_trial_start?: string | null
           church_id?: string
           id?: string
         }
@@ -2188,6 +2197,10 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { p_token: string }; Returns: undefined }
+      enable_ai_trial: {
+        Args: { p_church_id: string; p_trial_days?: number }
+        Returns: undefined
+      }
       get_current_church_id: { Args: never; Returns: string }
       get_my_roles: {
         Args: never

@@ -6,6 +6,35 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function checkAiAccess(supabase: any, churchId: string, userId: string): Promise<{ allowed: boolean; reason?: string }> {
+  const { data: churchFeature } = await supabase
+    .from("church_features")
+    .select("ai_enabled, ai_trial_enabled, ai_trial_end")
+    .eq("church_id", churchId)
+    .maybeSingle();
+
+  if (churchFeature?.ai_enabled) return { allowed: true };
+
+  if (churchFeature?.ai_trial_enabled && churchFeature?.ai_trial_end) {
+    const now = new Date();
+    const trialEnd = new Date(churchFeature.ai_trial_end);
+    if (now <= trialEnd) return { allowed: true };
+    // Auto-disable expired trial
+    await supabase.from("church_features").update({ ai_trial_enabled: false }).eq("church_id", churchId);
+  }
+
+  const { data: userFeature } = await supabase
+    .from("user_features")
+    .select("ai_enabled")
+    .eq("user_id", userId)
+    .eq("church_id", churchId)
+    .maybeSingle();
+
+  if (userFeature?.ai_enabled) return { allowed: true };
+
+  return { allowed: false, reason: "premium_required" };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -17,7 +46,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get user from token
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!);
     const { data: { user }, error: authError } = await anonClient.auth.getUser(authHeader.replace("Bearer ", ""));
     if (authError || !user) throw new Error("Usuário não autenticado");
@@ -25,21 +53,8 @@ serve(async (req) => {
     const { message, church_id } = await req.json();
     if (!message || !church_id) throw new Error("Mensagem e church_id são obrigatórios");
 
-    // Check AI access
-    const { data: churchFeature } = await supabase
-      .from("church_features")
-      .select("ai_enabled")
-      .eq("church_id", church_id)
-      .maybeSingle();
-
-    const { data: userFeature } = await supabase
-      .from("user_features")
-      .select("ai_enabled")
-      .eq("user_id", user.id)
-      .eq("church_id", church_id)
-      .maybeSingle();
-
-    if (!churchFeature?.ai_enabled && !userFeature?.ai_enabled) {
+    const access = await checkAiAccess(supabase, church_id, user.id);
+    if (!access.allowed) {
       return new Response(JSON.stringify({ error: "premium_required", message: "Recurso disponível no plano premium." }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -70,7 +85,6 @@ serve(async (req) => {
       await supabase.from("ai_usage_control").insert({ church_id, user_id: user.id, executions_today: 1, last_reset_date: today });
     }
 
-    // Call Lovable AI
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
 
