@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { queryClient } from "@/App";
+import { queryClient } from "@/lib/queryClient";
 
 interface Profile {
   id: string;
@@ -130,7 +130,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (profileError) {
         console.error("[Auth] Error fetching profile:", profileError.message);
-        setProfile(null);
+        // Fallback: create a minimal profile from auth user data
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          setProfile({
+            id: "",
+            user_id: userId,
+            church_id: null,
+            full_name: authUser.email || "Usuário",
+            email: authUser.email || "",
+            phone: null,
+            avatar_url: null,
+          });
+        } else {
+          setProfile(null);
+        }
         setChurch(null);
         setRoles([]);
         return;
