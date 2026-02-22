@@ -55,9 +55,14 @@ export default function Celulas() {
   const [selectedCell, setSelectedCell] = useState<Cell | null>(null);
   const [selectedCellId, setSelectedCellId] = useState<string | undefined>();
 
-  const { profile } = useAuth();
+  const { profile, hasRole } = useAuth();
   const churchId = profile?.church_id;
-  const { cells, reports, isLoading, createCell, updateCell, deleteCell, createReport, fetchReports } = useCells(churchId || undefined);
+
+  // Cell leaders who are NOT pastors should only see their own cells
+  const isOnlyCellLeader = hasRole("lider_celula") && !hasRole("pastor");
+  const leaderMemberId = isOnlyCellLeader ? profile?.member_id : undefined;
+
+  const { cells, reports, isLoading, createCell, updateCell, deleteCell, createReport, fetchReports } = useCells(churchId || undefined, leaderMemberId);
   const { members } = useMembers(churchId || undefined);
 
   // Get member name by ID

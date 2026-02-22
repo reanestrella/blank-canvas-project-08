@@ -52,7 +52,7 @@ export interface CreateCellReportData {
   visitor_names?: string[];
 }
 
-export function useCells(churchId?: string) {
+export function useCells(churchId?: string, leaderMemberId?: string | null) {
   const [cells, setCells] = useState<Cell[]>([]);
   const [reports, setReports] = useState<CellReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,11 +66,18 @@ export function useCells(churchId?: string) {
     }
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from("cells")
         .select("*")
         .eq("church_id", churchId)
         .order("name");
+      
+      // If leaderMemberId is provided, filter cells to only those led by this member
+      if (leaderMemberId) {
+        query = query.eq("leader_id", leaderMemberId);
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       setCells((data as Cell[]) || []);
@@ -239,7 +246,7 @@ export function useCells(churchId?: string) {
   useEffect(() => {
     fetchCells();
     fetchReports();
-  }, [churchId]);
+  }, [churchId, leaderMemberId]);
 
   return {
     cells,
