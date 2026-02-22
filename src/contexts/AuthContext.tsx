@@ -151,8 +151,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (profileData) {
-        setProfile(profileData as Profile);
-        console.log("[Auth] profile loaded, churchId:", profileData.church_id);
+        let resolvedProfile = profileData as Profile;
+
+        // Auto-resolve member_id if missing (for existing users without linkage)
+        if (!profileData.member_id && profileData.church_id && profileData.email) {
+          const { data: memberMatch } = await supabase
+            .from("members")
+            .select("id")
+            .eq("church_id", profileData.church_id)
+            .eq("email", profileData.email)
+            .limit(1)
+            .maybeSingle();
+          
+          if (memberMatch) {
+            console.log("[Auth] Auto-linked member_id:", memberMatch.id);
+            // Update profile in DB
+            await supabase
+              .from("profiles")
+              .update({ member_id: memberMatch.id })
+              .eq("user_id", userId);
+            resolvedProfile = { ...resolvedProfile, member_id: memberMatch.id };
+          }
+        }
+
+        setProfile(resolvedProfile);
+        console.log("[Auth] profile loaded, churchId:", profileData.church_id, "memberId:", resolvedProfile.member_id);
         
         // 2. Fetch church info ONLY if profile has church_id
         if (profileData.church_id) {
