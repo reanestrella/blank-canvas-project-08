@@ -24,12 +24,14 @@ import {
   Building,
   MapPin,
   Edit,
+  Bot,
 } from "lucide-react";
 import { useInvitations } from "@/hooks/useInvitations";
 import { useCongregations } from "@/hooks/useCongregations";
 import { useChurchSettings } from "@/hooks/useChurchSettings";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { InviteUserModal } from "@/components/modals/InviteUserModal";
 import { CongregationModal } from "@/components/modals/CongregationModal";
 import type { Congregation, CreateCongregationData } from "@/hooks/useCongregations";
@@ -72,6 +74,11 @@ export default function Configuracoes() {
   const [congregationModalOpen, setCongregationModalOpen] = useState(false);
   const [editingCongregation, setEditingCongregation] = useState<Congregation | undefined>();
   
+  // AI feature state
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSaving, setAiSaving] = useState(false);
+
   // Church form state
   const [churchName, setChurchName] = useState("");
   const [churchCnpj, setChurchCnpj] = useState("");
@@ -96,6 +103,59 @@ export default function Configuracoes() {
       setChurchAddress(church.address || "");
     }
   }, [church]);
+
+  // Load AI feature status
+  useEffect(() => {
+    if (!churchId) return;
+    setAiLoading(true);
+    const loadAi = async () => {
+      try {
+        const { data } = await supabase
+          .from("church_features")
+          .select("ai_enabled")
+          .eq("church_id", churchId)
+          .maybeSingle();
+        setAiEnabled(!!data?.ai_enabled);
+      } finally {
+        setAiLoading(false);
+      }
+    };
+    loadAi();
+  }, [churchId]);
+
+  const handleToggleAi = async (enabled: boolean) => {
+    if (!churchId) return;
+    setAiSaving(true);
+    try {
+      const { data: existing } = await supabase
+        .from("church_features")
+        .select("id")
+        .eq("church_id", churchId)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from("church_features")
+          .update({ ai_enabled: enabled })
+          .eq("church_id", churchId);
+      } else {
+        await supabase
+          .from("church_features")
+          .insert({ church_id: churchId, ai_enabled: enabled });
+      }
+      setAiEnabled(enabled);
+      toast({
+        title: enabled ? "IA ativada" : "IA desativada",
+        description: enabled
+          ? "Os recursos de inteligência artificial foram habilitados para esta igreja."
+          : "Os recursos de IA foram desabilitados.",
+      });
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível alterar o status da IA.", variant: "destructive" });
+    } finally {
+      setAiSaving(false);
+    }
+  };
 
   const handleSaveChurch = async () => {
     const result = await updateChurch({
@@ -168,6 +228,10 @@ export default function Configuracoes() {
             <TabsTrigger value="plan" className="gap-2">
               <Crown className="w-4 h-4" />
               <span className="hidden sm:inline">Plano</span>
+            </TabsTrigger>
+            <TabsTrigger value="ai" className="gap-2">
+              <Bot className="w-4 h-4" />
+              <span className="hidden sm:inline">IA</span>
             </TabsTrigger>
           </TabsList>
 
@@ -435,6 +499,65 @@ export default function Configuracoes() {
                 </Card>
               ))}
             </div>
+          </TabsContent>
+
+          <TabsContent value="ai" className="space-y-6 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bot className="w-5 h-5" />
+                  Inteligência Artificial
+                </CardTitle>
+                <CardDescription>
+                  Gerencie o acesso aos recursos de IA da sua igreja
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {aiLoading ? (
+                  <div className="flex items-center justify-center p-8">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between p-4 rounded-lg border">
+                      <div>
+                        <p className="font-medium">Habilitar IA para esta igreja</p>
+                        <p className="text-sm text-muted-foreground">
+                          Ativa o Assistente de Liderança, detecção de ausências e relatórios inteligentes para todos os usuários.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={aiEnabled}
+                        onCheckedChange={handleToggleAi}
+                        disabled={aiSaving}
+                      />
+                    </div>
+                    {aiEnabled && (
+                      <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                        <p className="text-sm font-medium text-foreground">Recursos habilitados:</p>
+                        <ul className="text-sm text-muted-foreground space-y-1">
+                          <li className="flex items-center gap-2">
+                            <Check className="w-4 h-4 text-success" />
+                            Assistente de Liderança (chat com IA)
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="w-4 h-4 text-success" />
+                            Detecção automática de membros ausentes
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="w-4 h-4 text-success" />
+                            Relatórios inteligentes de célula
+                          </li>
+                        </ul>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Limite: 10 execuções por dia por usuário.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

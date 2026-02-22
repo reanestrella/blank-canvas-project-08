@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -57,9 +57,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const currentChurchId = profile?.church_id ?? null;
   const hasNoChurch = !isLoading && !!user && !currentChurchId;
 
-  useEffect(() => {
-    let initialLoad = true;
+  const prevUserIdRef = useRef<string | null>(null);
 
+  useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("[Auth] event:", event, "user:", session?.user?.id);
@@ -67,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         
         if (event === "SIGNED_OUT") {
+          prevUserIdRef.current = null;
           setProfile(null);
           setChurch(null);
           setRoles([]);
@@ -75,12 +76,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         
         if (session?.user) {
+          const newUserId = session.user.id;
+          // If user changed, clear stale state immediately
+          if (prevUserIdRef.current && prevUserIdRef.current !== newUserId) {
+            console.log("[Auth] User changed, clearing stale state");
+            setProfile(null);
+            setChurch(null);
+            setRoles([]);
+          }
+          prevUserIdRef.current = newUserId;
           // Defer to avoid deadlock inside onAuthStateChange
           setTimeout(async () => {
-            await fetchUserData(session.user.id);
+            await fetchUserData(newUserId);
             setIsLoading(false);
           }, 0);
         } else {
+          prevUserIdRef.current = null;
           setProfile(null);
           setChurch(null);
           setRoles([]);
@@ -94,11 +105,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        prevUserIdRef.current = session.user.id;
         await fetchUserData(session.user.id);
       }
       
       setIsLoading(false);
-      initialLoad = false;
     });
 
     return () => subscription.unsubscribe();
@@ -108,12 +119,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("[Auth] fetchUserData for:", userId);
       // 1. Fetch profile — single source of church_id
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("user_id", userId)
-        .maybeSingle();
+        .single();
       
+      if (profileError) {
+        console.error("[Auth] Error fetching profile:", profileError.message);
+        setProfile(null);
+        setChurch(null);
+        setRoles([]);
+        return;
+      }
+
       if (profileData) {
         setProfile(profileData as Profile);
         console.log("[Auth] profile loaded, churchId:", profileData.church_id);

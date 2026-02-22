@@ -250,7 +250,7 @@ export function CellReportWithAttendanceModal({
         <CellReportErrorBoundary>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 overflow-hidden gap-4">
-              <div className="space-y-4 flex-shrink-0">
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1">
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -290,18 +290,16 @@ export function CellReportWithAttendanceModal({
                     )}
                   />
                 </div>
-              </div>
 
-              {selectedCellId && (
-                <AttendanceList
-                  members={members}
-                  loading={loadingMembers}
-                  presencas={presencas}
-                  onToggle={togglePresenca}
-                />
-              )}
+                {selectedCellId && (
+                  <AttendanceList
+                    members={members}
+                    loading={loadingMembers}
+                    presencas={presencas}
+                    onToggle={togglePresenca}
+                  />
+                )}
 
-              <div className="space-y-4 mt-4 flex-shrink-0 overflow-y-auto max-h-[300px]">
                 {/* Visitors */}
                 <div className="border rounded-lg p-3 space-y-2">
                   <FormLabel>Visitantes</FormLabel>
@@ -394,7 +392,7 @@ export function CellReportWithAttendanceModal({
                 />
               </div>
 
-              <DialogFooter className="mt-4 flex-shrink-0">
+              <DialogFooter className="flex-shrink-0">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   Cancelar
                 </Button>
