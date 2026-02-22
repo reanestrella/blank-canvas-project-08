@@ -31,7 +31,7 @@ import Instalar from "./pages/Instalar";
 import NotFound from "./pages/NotFound";
 import { AiChatFab } from "@/components/ai/AiChatFab";
 
-const queryClient = new QueryClient();
+export const queryClient = new QueryClient();
 
 function UnhandledRejectionHandler() {
   useEffect(() => {
