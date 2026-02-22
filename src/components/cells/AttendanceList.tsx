@@ -44,7 +44,7 @@ export function AttendanceList({ members, loading, presencas, onToggle }: Attend
     : members;
 
   return (
-    <div className="mt-4 border rounded-lg p-3 sm:p-4 flex-1 overflow-hidden flex flex-col min-h-0">
+    <div className="mt-2 border rounded-lg p-3 sm:p-4 flex-1 overflow-hidden flex flex-col min-h-[250px] max-h-[400px]">
       {/* Header with counter */}
       <div className="flex items-center justify-between mb-3 flex-shrink-0">
         <h4 className="font-medium flex items-center gap-2 text-sm sm:text-base">
@@ -69,8 +69,8 @@ export function AttendanceList({ members, loading, presencas, onToggle }: Attend
       </div>
 
       {/* Members list */}
-      <div className="flex-1 overflow-y-auto -mx-1 px-1">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="flex-1 overflow-y-auto -mx-1 px-1 min-h-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2">
           {filtered.map((m) => (
             <AttendanceItem
               key={m.memberId}

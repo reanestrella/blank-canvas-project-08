@@ -239,7 +239,7 @@ export function CellReportWithAttendanceModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[95vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Relatório Semanal da Célula</DialogTitle>
           <DialogDescription>
@@ -249,7 +249,7 @@ export function CellReportWithAttendanceModal({
 
         <CellReportErrorBoundary>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 overflow-hidden">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 overflow-hidden gap-4">
               <div className="space-y-4 flex-shrink-0">
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
