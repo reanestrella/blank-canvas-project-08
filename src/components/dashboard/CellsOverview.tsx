@@ -4,9 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCells } from "@/hooks/useCells";
 
 export function CellsOverview() {
-  const { profile } = useAuth();
+  const { profile, hasRole, user } = useAuth();
   const churchId = profile?.church_id;
-  const { cells, isLoading } = useCells(churchId || undefined);
+  const isOnlyCellLeader = hasRole("lider_celula") && !hasRole("pastor");
+  const leaderMemberId = isOnlyCellLeader ? (profile?.member_id ?? null) : undefined;
+  const leaderUserId = isOnlyCellLeader && !profile?.member_id ? (user?.id ?? null) : undefined;
+  const { cells, isLoading } = useCells(churchId || undefined, leaderMemberId, leaderUserId);
 
   const activeCells = cells.filter(c => c.is_active);
 
