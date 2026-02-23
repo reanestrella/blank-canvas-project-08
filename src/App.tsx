@@ -32,7 +32,6 @@ import Instalar from "./pages/Instalar";
 import DevAdmin from "./pages/DevAdmin";
 import Assistente from "./pages/Assistente";
 import NotFound from "./pages/NotFound";
-import { AiChatFab } from "@/components/ai/AiChatFab";
 import { queryClient } from "@/lib/queryClient";
 
 function UnhandledRejectionHandler() {
@@ -55,7 +54,6 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <AiChatFab />
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<LandingPage />} />

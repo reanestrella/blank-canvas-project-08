@@ -31,7 +31,7 @@ const allMenuItems: MenuItem[] = [
   { icon: Home, label: "Visitas", path: "/visitas", allowedRoles: ["pastor", "secretario"] },
   { icon: Armchair, label: "Gabinete", path: "/gabinete", allowedRoles: ["pastor", "secretario"] },
   { icon: Bell, label: "Lembretes", path: "/lembretes", allowedRoles: ["pastor", "secretario"] },
-  { icon: Sparkles, label: "Assistente IA", path: "/assistente", allowedRoles: ["pastor", "lider_celula", "lider_ministerio"] },
+  { icon: Sparkles, label: "Meu Assistente", path: "/assistente", allowedRoles: ["pastor", "lider_celula", "lider_ministerio"] },
   { icon: User, label: "Meu App", path: "/meu-app" },
 ];
 

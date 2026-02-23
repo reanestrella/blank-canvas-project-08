@@ -1,30 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Plus,
-  Grid3X3,
-  Users,
-  MapPin,
-  Calendar,
-  TrendingUp,
-  Heart,
-  Clock,
-  MoreHorizontal,
-  FileText,
-  Loader2,
-  UserPlus,
-  BarChart3,
-  Sparkles,
+  Plus, Grid3X3, Users, MapPin, Calendar, TrendingUp, Heart, Clock,
+  MoreHorizontal, FileText, Loader2, UserPlus, BarChart3, Sparkles,
+  DollarSign, Percent, Eye,
 } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useCells, CreateCellData, CreateCellReportData } from "@/hooks/useCells";
 import { useMembers } from "@/hooks/useMembers";
@@ -35,6 +22,7 @@ import { CellReportsOverview } from "@/components/cells/CellReportsOverview";
 import { CellLeaderPillars } from "@/components/cells/CellLeaderPillars";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import type { Cell } from "@/hooks/useCells";
 
 const statusConfig = {
@@ -54,19 +42,37 @@ export default function Celulas() {
   const [deletingCell, setDeletingCell] = useState<Cell | null>(null);
   const [selectedCell, setSelectedCell] = useState<Cell | null>(null);
   const [selectedCellId, setSelectedCellId] = useState<string | undefined>();
+  const [cellMemberCounts, setCellMemberCounts] = useState<Record<string, number>>({});
 
   const { profile, hasRole, user } = useAuth();
   const churchId = profile?.church_id;
 
-  // Cell leaders who are NOT pastors should only see their own cells
   const isOnlyCellLeader = hasRole("lider_celula") && !hasRole("pastor");
-  // Pass user.id to filter by leader_user_id; null means "show nothing"; undefined means "show all"
   const leaderUserId = isOnlyCellLeader ? (user?.id ?? null) : undefined;
 
   const { cells, reports, isLoading, createCell, updateCell, deleteCell, createReport, fetchReports } = useCells(churchId || undefined, leaderUserId);
   const { members } = useMembers(churchId || undefined);
 
-  // Get member name by ID
+  // Fetch cell member counts
+  useEffect(() => {
+    if (cells.length === 0) return;
+    const fetchCounts = async () => {
+      const cellIds = cells.map(c => c.id);
+      const { data } = await supabase
+        .from("cell_members")
+        .select("cell_id")
+        .in("cell_id", cellIds);
+      if (data) {
+        const counts: Record<string, number> = {};
+        data.forEach((row: any) => {
+          counts[row.cell_id] = (counts[row.cell_id] || 0) + 1;
+        });
+        setCellMemberCounts(counts);
+      }
+    };
+    fetchCounts();
+  }, [cells]);
+
   const getMemberName = (memberId: string | null) => {
     if (!memberId) return null;
     const member = members.find((m) => m.id === memberId);
@@ -75,42 +81,43 @@ export default function Celulas() {
 
   // Calculate stats
   const activeCells = cells.filter((c) => c.is_active);
-  const totalVisitors = reports.reduce((sum, r) => sum + r.visitors, 0);
-  const totalConversions = reports.reduce((sum, r) => sum + r.conversions, 0);
+
+  // Monthly stats (last 30 days)
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const monthReports = reports.filter(r => new Date(r.report_date) >= thirtyDaysAgo);
+  const totalVisitorsMonth = monthReports.reduce((sum, r) => sum + r.visitors, 0);
+  const totalConversionsMonth = monthReports.reduce((sum, r) => sum + r.conversions, 0);
+  const totalOfferingMonth = monthReports.reduce((sum, r) => sum + (r.offering || 0), 0);
+  const totalAttendanceMonth = monthReports.reduce((sum, r) => sum + r.attendance, 0);
+  const avgAttendance = monthReports.length > 0 ? Math.round(totalAttendanceMonth / monthReports.length) : 0;
+  const totalCellMembers = Object.values(cellMemberCounts).reduce((sum, c) => sum + c, 0);
+  const attendancePercent = totalCellMembers > 0 && monthReports.length > 0
+    ? Math.round((avgAttendance / totalCellMembers) * 100)
+    : 0;
+
+  // Cell leader dashboard stats
+  const leaderStats = [
+    { label: "Discípulos", value: totalCellMembers, icon: Users, color: "text-primary" },
+    { label: "Presentes (Média)", value: avgAttendance, icon: TrendingUp, color: "text-success" },
+    { label: "% Presença", value: `${attendancePercent}%`, icon: Percent, color: "text-info" },
+    { label: "Visitantes/Mês", value: totalVisitorsMonth, icon: Eye, color: "text-secondary" },
+    { label: "Decisões/Mês", value: totalConversionsMonth, icon: Heart, color: "text-rose-500" },
+    { label: "Oferta/Mês", value: `R$ ${totalOfferingMonth.toFixed(0)}`, icon: DollarSign, color: "text-amber-500" },
+  ];
 
   const stats = [
     { label: "Células Ativas", value: activeCells.length, icon: Grid3X3, color: "text-success" },
     { label: "Total de Células", value: cells.length, icon: Users, color: "text-primary" },
-    { label: "Visitantes (Total)", value: totalVisitors, icon: Heart, color: "text-secondary" },
-    { label: "Decisões (Total)", value: totalConversions, icon: TrendingUp, color: "text-info" },
+    { label: "Visitantes (Total)", value: totalVisitorsMonth, icon: Heart, color: "text-secondary" },
+    { label: "Decisões (Total)", value: totalConversionsMonth, icon: TrendingUp, color: "text-info" },
   ];
 
-  const handleOpenNewCell = () => {
-    setEditingCell(undefined);
-    setCellModalOpen(true);
-  };
-
-  const handleOpenEditCell = (cell: Cell) => {
-    setEditingCell(cell);
-    setCellModalOpen(true);
-  };
-
-  const handleOpenMembers = (cell: Cell) => {
-    setSelectedCell(cell);
-    setMembersModalOpen(true);
-  };
-
-  const handleCloseCellModal = (open: boolean) => {
-    setCellModalOpen(open);
-    if (!open) {
-      setEditingCell(undefined);
-    }
-  };
-
-  const handleOpenReport = (cellId?: string) => {
-    setSelectedCellId(cellId);
-    setReportModalOpen(true);
-  };
+  const handleOpenNewCell = () => { setEditingCell(undefined); setCellModalOpen(true); };
+  const handleOpenEditCell = (cell: Cell) => { setEditingCell(cell); setCellModalOpen(true); };
+  const handleOpenMembers = (cell: Cell) => { setSelectedCell(cell); setMembersModalOpen(true); };
+  const handleCloseCellModal = (open: boolean) => { setCellModalOpen(open); if (!open) setEditingCell(undefined); };
+  const handleOpenReport = (cellId?: string) => { setSelectedCellId(cellId); setReportModalOpen(true); };
 
   const handleCreateCell = async (data: CreateCellData) => {
     if (!churchId) return { data: null, error: new Error("Igreja não identificada") };
@@ -124,13 +131,10 @@ export default function Celulas() {
 
   const handleCreateReport = async (data: CreateCellReportData) => {
     const result = await createReport(data);
-    if (!result.error) {
-      fetchReports(); // Refresh reports after creating
-    }
+    if (!result.error) fetchReports();
     return result;
   };
 
-  // Get cell status based on members and activity
   const getCellStatus = (cell: Cell) => {
     if (!cell.is_active) return "inactive";
     const recentReports = reports.filter(
@@ -146,9 +150,13 @@ export default function Celulas() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold">Células</h1>
+            <h1 className="text-2xl md:text-3xl font-bold">
+              {isOnlyCellLeader ? "Minha Célula" : "Células"}
+            </h1>
             <p className="text-muted-foreground">
-              Gerencie as células e grupos familiares da sua igreja
+              {isOnlyCellLeader
+                ? "Dashboard e gestão da sua célula"
+                : "Gerencie as células e grupos familiares da sua igreja"}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -157,10 +165,7 @@ export default function Celulas() {
               Enviar Relatório
             </Button>
             {!isOnlyCellLeader && (
-              <Button 
-                className="gradient-accent text-secondary-foreground shadow-lg hover:shadow-xl transition-all"
-                onClick={handleOpenNewCell}
-              >
+              <Button className="gradient-accent text-secondary-foreground shadow-lg hover:shadow-xl transition-all" onClick={handleOpenNewCell}>
                 <Plus className="w-4 h-4 mr-2" />
                 Nova Célula
               </Button>
@@ -168,22 +173,39 @@ export default function Celulas() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {stats.map((stat) => (
-            <div key={stat.label} className="stat-card">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg bg-muted ${stat.color}`}>
-                  <stat.icon className="w-5 h-5" />
-                </div>
-                <div>
+        {/* Cell Leader Dashboard */}
+        {isOnlyCellLeader && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {leaderStats.map((stat) => (
+              <Card key={stat.label} className="text-center">
+                <CardContent className="p-4">
+                  <stat.icon className={`w-6 h-6 mx-auto mb-2 ${stat.color}`} />
                   <p className="text-2xl font-bold">{stat.value}</p>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Pastor/Admin Stats */}
+        {!isOnlyCellLeader && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {stats.map((stat) => (
+              <div key={stat.label} className="stat-card">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg bg-muted ${stat.color}`}>
+                    <stat.icon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stat.value}</p>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -204,7 +226,6 @@ export default function Celulas() {
             )}
           </TabsList>
 
-          {/* Cells Tab */}
           <TabsContent value="cells" className="mt-6">
             {isLoading ? (
               <div className="flex items-center justify-center p-12">
@@ -214,13 +235,8 @@ export default function Celulas() {
               <div className="card-elevated flex flex-col items-center justify-center p-12 text-center">
                 <Grid3X3 className="w-12 h-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium">Nenhuma célula cadastrada</h3>
-                <p className="text-muted-foreground mb-4">
-                  Comece criando a primeira célula da sua igreja.
-                </p>
-                <Button onClick={handleOpenNewCell}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Criar Célula
-                </Button>
+                <p className="text-muted-foreground mb-4">Comece criando a primeira célula da sua igreja.</p>
+                <Button onClick={handleOpenNewCell}><Plus className="w-4 h-4 mr-2" />Criar Célula</Button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -228,25 +244,21 @@ export default function Celulas() {
                   const status = getCellStatus(cell);
                   const leaderName = getMemberName(cell.leader_id);
                   const supervisorName = getMemberName(cell.supervisor_id);
+                  const memberCount = cellMemberCounts[cell.id] || 0;
                   
                   return (
-                    <div
-                      key={cell.id}
-                      className="card-elevated p-5 hover:shadow-lg transition-all duration-300 animate-fade-in"
-                    >
-                      {/* Header */}
+                    <div key={cell.id} className="card-elevated p-5 hover:shadow-lg transition-all duration-300 animate-fade-in">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <h3 className="font-semibold text-lg">{cell.name}</h3>
-                            <Badge
-                              variant="secondary"
-                              className={statusConfig[status]?.color}
-                            >
+                            <Badge variant="secondary" className={statusConfig[status]?.color}>
                               {statusConfig[status]?.label}
                             </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground">{cell.network || "Sem rede"}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {cell.network || "Sem rede"} • {memberCount} discípulos
+                          </p>
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -255,39 +267,25 @@ export default function Celulas() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {
-                              setPillarsCell(cell);
-                              setActiveTab("pillars");
-                            }}>
-                              <Sparkles className="w-4 h-4 mr-2" />
-                              Ferramentas do Líder
+                            <DropdownMenuItem onClick={() => { setPillarsCell(cell); setActiveTab("pillars"); }}>
+                              <Sparkles className="w-4 h-4 mr-2" />Ferramentas do Líder
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleOpenMembers(cell)}>
-                              <UserPlus className="w-4 h-4 mr-2" />
-                              Gerenciar membros
+                              <UserPlus className="w-4 h-4 mr-2" />Gerenciar membros
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleOpenReport(cell.id)}>
-                              <FileText className="w-4 h-4 mr-2" />
-                              Enviar relatório
+                              <FileText className="w-4 h-4 mr-2" />Enviar relatório
                             </DropdownMenuItem>
                             {!isOnlyCellLeader && (
                               <>
-                                <DropdownMenuItem onClick={() => handleOpenEditCell(cell)}>
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  className="text-destructive"
-                                  onClick={() => setDeletingCell(cell)}
-                                >
-                                  Excluir
-                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleOpenEditCell(cell)}>Editar</DropdownMenuItem>
+                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingCell(cell)}>Excluir</DropdownMenuItem>
                               </>
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
 
-                      {/* Leader */}
                       <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-muted/50">
                         <Avatar className="w-10 h-10">
                           <AvatarImage src="" />
@@ -297,53 +295,35 @@ export default function Celulas() {
                         </Avatar>
                         <div>
                           <p className="font-medium text-sm">{leaderName || "Sem líder"}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Supervisor: {supervisorName || "Não definido"}
-                          </p>
+                          <p className="text-xs text-muted-foreground">Supervisor: {supervisorName || "Não definido"}</p>
                         </div>
                       </div>
 
-                      {/* Info */}
                       <div className="space-y-2 mb-4">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <MapPin className="w-4 h-4" />
-                          <span className="truncate">{cell.address || "Local não definido"}</span>
+                          <MapPin className="w-4 h-4" /><span className="truncate">{cell.address || "Local não definido"}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="w-4 h-4" />
-                          <span>{cell.day_of_week || "Dia não definido"}</span>
-                          {cell.time && (
-                            <>
-                              <Clock className="w-4 h-4 ml-2" />
-                              <span>{cell.time}</span>
-                            </>
-                          )}
+                          <Calendar className="w-4 h-4" /><span>{cell.day_of_week || "Dia não definido"}</span>
+                          {cell.time && (<><Clock className="w-4 h-4 ml-2" /><span>{cell.time}</span></>)}
                         </div>
                       </div>
 
-                      {/* Stats Row */}
                       {(() => {
                         const cellReports = reports.filter((r) => r.cell_id === cell.id);
                         const lastReport = cellReports[0];
-                        
                         return (
                           <div className="grid grid-cols-3 gap-2 pt-4 border-t">
                             <div className="text-center">
-                              <p className="text-lg font-bold text-success">
-                                {lastReport?.attendance || 0}
-                              </p>
+                              <p className="text-lg font-bold text-success">{lastReport?.attendance || 0}</p>
                               <p className="text-xs text-muted-foreground">Presença</p>
                             </div>
                             <div className="text-center border-x">
-                              <p className="text-lg font-bold text-secondary">
-                                {lastReport?.visitors || 0}
-                              </p>
+                              <p className="text-lg font-bold text-secondary">{lastReport?.visitors || 0}</p>
                               <p className="text-xs text-muted-foreground">Visitantes</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-lg font-bold text-info">
-                                {lastReport?.conversions || 0}
-                              </p>
+                              <p className="text-lg font-bold text-info">{lastReport?.conversions || 0}</p>
                               <p className="text-xs text-muted-foreground">Decisões</p>
                             </div>
                           </div>
@@ -356,16 +336,10 @@ export default function Celulas() {
             )}
           </TabsContent>
 
-          {/* Reports Overview Tab */}
           <TabsContent value="reports" className="mt-6">
-            <CellReportsOverview
-              cells={cells}
-              reports={reports}
-              getMemberName={getMemberName}
-            />
+            <CellReportsOverview cells={cells} reports={reports} getMemberName={getMemberName} />
           </TabsContent>
 
-          {/* Leader Pillars Tab */}
           {pillarsCell && churchId && (
             <TabsContent value="pillars" className="mt-6">
               <CellLeaderPillars cell={pillarsCell} churchId={churchId} />
@@ -374,42 +348,10 @@ export default function Celulas() {
         </Tabs>
       </div>
 
-      {/* Cell Modal */}
-      <CellModal
-        open={cellModalOpen}
-        onOpenChange={handleCloseCellModal}
-        cell={editingCell}
-        members={members}
-        onSubmit={editingCell ? handleUpdateCell : handleCreateCell}
-      />
-
-      {/* Cell Report Modal with Attendance */}
-      <CellReportWithAttendanceModal
-        open={reportModalOpen}
-        onOpenChange={setReportModalOpen}
-        cells={cells}
-        defaultCellId={selectedCellId}
-        onSubmit={handleCreateReport}
-      />
-
-      {/* Cell Members Modal */}
-      {selectedCell && (
-        <CellMembersModal
-          open={membersModalOpen}
-          onOpenChange={setMembersModalOpen}
-          cell={selectedCell}
-          churchMembers={members}
-        />
-      )}
-
-      {/* Delete Confirmation */}
-      <DeleteConfirmModal
-        open={!!deletingCell}
-        onOpenChange={(open) => !open && setDeletingCell(null)}
-        title="Excluir Célula"
-        description={`Tem certeza que deseja excluir "${deletingCell?.name}"? Esta ação não pode ser desfeita.`}
-        onConfirm={() => deleteCell(deletingCell!.id)}
-      />
+      <CellModal open={cellModalOpen} onOpenChange={handleCloseCellModal} cell={editingCell} members={members} onSubmit={editingCell ? handleUpdateCell : handleCreateCell} />
+      <CellReportWithAttendanceModal open={reportModalOpen} onOpenChange={setReportModalOpen} cells={cells} defaultCellId={selectedCellId} onSubmit={handleCreateReport} />
+      {selectedCell && (<CellMembersModal open={membersModalOpen} onOpenChange={setMembersModalOpen} cell={selectedCell} churchMembers={members} />)}
+      <DeleteConfirmModal open={!!deletingCell} onOpenChange={(open) => !open && setDeletingCell(null)} title="Excluir Célula" description={`Tem certeza que deseja excluir "${deletingCell?.name}"? Esta ação não pode ser desfeita.`} onConfirm={() => deleteCell(deletingCell!.id)} />
     </AppLayout>
   );
 }
