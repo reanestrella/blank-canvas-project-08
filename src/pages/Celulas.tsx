@@ -1,29 +1,37 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Plus, Grid3X3, Users, MapPin, Calendar, TrendingUp, Heart, Clock,
   MoreHorizontal, FileText, Loader2, UserPlus, BarChart3, Sparkles,
   DollarSign, Percent, Eye,
 } from "lucide-react";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useCells, CreateCellData, CreateCellReportData } from "@/hooks/useCells";
 import { useMembers } from "@/hooks/useMembers";
+import { useFinancialAccounts } from "@/hooks/useFinancialAccounts";
 import { CellModal } from "@/components/modals/CellModal";
 import { CellReportWithAttendanceModal } from "@/components/modals/CellReportWithAttendanceModal";
 import { CellMembersModal } from "@/components/modals/CellMembersModal";
 import { CellReportsOverview } from "@/components/cells/CellReportsOverview";
 import { CellLeaderPillars } from "@/components/cells/CellLeaderPillars";
+import { EditCellReportModal } from "@/components/modals/EditCellReportModal";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import type { Cell } from "@/hooks/useCells";
+import type { Cell, CellReport } from "@/hooks/useCells";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const statusConfig = {
   active: { label: "Ativa", color: "bg-success/20 text-success" },
@@ -31,6 +39,18 @@ const statusConfig = {
   new: { label: "Nova", color: "bg-info/20 text-info" },
   inactive: { label: "Inativa", color: "bg-muted text-muted-foreground" },
 };
+
+function getMonthOptions() {
+  const options: { value: string; label: string }[] = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = format(d, "MMMM yyyy", { locale: ptBR });
+    options.push({ value: val, label: label.charAt(0).toUpperCase() + label.slice(1) });
+  }
+  return options;
+}
 
 export default function Celulas() {
   const [activeTab, setActiveTab] = useState("cells");
@@ -43,15 +63,22 @@ export default function Celulas() {
   const [selectedCell, setSelectedCell] = useState<Cell | null>(null);
   const [selectedCellId, setSelectedCellId] = useState<string | undefined>();
   const [cellMemberCounts, setCellMemberCounts] = useState<Record<string, number>>({});
+  const [editingReport, setEditingReport] = useState<CellReport | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<string>("all");
+  const [offeringAccountId, setOfferingAccountId] = useState<string>("");
 
   const { profile, hasRole, user } = useAuth();
+  const { toast } = useToast();
   const churchId = profile?.church_id;
 
   const isOnlyCellLeader = hasRole("lider_celula") && !hasRole("pastor");
   const leaderUserId = isOnlyCellLeader ? (user?.id ?? null) : undefined;
 
-  const { cells, reports, isLoading, createCell, updateCell, deleteCell, createReport, fetchReports } = useCells(churchId || undefined, leaderUserId);
+  const { cells, reports, isLoading, createCell, updateCell, deleteCell, createReport, updateReport, fetchReports } = useCells(churchId || undefined, leaderUserId);
   const { members } = useMembers(churchId || undefined);
+  const { accounts } = useFinancialAccounts(churchId || undefined);
+
+  const monthOptions = useMemo(() => getMonthOptions(), []);
 
   // Fetch cell member counts
   useEffect(() => {
@@ -79,38 +106,39 @@ export default function Celulas() {
     return member?.full_name || null;
   };
 
-  // Calculate stats
   const activeCells = cells.filter((c) => c.is_active);
 
-  // Monthly stats (last 30 days)
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const monthReports = reports.filter(r => new Date(r.report_date) >= thirtyDaysAgo);
-  const totalVisitorsMonth = monthReports.reduce((sum, r) => sum + r.visitors, 0);
-  const totalConversionsMonth = monthReports.reduce((sum, r) => sum + r.conversions, 0);
-  const totalOfferingMonth = monthReports.reduce((sum, r) => sum + (r.offering || 0), 0);
-  const totalAttendanceMonth = monthReports.reduce((sum, r) => sum + r.attendance, 0);
-  const avgAttendance = monthReports.length > 0 ? Math.round(totalAttendanceMonth / monthReports.length) : 0;
-  const totalCellMembers = Object.values(cellMemberCounts).reduce((sum, c) => sum + c, 0);
-  const attendancePercent = totalCellMembers > 0 && monthReports.length > 0
-    ? Math.round((avgAttendance / totalCellMembers) * 100)
-    : 0;
+  // Filter reports by selected month for dashboard stats
+  const filteredReports = useMemo(() => {
+    if (selectedMonth === "all") return reports;
+    return reports.filter(r => r.report_date.startsWith(selectedMonth));
+  }, [reports, selectedMonth]);
 
-  // Cell leader dashboard stats
+  const totalCellMembers = Object.values(cellMemberCounts).reduce((sum, c) => sum + c, 0);
+  const totalVisitorsMonth = filteredReports.reduce((sum, r) => sum + r.visitors, 0);
+  const totalConversionsMonth = filteredReports.reduce((sum, r) => sum + r.conversions, 0);
+  const totalOfferingMonth = filteredReports.reduce((sum, r) => sum + (r.offering || 0), 0);
+  const totalAttendanceMonth = filteredReports.reduce((sum, r) => sum + r.attendance, 0);
+  const avgAttendance = filteredReports.length > 0 ? Math.round(totalAttendanceMonth / filteredReports.length) : 0;
+  
+  // % = total presences / (totalDisciples * meetings) * 100
+  const maxPossible = totalCellMembers * filteredReports.length;
+  const attendancePercent = maxPossible > 0 ? Math.round((totalAttendanceMonth / maxPossible) * 100) : 0;
+
   const leaderStats = [
     { label: "Discípulos", value: totalCellMembers, icon: Users, color: "text-primary" },
     { label: "Presentes (Média)", value: avgAttendance, icon: TrendingUp, color: "text-success" },
     { label: "% Presença", value: `${attendancePercent}%`, icon: Percent, color: "text-info" },
-    { label: "Visitantes/Mês", value: totalVisitorsMonth, icon: Eye, color: "text-secondary" },
-    { label: "Decisões/Mês", value: totalConversionsMonth, icon: Heart, color: "text-rose-500" },
-    { label: "Oferta/Mês", value: `R$ ${totalOfferingMonth.toFixed(0)}`, icon: DollarSign, color: "text-amber-500" },
+    { label: "Visitantes", value: totalVisitorsMonth, icon: Eye, color: "text-secondary" },
+    { label: "Decisões", value: totalConversionsMonth, icon: Heart, color: "text-rose-500" },
+    { label: "Oferta", value: `R$ ${totalOfferingMonth.toFixed(0)}`, icon: DollarSign, color: "text-amber-500" },
   ];
 
   const stats = [
     { label: "Células Ativas", value: activeCells.length, icon: Grid3X3, color: "text-success" },
     { label: "Total de Células", value: cells.length, icon: Users, color: "text-primary" },
-    { label: "Visitantes (Total)", value: totalVisitorsMonth, icon: Heart, color: "text-secondary" },
-    { label: "Decisões (Total)", value: totalConversionsMonth, icon: TrendingUp, color: "text-info" },
+    { label: "Visitantes", value: totalVisitorsMonth, icon: Heart, color: "text-secondary" },
+    { label: "Decisões", value: totalConversionsMonth, icon: TrendingUp, color: "text-info" },
   ];
 
   const handleOpenNewCell = () => { setEditingCell(undefined); setCellModalOpen(true); };
@@ -129,10 +157,39 @@ export default function Celulas() {
     return updateCell(editingCell.id, data);
   };
 
+  // Register offering as financial transaction
+  const registerOfferingTransaction = async (cellId: string, amount: number, reportDate: string) => {
+    if (!churchId || !offeringAccountId || amount <= 0) return;
+    const cellName = cells.find(c => c.id === cellId)?.name || "Célula";
+    try {
+      await supabase.from("financial_transactions").insert([{
+        church_id: churchId,
+        type: "receita",
+        description: `Oferta da ${cellName}`,
+        amount,
+        transaction_date: reportDate,
+        account_id: offeringAccountId,
+        created_by: user?.id,
+      }]);
+    } catch (err) {
+      console.error("Erro ao registrar oferta no financeiro:", err);
+    }
+  };
+
   const handleCreateReport = async (data: CreateCellReportData) => {
     const result = await createReport(data);
-    if (!result.error) fetchReports();
+    if (!result.error) {
+      // Register offering as transaction if account is set
+      if (data.offering && data.offering > 0 && offeringAccountId) {
+        await registerOfferingTransaction(data.cell_id, data.offering, data.report_date);
+      }
+      fetchReports();
+    }
     return result;
+  };
+
+  const handleUpdateReport = async (id: string, data: Partial<CreateCellReportData>) => {
+    return updateReport(id, data);
   };
 
   const getCellStatus = (cell: Cell) => {
@@ -154,9 +211,7 @@ export default function Celulas() {
               {isOnlyCellLeader ? "Minha Célula" : "Células"}
             </h1>
             <p className="text-muted-foreground">
-              {isOnlyCellLeader
-                ? "Dashboard e gestão da sua célula"
-                : "Gerencie as células e grupos familiares da sua igreja"}
+              {isOnlyCellLeader ? "Dashboard e gestão da sua célula" : "Gerencie as células e grupos familiares da sua igreja"}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -171,6 +226,40 @@ export default function Celulas() {
               </Button>
             )}
           </div>
+        </div>
+
+        {/* Month Filter + Offering Account (for pastor) */}
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Mês:</span>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os meses</SelectItem>
+                {monthOptions.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {!isOnlyCellLeader && accounts.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Conta p/ Ofertas:</span>
+              <Select value={offeringAccountId} onValueChange={setOfferingAccountId}>
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder="Selecione a conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma (não registrar)</SelectItem>
+                  {accounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         {/* Cell Leader Dashboard */}
@@ -337,7 +426,13 @@ export default function Celulas() {
           </TabsContent>
 
           <TabsContent value="reports" className="mt-6">
-            <CellReportsOverview cells={cells} reports={reports} getMemberName={getMemberName} />
+            <CellReportsOverview
+              cells={cells}
+              reports={reports}
+              getMemberName={getMemberName}
+              cellMemberCounts={cellMemberCounts}
+              onEditReport={(report) => setEditingReport(report)}
+            />
           </TabsContent>
 
           {pillarsCell && churchId && (
@@ -351,6 +446,12 @@ export default function Celulas() {
       <CellModal open={cellModalOpen} onOpenChange={handleCloseCellModal} cell={editingCell} members={members} onSubmit={editingCell ? handleUpdateCell : handleCreateCell} />
       <CellReportWithAttendanceModal open={reportModalOpen} onOpenChange={setReportModalOpen} cells={cells} defaultCellId={selectedCellId} onSubmit={handleCreateReport} />
       {selectedCell && (<CellMembersModal open={membersModalOpen} onOpenChange={setMembersModalOpen} cell={selectedCell} churchMembers={members} />)}
+      <EditCellReportModal
+        open={!!editingReport}
+        onOpenChange={(open) => { if (!open) setEditingReport(null); }}
+        report={editingReport}
+        onSubmit={handleUpdateReport}
+      />
       <DeleteConfirmModal open={!!deletingCell} onOpenChange={(open) => !open && setDeletingCell(null)} title="Excluir Célula" description={`Tem certeza que deseja excluir "${deletingCell?.name}"? Esta ação não pode ser desfeita.`} onConfirm={() => deleteCell(deletingCell!.id)} />
     </AppLayout>
   );
