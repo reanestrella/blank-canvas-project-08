@@ -40,7 +40,7 @@ export function useAiChat() {
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({}));
         if (resp.status === 403) {
-          toast({ title: "Recurso Premium", description: errData.message || "Recurso disponível no plano premium.", variant: "destructive" });
+          toast({ title: "Disponível no Plano Premium", description: errData.message || "Este recurso requer ativação. Fale com o suporte.", variant: "destructive" });
           setMessages((prev) => prev.slice(0, -1));
           setIsLoading(false);
           return;

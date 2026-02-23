@@ -29,6 +29,7 @@ import Gabinete from "./pages/Gabinete";
 import Lembretes from "./pages/Lembretes";
 import Cadastrar from "./pages/Cadastrar";
 import Instalar from "./pages/Instalar";
+import DevAdmin from "./pages/DevAdmin";
 import NotFound from "./pages/NotFound";
 import { AiChatFab } from "@/components/ai/AiChatFab";
 import { queryClient } from "@/lib/queryClient";
@@ -130,6 +131,7 @@ const App = () => (
                   <Configuracoes />
                 </RequireAnyRole>
               } />
+              <Route path="/dev-admin" element={<DevAdmin />} />
               
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
