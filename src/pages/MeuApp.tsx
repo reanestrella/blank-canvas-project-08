@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,15 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  User, Users, Bell, Calendar, BookOpen, Heart, MessageSquare,
+  User, Users, Bell, Calendar as CalendarIcon, BookOpen, Heart, MessageSquare,
   Clock, MapPin, Plus, Loader2, Camera, GraduationCap, Settings,
+  List, CalendarDays, Check,
 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { DevotionalCard } from "@/components/meuapp/DevotionalCard";
 import { ProfileEditTab } from "@/components/meuapp/ProfileEditTab";
 import { CoursesTab } from "@/components/meuapp/CoursesTab";
 import { useNavigate } from "react-router-dom";
+import { ptBR } from "date-fns/locale";
+import { format, isSameDay } from "date-fns";
 
 interface Announcement {
   id: string;
@@ -51,6 +55,114 @@ interface MySchedule {
       name: string;
     } | null;
   } | null;
+}
+
+function SchedulesView({ schedules }: { schedules: MySchedule[] }) {
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+
+  const scheduleDates = useMemo(() => {
+    const dates: Date[] = [];
+    schedules.forEach(s => {
+      if (s.schedule?.event_date) {
+        dates.push(new Date(s.schedule.event_date + "T12:00:00"));
+      }
+    });
+    return dates;
+  }, [schedules]);
+
+  const filteredSchedules = useMemo(() => {
+    if (!selectedDate) return schedules;
+    return schedules.filter(s => {
+      if (!s.schedule?.event_date) return false;
+      return isSameDay(new Date(s.schedule.event_date + "T12:00:00"), selectedDate);
+    });
+  }, [schedules, selectedDate]);
+
+  const displaySchedules = viewMode === "calendar" ? filteredSchedules : schedules;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Clock className="w-5 h-5 text-primary" /> Minhas Escalas
+        </h3>
+        <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+          <Button
+            variant={viewMode === "list" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => { setViewMode("list"); setSelectedDate(undefined); }}
+          >
+            <List className="w-4 h-4 mr-1" /> Lista
+          </Button>
+          <Button
+            variant={viewMode === "calendar" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("calendar")}
+          >
+            <CalendarDays className="w-4 h-4 mr-1" /> Calendário
+          </Button>
+        </div>
+      </div>
+
+      {viewMode === "calendar" && (
+        <Card>
+          <CardContent className="p-4 flex justify-center">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={setSelectedDate}
+              locale={ptBR}
+              modifiers={{ scheduled: scheduleDates }}
+              modifiersClassNames={{ scheduled: "bg-primary/20 font-bold text-primary" }}
+              className="rounded-md"
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {schedules.length === 0 ? (
+        <Card>
+          <CardContent className="py-8">
+            <p className="text-center text-muted-foreground">Você não está escalado(a) em nenhum evento.</p>
+          </CardContent>
+        </Card>
+      ) : displaySchedules.length === 0 ? (
+        <Card>
+          <CardContent className="py-8">
+            <p className="text-center text-muted-foreground">Nenhuma escala nesta data.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {displaySchedules.map((s) => {
+            const eventDate = s.schedule ? new Date(s.schedule.event_date + "T12:00:00") : null;
+            const isPast = eventDate ? eventDate < new Date(new Date().setHours(0,0,0,0)) : false;
+            return (
+              <Card key={s.id} className={isPast ? "opacity-60" : ""}>
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-primary/10 flex-shrink-0">
+                    <span className="text-xl font-bold text-primary">{eventDate?.getDate() || "?"}</span>
+                    <span className="text-[10px] text-muted-foreground uppercase">
+                      {eventDate ? format(eventDate, "MMM", { locale: ptBR }) : ""}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-sm">{s.schedule?.event_name || "Evento"}</h4>
+                    <p className="text-xs text-muted-foreground">{s.schedule?.ministry?.name || "Ministério"}{s.role ? ` • ${s.role}` : ""}</p>
+                    {s.schedule?.notes && <p className="text-xs text-muted-foreground mt-1 truncate">{s.schedule.notes}</p>}
+                  </div>
+                  <Badge variant={s.confirmed ? "default" : "secondary"} className="flex-shrink-0">
+                    {s.confirmed ? <><Check className="w-3 h-3 mr-1" />Confirmado</> : "Pendente"}
+                  </Badge>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function MeuApp() {
@@ -108,10 +220,29 @@ export default function MeuApp() {
           .from("schedule_volunteers")
           .select(`id, schedule_id, role, confirmed, schedule:ministry_schedules(id, event_name, event_date, notes, ministry:ministries(name))`)
           .eq("member_id", profile.member_id);
-        const validSchedules = ((schedulesData as any[]) || [])
-          .filter((s: any) => s.schedule && s.schedule.event_date >= today)
+        const allSchedules = ((schedulesData as any[]) || [])
+          .filter((s: any) => s.schedule)
           .sort((a: any, b: any) => a.schedule.event_date.localeCompare(b.schedule.event_date));
-        setSchedules(validSchedules as MySchedule[]);
+        setSchedules(allSchedules as MySchedule[]);
+      } else if (profile.email) {
+        // Fallback: find member by email and fetch schedules
+        const { data: memberData } = await supabase
+          .from("members")
+          .select("id")
+          .eq("church_id", profile.church_id!)
+          .eq("email", profile.email)
+          .limit(1);
+        if (memberData && memberData.length > 0) {
+          const memberId = memberData[0].id;
+          const { data: schedulesData } = await supabase
+            .from("schedule_volunteers")
+            .select(`id, schedule_id, role, confirmed, schedule:ministry_schedules(id, event_name, event_date, notes, ministry:ministries(name))`)
+            .eq("member_id", memberId);
+          const allSchedules = ((schedulesData as any[]) || [])
+            .filter((s: any) => s.schedule)
+            .sort((a: any, b: any) => a.schedule.event_date.localeCompare(b.schedule.event_date));
+          setSchedules(allSchedules as MySchedule[]);
+        }
       }
     } catch (error) {
       console.error("Error fetching MeuApp data:", error);
@@ -268,7 +399,7 @@ export default function MeuApp() {
                   <GraduationCap className="w-6 h-6 text-success" /><span className="text-sm">Meus Cursos</span>
                 </Button>
                 <Button variant="outline" className="h-20 flex-col gap-2">
-                  <Calendar className="w-6 h-6 text-primary" /><span className="text-sm">Inscrições</span>
+                  <CalendarIcon className="w-6 h-6 text-primary" /><span className="text-sm">Inscrições</span>
                 </Button>
               </div>
             </TabsContent>
@@ -285,32 +416,7 @@ export default function MeuApp() {
 
             {/* Schedules Tab */}
             <TabsContent value="schedules" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-primary" />Minhas Escalas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {schedules.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">Você não está escalado(a) em nenhum evento próximo.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {schedules.map((s) => (
-                        <div key={s.id} className="flex items-center gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors">
-                          <div className="flex flex-col items-center justify-center w-16 h-16 rounded-xl bg-primary/10">
-                            <span className="text-2xl font-bold text-primary">{s.schedule ? new Date(s.schedule.event_date + "T12:00:00").getDate() : "?"}</span>
-                            <span className="text-xs text-muted-foreground uppercase">{s.schedule ? new Date(s.schedule.event_date + "T12:00:00").toLocaleDateString("pt-BR", { month: "short" }) : ""}</span>
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold">{s.schedule?.event_name || "Evento"}</h4>
-                            <p className="text-sm text-muted-foreground">{s.schedule?.ministry?.name || "Ministério"}{s.role ? ` • ${s.role}` : ""}</p>
-                          </div>
-                          <Badge variant={s.confirmed ? "default" : "secondary"}>{s.confirmed ? "Confirmado" : "Pendente"}</Badge>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <SchedulesView schedules={schedules} />
             </TabsContent>
 
             {/* Events Tab */}

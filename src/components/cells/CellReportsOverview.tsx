@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Calendar, Users, Heart, TrendingUp, DollarSign, Pencil, BarChart3, Percent } from "lucide-react";
+import { Calendar, Users, Heart, TrendingUp, DollarSign, Pencil, Percent, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -31,6 +31,7 @@ interface CellReportsOverviewProps {
   getMemberName: (id: string | null) => string | null;
   cellMemberCounts: Record<string, number>;
   onEditReport?: (report: CellReport) => void;
+  isLeader?: boolean;
 }
 
 function getMonthOptions() {
@@ -51,6 +52,7 @@ export function CellReportsOverview({
   getMemberName,
   cellMemberCounts,
   onEditReport,
+  isLeader = false,
 }: CellReportsOverviewProps) {
   const [selectedCellId, setSelectedCellId] = useState<string>("all");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
@@ -73,6 +75,13 @@ export function CellReportsOverview({
     return Object.values(cellMemberCounts).reduce((s, c) => s + c, 0);
   }, [selectedCellId, cellMemberCounts]);
 
+  // Per-report attendance % helper
+  const getReportAttendancePercent = (report: CellReport) => {
+    const disciples = cellMemberCounts[report.cell_id] || 0;
+    if (disciples <= 0) return 0;
+    return Math.round((report.attendance / disciples) * 100);
+  };
+
   const summaryStats = useMemo(() => {
     const totalReports = filteredReports.length;
     const totalAttendance = filteredReports.reduce((sum, r) => sum + r.attendance, 0);
@@ -81,29 +90,42 @@ export function CellReportsOverview({
     const totalOffering = filteredReports.reduce((sum, r) => sum + (r.offering || 0), 0);
     const avgAttendance = totalReports > 0 ? Math.round(totalAttendance / totalReports) : 0;
     
-    // Attendance % = total presences / (totalDisciples * meetings) * 100
-    const maxPossible = totalDisciples * totalReports;
-    const attendancePercent = maxPossible > 0 ? Math.round((totalAttendance / maxPossible) * 100) : 0;
+    // Average attendance % = average of each meeting's (attendance/disciples*100)
+    const perMeetingPercents = filteredReports.map(r => {
+      const disciples = cellMemberCounts[r.cell_id] || 0;
+      return disciples > 0 ? (r.attendance / disciples) * 100 : 0;
+    });
+    const avgAttendancePercent = perMeetingPercents.length > 0
+      ? Math.round(perMeetingPercents.reduce((s, p) => s + p, 0) / perMeetingPercents.length)
+      : 0;
 
-    return { totalReports, totalAttendance, totalVisitors, totalConversions, totalOffering, avgAttendance, attendancePercent };
-  }, [filteredReports, totalDisciples]);
+    return { totalReports, totalAttendance, totalVisitors, totalConversions, totalOffering, avgAttendance, avgAttendancePercent };
+  }, [filteredReports, cellMemberCounts]);
 
   // Chart data: group by report_date
   const chartData = useMemo(() => {
-    const grouped: Record<string, { date: string; presenca: number; visitantes: number; decisoes: number; oferta: number }> = {};
+    const grouped: Record<string, { date: string; presenca: number; visitantes: number; decisoes: number; oferta: number; percentual: number; count: number }> = {};
     const sorted = [...filteredReports].sort((a, b) => a.report_date.localeCompare(b.report_date));
     for (const r of sorted) {
       const key = r.report_date;
       if (!grouped[key]) {
-        grouped[key] = { date: key, presenca: 0, visitantes: 0, decisoes: 0, oferta: 0 };
+        grouped[key] = { date: key, presenca: 0, visitantes: 0, decisoes: 0, oferta: 0, percentual: 0, count: 0 };
       }
       grouped[key].presenca += r.attendance;
       grouped[key].visitantes += r.visitors;
       grouped[key].decisoes += r.conversions;
       grouped[key].oferta += r.offering || 0;
+      const disciples = cellMemberCounts[r.cell_id] || 0;
+      if (disciples > 0) {
+        grouped[key].percentual += (r.attendance / disciples) * 100;
+        grouped[key].count += 1;
+      }
     }
-    return Object.values(grouped);
-  }, [filteredReports]);
+    return Object.values(grouped).map(g => ({
+      ...g,
+      percentual: g.count > 0 ? Math.round(g.percentual / g.count) : 0,
+    }));
+  }, [filteredReports, cellMemberCounts]);
 
   const getCellName = (cellId: string) => cells.find((c) => c.id === cellId)?.name || "Célula desconhecida";
 
@@ -151,15 +173,15 @@ export function CellReportsOverview({
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className={`grid grid-cols-2 md:grid-cols-4 ${isLeader ? "lg:grid-cols-6" : "lg:grid-cols-7"} gap-3`}>
         {[
           { icon: Calendar, label: "Reuniões", value: summaryStats.totalReports, color: "text-primary" },
           { icon: Users, label: "Discípulos", value: totalDisciples, color: "text-info" },
           { icon: Users, label: "Presenças", value: summaryStats.totalAttendance, color: "text-success" },
-          { icon: Percent, label: "% Presença", value: `${summaryStats.attendancePercent}%`, color: "text-secondary" },
-          { icon: Heart, label: "Visitantes", value: summaryStats.totalVisitors, color: "text-secondary" },
-          { icon: TrendingUp, label: "Decisões", value: summaryStats.totalConversions, color: "text-accent" },
-          { icon: DollarSign, label: "Ofertas", value: `R$ ${summaryStats.totalOffering.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, color: "text-success" },
+          { icon: Percent, label: "% Média Presença", value: `${summaryStats.avgAttendancePercent}%`, color: "text-secondary" },
+          { icon: Eye, label: "Visitantes", value: summaryStats.totalVisitors, color: "text-secondary" },
+          { icon: Heart, label: "Decisões", value: summaryStats.totalConversions, color: "text-accent" },
+          ...(!isLeader ? [{ icon: DollarSign, label: "Ofertas", value: `R$ ${summaryStats.totalOffering.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, color: "text-success" }] : []),
         ].map((s) => (
           <Card key={s.label}>
             <CardContent className="pt-4 pb-3">
@@ -175,28 +197,29 @@ export function CellReportsOverview({
 
       {/* Charts */}
       {chartData.length > 1 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className={`grid grid-cols-1 ${isLeader ? "lg:grid-cols-3" : "lg:grid-cols-2"} gap-4`}>
+          {/* Attendance % chart */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Presença ao longo do tempo</CardTitle>
+              <CardTitle className="text-sm font-medium">% Presença ao longo do tempo</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => { const [,m,d] = v.split("-"); return `${d}/${m}`; }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip labelFormatter={(v) => formatReportDate(v as string)} />
-                  <Legend />
-                  <Line type="monotone" dataKey="presenca" name="Presença" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} />
-                  <Line type="monotone" dataKey="visitantes" name="Visitantes" stroke="hsl(var(--secondary))" strokeWidth={2} dot={{ r: 4 }} />
+                  <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} />
+                  <Tooltip labelFormatter={(v) => formatReportDate(v as string)} formatter={(v: number) => [`${v}%`, "% Presença"]} />
+                  <Line type="monotone" dataKey="percentual" name="% Presença" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
+
+          {/* Visitors chart */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Ofertas e Decisões</CardTitle>
+              <CardTitle className="text-sm font-medium">Visitantes ao longo do tempo</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={250}>
@@ -205,13 +228,51 @@ export function CellReportsOverview({
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => { const [,m,d] = v.split("-"); return `${d}/${m}`; }} />
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip labelFormatter={(v) => formatReportDate(v as string)} />
-                  <Legend />
-                  <Bar dataKey="oferta" name="Oferta (R$)" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="decisoes" name="Decisões" fill="hsl(var(--info))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="visitantes" name="Visitantes" fill="hsl(var(--secondary))" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
+
+          {isLeader ? (
+            /* Decisions chart for leader */
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Decisões ao longo do tempo</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => { const [,m,d] = v.split("-"); return `${d}/${m}`; }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip labelFormatter={(v) => formatReportDate(v as string)} />
+                    <Bar dataKey="decisoes" name="Decisões" fill="hsl(var(--info))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          ) : (
+            /* Offerings + Decisions chart for pastor */
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Ofertas e Decisões</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => { const [,m,d] = v.split("-"); return `${d}/${m}`; }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip labelFormatter={(v) => formatReportDate(v as string)} />
+                    <Legend />
+                    <Bar dataKey="oferta" name="Oferta (R$)" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="decisoes" name="Decisões" fill="hsl(var(--info))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
@@ -239,7 +300,8 @@ export function CellReportsOverview({
                     <TableHead className="text-center">Presença</TableHead>
                     <TableHead className="text-center">Visitantes</TableHead>
                     <TableHead className="text-center">Decisões</TableHead>
-                    <TableHead className="text-right">Oferta</TableHead>
+                    <TableHead className="text-center">% Presença</TableHead>
+                    {!isLeader && <TableHead className="text-right">Oferta</TableHead>}
                     <TableHead>Observações</TableHead>
                     {onEditReport && <TableHead className="w-10"></TableHead>}
                   </TableRow>
@@ -252,11 +314,18 @@ export function CellReportsOverview({
                       <TableCell className="text-center"><span className="font-semibold text-success">{report.attendance}</span></TableCell>
                       <TableCell className="text-center"><span className="font-semibold text-secondary">{report.visitors}</span></TableCell>
                       <TableCell className="text-center"><span className="font-semibold text-info">{report.conversions}</span></TableCell>
-                      <TableCell className="text-right">
-                        {report.offering ? (
-                          <span className="text-success">R$ {Number(report.offering).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                        ) : <span className="text-muted-foreground">-</span>}
+                      <TableCell className="text-center">
+                        <Badge variant={getReportAttendancePercent(report) >= 80 ? "default" : getReportAttendancePercent(report) >= 50 ? "secondary" : "destructive"}>
+                          {getReportAttendancePercent(report)}%
+                        </Badge>
                       </TableCell>
+                      {!isLeader && (
+                        <TableCell className="text-right">
+                          {report.offering ? (
+                            <span className="text-success">R$ {Number(report.offering).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                          ) : <span className="text-muted-foreground">-</span>}
+                        </TableCell>
+                      )}
                       <TableCell className="max-w-[200px] truncate text-muted-foreground">{report.notes || "-"}</TableCell>
                       {onEditReport && (
                         <TableCell>
