@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Sparkles, Send, Loader2, Trash2, Lightbulb, Users, FileText, Heart, MessageCircle } from "lucide-react";
+import { Sparkles, Send, Loader2, Trash2, Lightbulb, Users, FileText, Heart, MessageCircle, AlertTriangle, Eye } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,23 +8,47 @@ import { Badge } from "@/components/ui/badge";
 import { useAiChat } from "@/hooks/useAiChat";
 import { useAiFeatureAccess } from "@/hooks/useAiFeatureAccess";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCells } from "@/hooks/useCells";
 import { cn } from "@/lib/utils";
 
 const quickActions = [
   { label: "Gerar dinâmica para hoje", icon: Lightbulb, prompt: "Sugira uma dinâmica criativa e rápida para iniciar o encontro da célula hoje. Algo que promova interação e quebra-gelo entre os membros.", color: "text-amber-500" },
+  { label: "Gerar relatório inteligente", icon: FileText, prompt: "Com base nos dados dos relatórios da minha célula, gere um relatório completo com análise de presença, visitantes, decisões e sugestões de melhoria.", color: "text-violet-500" },
   { label: "Mensagens para faltosos", icon: Users, prompt: "Escreva 3 mensagens carinhosas e breves para enviar via WhatsApp a membros que estão faltando nos encontros da célula. Tom acolhedor e cristão.", color: "text-blue-500" },
   { label: "Ideias para visitantes", icon: Heart, prompt: "Sugira 5 ideias práticas para acolher e integrar visitantes na célula. Inclua ações simples que qualquer líder pode fazer.", color: "text-rose-500" },
   { label: "Resumo da minha célula", icon: FileText, prompt: "Faça um resumo da situação geral da minha célula, considerando presença, engajamento e sugestões de melhoria.", color: "text-emerald-500" },
-  { label: "Gerar relatório da reunião", icon: FileText, prompt: "Me ajude a montar o relatório do encontro da célula. Pergunte-me os dados e me ajude a organizar as informações.", color: "text-violet-500" },
 ];
 
 export default function Assistente() {
   const [input, setInput] = useState("");
   const { messages, isLoading, sendMessage, clearMessages } = useAiChat();
   const { hasAccess, isTrial, trialEnd, checkAccess, showPremiumMessage } = useAiFeatureAccess();
-  const { hasAnyRole } = useAuth();
+  const { hasAnyRole, profile, user } = useAuth();
   const [checked, setChecked] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const churchId = profile?.church_id;
+  const isOnlyCellLeader = hasAnyRole("lider_celula") && !hasAnyRole("pastor");
+  const leaderUserId = isOnlyCellLeader ? (user?.id ?? null) : undefined;
+  const { cells, reports } = useCells(churchId || undefined, leaderUserId);
+
+  // Calculate contextual alerts
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const recentReports = reports.filter(r => new Date(r.report_date) >= thirtyDaysAgo);
+  const totalVisitorsMonth = recentReports.reduce((sum, r) => sum + r.visitors, 0);
+  const avgAttendance = recentReports.length > 0 ? Math.round(recentReports.reduce((sum, r) => sum + r.attendance, 0) / recentReports.length) : 0;
+
+  const alerts: { type: "warning" | "info"; message: string }[] = [];
+  if (recentReports.length === 0) {
+    alerts.push({ type: "warning", message: "Nenhum relatório enviado nos últimos 30 dias." });
+  }
+  if (totalVisitorsMonth === 0 && recentReports.length > 0) {
+    alerts.push({ type: "warning", message: "Nenhum visitante registrado este mês. Que tal planejar uma ação de alcance?" });
+  }
+  if (avgAttendance > 0 && avgAttendance < 5) {
+    alerts.push({ type: "info", message: `Presença média baixa (${avgAttendance} pessoas). Considere estratégias de engajamento.` });
+  }
 
   useEffect(() => {
     checkAccess().then(() => setChecked(true));
@@ -74,7 +98,7 @@ export default function Assistente() {
               <Sparkles className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Assistente do Líder</h1>
+              <h1 className="text-2xl font-bold">Meu Assistente</h1>
               <p className="text-muted-foreground">Disponível no Plano Premium</p>
             </div>
           </div>
@@ -98,7 +122,7 @@ export default function Assistente() {
             <Sparkles className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Assistente do Líder</h1>
+            <h1 className="text-2xl font-bold">Meu Assistente</h1>
             <p className="text-muted-foreground">Sugestões rápidas para cuidar das pessoas e organizar sua semana.</p>
           </div>
           {isTrial && (
@@ -107,6 +131,21 @@ export default function Assistente() {
             </Badge>
           )}
         </div>
+
+        {/* Contextual Alerts */}
+        {alerts.length > 0 && (
+          <div className="space-y-2">
+            {alerts.map((alert, i) => (
+              <div key={i} className={cn(
+                "flex items-center gap-3 p-3 rounded-lg text-sm",
+                alert.type === "warning" ? "bg-destructive/10 text-destructive" : "bg-info/10 text-info"
+              )}>
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                <span>{alert.message}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Quick Actions */}
         {messages.length === 0 && (

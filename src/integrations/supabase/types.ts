@@ -920,6 +920,193 @@ export type Database = {
           },
         ]
       }
+      course_lesson_progress: {
+        Row: {
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          lesson_id: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          lesson_id: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          lesson_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_lesson_progress_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "course_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_lessons: {
+        Row: {
+          course_id: string
+          created_at: string | null
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          lesson_order: number
+          title: string
+          video_type: string | null
+          video_url: string | null
+        }
+        Insert: {
+          course_id: string
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          lesson_order?: number
+          title: string
+          video_type?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          course_id?: string
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          lesson_order?: number
+          title?: string
+          video_type?: string | null
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_lessons_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_quiz_attempts: {
+        Row: {
+          answers: Json
+          attempted_at: string | null
+          id: string
+          passed: boolean | null
+          quiz_id: string
+          score: number | null
+          user_id: string
+        }
+        Insert: {
+          answers?: Json
+          attempted_at?: string | null
+          id?: string
+          passed?: boolean | null
+          quiz_id: string
+          score?: number | null
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          attempted_at?: string | null
+          id?: string
+          passed?: boolean | null
+          quiz_id?: string
+          score?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_quiz_attempts_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "course_quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_quiz_questions: {
+        Row: {
+          id: string
+          options: Json | null
+          points: number | null
+          question: string
+          question_order: number | null
+          question_type: string
+          quiz_id: string
+        }
+        Insert: {
+          id?: string
+          options?: Json | null
+          points?: number | null
+          question: string
+          question_order?: number | null
+          question_type?: string
+          quiz_id: string
+        }
+        Update: {
+          id?: string
+          options?: Json | null
+          points?: number | null
+          question?: string
+          question_order?: number | null
+          question_type?: string
+          quiz_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_quiz_questions_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "course_quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_quizzes: {
+        Row: {
+          course_id: string
+          created_at: string | null
+          id: string
+          passing_score: number | null
+          title: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string | null
+          id?: string
+          passing_score?: number | null
+          title: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string | null
+          id?: string
+          passing_score?: number | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_quizzes_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_students: {
         Row: {
           completed: boolean | null
