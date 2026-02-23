@@ -11,20 +11,11 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Shield, Church, Bot, Calendar } from "lucide-react";
+import { Loader2, Shield, Church, Bot, Calendar, AlertTriangle } from "lucide-react";
 
-interface ChurchItem {
-  id: string;
-  name: string;
-  plan: string;
-  created_at: string;
-}
-
-interface ChurchFeatures {
-  ai_enabled: boolean;
-  ai_trial_enabled: boolean;
-  ai_trial_end: string | null;
-}
+interface ChurchItem { id: string; name: string; plan: string; created_at: string; }
+interface ChurchFeatures { ai_enabled: boolean; ai_trial_enabled: boolean; ai_trial_end: string | null; }
+interface AiErrorLog { id: string; feature: string; error_message: string; provider_status: number | null; created_at: string; }
 
 export default function DevAdmin() {
   const { isSuperAdmin, isChecking } = useSuperAdmin();
@@ -38,6 +29,8 @@ export default function DevAdmin() {
   const [featuresLoading, setFeaturesLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [trialDays, setTrialDays] = useState(30);
+  const [errorLogs, setErrorLogs] = useState<AiErrorLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
 
   useEffect(() => {
     if (!isSuperAdmin) return;
@@ -47,7 +40,19 @@ export default function DevAdmin() {
       setLoading(false);
     };
     load();
+    loadErrorLogs();
   }, [isSuperAdmin]);
+
+  const loadErrorLogs = async () => {
+    setLogsLoading(true);
+    const { data } = await supabase
+      .from("ai_error_logs")
+      .select("id, feature, error_message, provider_status, created_at")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setErrorLogs((data as AiErrorLog[]) || []);
+    setLogsLoading(false);
+  };
 
   const loadFeatures = async (churchId: string) => {
     setFeaturesLoading(true);
@@ -97,10 +102,8 @@ export default function DevAdmin() {
     try {
       const { error } = await supabase.rpc("enable_ai_trial", { p_church_id: selectedChurch, p_trial_days: trialDays });
       if (error) throw error;
-      const end = new Date();
-      end.setDate(end.getDate() + trialDays);
-      setFeatures(prev => prev ? { ...prev, ai_trial_enabled: true, ai_trial_end: end.toISOString() } : prev);
       toast({ title: "Trial ativado", description: `Trial de ${trialDays} dias ativado.` });
+      await loadFeatures(selectedChurch);
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
     } finally {
@@ -174,19 +177,14 @@ export default function DevAdmin() {
                 <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
               ) : features ? (
                 <div className="space-y-6">
-                  {/* AI Enabled Toggle */}
                   <div className="flex items-center justify-between p-4 rounded-lg border">
                     <div>
                       <p className="font-medium">IA Habilitada (permanente)</p>
                       <p className="text-sm text-muted-foreground">Libera todos os recursos de IA para esta igreja</p>
                     </div>
-                    <Switch
-                      checked={features.ai_enabled}
-                      onCheckedChange={(checked) => setFeatures({ ...features, ai_enabled: checked })}
-                    />
+                    <Switch checked={features.ai_enabled} onCheckedChange={(checked) => setFeatures({ ...features, ai_enabled: checked })} />
                   </div>
 
-                  {/* Trial Toggle */}
                   <div className="flex items-center justify-between p-4 rounded-lg border">
                     <div>
                       <p className="font-medium">Trial Ativo</p>
@@ -196,13 +194,9 @@ export default function DevAdmin() {
                           : "Sem trial ativo"}
                       </p>
                     </div>
-                    <Switch
-                      checked={features.ai_trial_enabled}
-                      onCheckedChange={(checked) => setFeatures({ ...features, ai_trial_enabled: checked })}
-                    />
+                    <Switch checked={features.ai_trial_enabled} onCheckedChange={(checked) => setFeatures({ ...features, ai_trial_enabled: checked })} />
                   </div>
 
-                  {/* Activate Trial */}
                   <div className="p-4 rounded-lg border border-dashed space-y-3">
                     <p className="font-medium flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
@@ -211,14 +205,7 @@ export default function DevAdmin() {
                     <div className="flex items-end gap-3">
                       <div className="space-y-1">
                         <Label>Dias</Label>
-                        <Input
-                          type="number"
-                          value={trialDays}
-                          onChange={(e) => setTrialDays(Number(e.target.value))}
-                          className="w-24"
-                          min={1}
-                          max={365}
-                        />
+                        <Input type="number" value={trialDays} onChange={(e) => setTrialDays(Number(e.target.value))} className="w-24" min={1} max={365} />
                       </div>
                       <Button onClick={handleActivateTrial} disabled={saving} variant="outline">
                         {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
@@ -227,7 +214,6 @@ export default function DevAdmin() {
                     </div>
                   </div>
 
-                  {/* Save */}
                   <Button onClick={handleSave} disabled={saving} className="w-full">
                     {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     Salvar Alterações
@@ -237,6 +223,38 @@ export default function DevAdmin() {
             </CardContent>
           </Card>
         </div>
+
+        {/* AI Error Logs */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Logs da IA
+              <Button variant="ghost" size="sm" onClick={loadErrorLogs} disabled={logsLoading} className="ml-auto">
+                {logsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Atualizar"}
+              </Button>
+            </CardTitle>
+            <CardDescription>Últimos 20 erros registrados</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {errorLogs.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhum erro registrado.</p>
+            ) : (
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {errorLogs.map(log => (
+                  <div key={log.id} className="p-3 rounded-lg border text-sm space-y-1">
+                    <div className="flex items-center gap-2 justify-between">
+                      <Badge variant="outline" className="text-xs">{log.feature}</Badge>
+                      {log.provider_status && <Badge variant="destructive" className="text-xs">HTTP {log.provider_status}</Badge>}
+                      <span className="text-xs text-muted-foreground ml-auto">{new Date(log.created_at).toLocaleString("pt-BR")}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">{log.error_message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </AppLayout>
   );

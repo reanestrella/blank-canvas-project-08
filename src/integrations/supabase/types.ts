@@ -49,6 +49,82 @@ export type Database = {
           },
         ]
       }
+      ai_dashboard_reports: {
+        Row: {
+          church_id: string
+          created_by: string
+          generated_at: string
+          id: string
+          period: string
+          report_text: string
+        }
+        Insert: {
+          church_id: string
+          created_by: string
+          generated_at?: string
+          id?: string
+          period?: string
+          report_text: string
+        }
+        Update: {
+          church_id?: string
+          created_by?: string
+          generated_at?: string
+          id?: string
+          period?: string
+          report_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_dashboard_reports_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_error_logs: {
+        Row: {
+          church_id: string
+          created_at: string
+          error_message: string
+          error_stack: string | null
+          feature: string
+          id: string
+          provider_status: number | null
+          user_id: string
+        }
+        Insert: {
+          church_id: string
+          created_at?: string
+          error_message: string
+          error_stack?: string | null
+          feature: string
+          id?: string
+          provider_status?: number | null
+          user_id: string
+        }
+        Update: {
+          church_id?: string
+          created_at?: string
+          error_message?: string
+          error_stack?: string | null
+          feature?: string
+          id?: string
+          provider_status?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_error_logs_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_member_alerts: {
         Row: {
           church_id: string

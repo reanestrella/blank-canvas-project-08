@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.ai-generate-report]
 verify_jwt = false
+
+[functions.ai-dashboard-report]
+verify_jwt = false
