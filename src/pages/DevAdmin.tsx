@@ -49,46 +49,41 @@ export default function DevAdmin() {
     load();
   }, [isSuperAdmin]);
 
+  const loadFeatures = async (churchId: string) => {
+    setFeaturesLoading(true);
+    let { data } = await supabase
+      .from("church_features")
+      .select("ai_enabled, ai_trial_enabled, ai_trial_end")
+      .eq("church_id", churchId)
+      .maybeSingle();
+    if (!data) {
+      await supabase.from("church_features").insert({
+        church_id: churchId, ai_enabled: false, ai_trial_enabled: false, ai_trial_start: null, ai_trial_end: null,
+      });
+      data = { ai_enabled: false, ai_trial_enabled: false, ai_trial_end: null };
+    }
+    setFeatures(data);
+    setFeaturesLoading(false);
+  };
+
   useEffect(() => {
     if (!selectedChurch) { setFeatures(null); return; }
-    const load = async () => {
-      setFeaturesLoading(true);
-      const { data } = await supabase
-        .from("church_features")
-        .select("ai_enabled, ai_trial_enabled, ai_trial_end")
-        .eq("church_id", selectedChurch)
-        .maybeSingle();
-      setFeatures(data || { ai_enabled: false, ai_trial_enabled: false, ai_trial_end: null });
-      setFeaturesLoading(false);
-    };
-    load();
+    loadFeatures(selectedChurch);
   }, [selectedChurch]);
 
   const handleSave = async () => {
     if (!selectedChurch || !features) return;
     setSaving(true);
     try {
-      const { data: existing } = await supabase
-        .from("church_features")
-        .select("id")
-        .eq("church_id", selectedChurch)
-        .maybeSingle();
-
-      if (existing) {
-        await supabase.from("church_features").update({
-          ai_enabled: features.ai_enabled,
-          ai_trial_enabled: features.ai_trial_enabled,
-          ai_trial_end: features.ai_trial_end,
-        }).eq("church_id", selectedChurch);
-      } else {
-        await supabase.from("church_features").insert({
-          church_id: selectedChurch,
-          ai_enabled: features.ai_enabled,
-          ai_trial_enabled: features.ai_trial_enabled,
-          ai_trial_end: features.ai_trial_end,
-        });
-      }
+      const { error } = await supabase.from("church_features").upsert({
+        church_id: selectedChurch,
+        ai_enabled: features.ai_enabled,
+        ai_trial_enabled: features.ai_trial_enabled,
+        ai_trial_end: features.ai_trial_end,
+      }, { onConflict: "church_id" });
+      if (error) throw error;
       toast({ title: "Salvo", description: "Configurações de IA atualizadas." });
+      await loadFeatures(selectedChurch);
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
     } finally {
