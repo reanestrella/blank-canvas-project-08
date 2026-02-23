@@ -1,0 +1,1 @@
+INSERT INTO public.system_admins (user_id, role, active) VALUES ('a51bd424-7de2-4c37-a2e3-9c401daef76c', 'super_admin', true) ON CONFLICT (user_id) DO NOTHING;
