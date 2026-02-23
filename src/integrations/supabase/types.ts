@@ -2130,6 +2130,30 @@ export type Database = {
           },
         ]
       }
+      system_admins: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_features: {
         Row: {
           ai_enabled: boolean
@@ -2209,6 +2233,7 @@ export type Database = {
         }[]
       }
       has_role: { Args: { role_name: string }; Returns: boolean }
+      is_super_admin: { Args: never; Returns: boolean }
       mark_invitation_used: { Args: { p_token: string }; Returns: undefined }
       reissue_invitation: {
         Args: {

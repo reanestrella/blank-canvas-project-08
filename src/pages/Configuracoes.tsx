@@ -24,7 +24,6 @@ import {
   Building,
   MapPin,
   Edit,
-  Bot,
 } from "lucide-react";
 import { useInvitations } from "@/hooks/useInvitations";
 import { useCongregations } from "@/hooks/useCongregations";
@@ -74,14 +73,6 @@ export default function Configuracoes() {
   const [congregationModalOpen, setCongregationModalOpen] = useState(false);
   const [editingCongregation, setEditingCongregation] = useState<Congregation | undefined>();
   
-  // AI feature state
-  const [aiEnabled, setAiEnabled] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiSaving, setAiSaving] = useState(false);
-  const [aiTrialEnabled, setAiTrialEnabled] = useState(false);
-  const [aiTrialEnd, setAiTrialEnd] = useState<string | null>(null);
-  const [aiTrialActivating, setAiTrialActivating] = useState(false);
-
   // Church form state
   const [churchName, setChurchName] = useState("");
   const [churchCnpj, setChurchCnpj] = useState("");
@@ -107,79 +98,6 @@ export default function Configuracoes() {
     }
   }, [church]);
 
-  // Load AI feature status
-  useEffect(() => {
-    if (!churchId) return;
-    setAiLoading(true);
-    const loadAi = async () => {
-      try {
-        const { data } = await supabase
-          .from("church_features")
-          .select("ai_enabled, ai_trial_enabled, ai_trial_end")
-          .eq("church_id", churchId)
-          .maybeSingle();
-        setAiEnabled(!!data?.ai_enabled);
-        const trialActive = !!data?.ai_trial_enabled && data?.ai_trial_end && new Date(data.ai_trial_end) > new Date();
-        setAiTrialEnabled(!!trialActive);
-        setAiTrialEnd(data?.ai_trial_end || null);
-      } finally {
-        setAiLoading(false);
-      }
-    };
-    loadAi();
-  }, [churchId]);
-
-  const handleToggleAi = async (enabled: boolean) => {
-    if (!churchId) return;
-    setAiSaving(true);
-    try {
-      const { data: existing } = await supabase
-        .from("church_features")
-        .select("id")
-        .eq("church_id", churchId)
-        .maybeSingle();
-
-      if (existing) {
-        await supabase
-          .from("church_features")
-          .update({ ai_enabled: enabled })
-          .eq("church_id", churchId);
-      } else {
-        await supabase
-          .from("church_features")
-          .insert({ church_id: churchId, ai_enabled: enabled });
-      }
-      setAiEnabled(enabled);
-      toast({
-        title: enabled ? "IA ativada" : "IA desativada",
-        description: enabled
-          ? "Os recursos de inteligência artificial foram habilitados para esta igreja."
-          : "Os recursos de IA foram desabilitados.",
-      });
-    } catch {
-      toast({ title: "Erro", description: "Não foi possível alterar o status da IA.", variant: "destructive" });
-    } finally {
-      setAiSaving(false);
-    }
-  };
-
-  const handleActivateTrial = async () => {
-    if (!churchId) return;
-    setAiTrialActivating(true);
-    try {
-      const { error } = await supabase.rpc("enable_ai_trial", { p_church_id: churchId, p_trial_days: 30 });
-      if (error) throw error;
-      setAiTrialEnabled(true);
-      const end = new Date();
-      end.setDate(end.getDate() + 30);
-      setAiTrialEnd(end.toISOString());
-      toast({ title: "Teste gratuito ativado!", description: "A Inteligência Ministerial está disponível por 30 dias." });
-    } catch (err: any) {
-      toast({ title: "Erro", description: err.message || "Não foi possível ativar o teste.", variant: "destructive" });
-    } finally {
-      setAiTrialActivating(false);
-    }
-  };
 
   const handleSaveChurch = async () => {
     const result = await updateChurch({
@@ -253,10 +171,8 @@ export default function Configuracoes() {
               <Crown className="w-4 h-4" />
               <span className="hidden sm:inline">Plano</span>
             </TabsTrigger>
-            <TabsTrigger value="ai" className="gap-2">
-              <Bot className="w-4 h-4" />
-              <span className="hidden sm:inline">IA</span>
-            </TabsTrigger>
+
+
           </TabsList>
 
           <TabsContent value="church" className="space-y-6 mt-6">
@@ -524,94 +440,9 @@ export default function Configuracoes() {
               ))}
             </div>
           </TabsContent>
-
-          <TabsContent value="ai" className="space-y-6 mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bot className="w-5 h-5" />
-                  Inteligência Artificial
-                </CardTitle>
-                <CardDescription>
-                  Gerencie o acesso aos recursos de IA da sua igreja
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {aiLoading ? (
-                  <div className="flex items-center justify-center p-8">
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between p-4 rounded-lg border">
-                      <div>
-                        <p className="font-medium">Habilitar IA para esta igreja</p>
-                        <p className="text-sm text-muted-foreground">
-                          Ativa o Assistente de Liderança, detecção de ausências e relatórios inteligentes para todos os usuários.
-                        </p>
-                      </div>
-                      <Switch
-                        checked={aiEnabled}
-                        onCheckedChange={handleToggleAi}
-                        disabled={aiSaving}
-                      />
-                    </div>
-                    {/* Trial Section */}
-                    {!aiEnabled && (
-                      <div className="p-4 rounded-lg border border-dashed space-y-3">
-                        {aiTrialEnabled && aiTrialEnd ? (
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium text-foreground">
-                              ✅ Teste gratuito da Inteligência Ministerial ativo.
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              Válido até: {new Date(aiTrialEnd).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <p className="font-medium">Experimente grátis por 30 dias</p>
-                            <p className="text-sm text-muted-foreground">
-                              Ative o teste gratuito para experimentar todos os recursos de Inteligência Ministerial sem compromisso.
-                            </p>
-                            <Button onClick={handleActivateTrial} disabled={aiTrialActivating} variant="outline">
-                              {aiTrialActivating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                              Ativar teste gratuito da IA
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {(aiEnabled || aiTrialEnabled) && (
-                      <div className="p-4 rounded-lg bg-muted/50 space-y-2">
-                        <p className="text-sm font-medium text-foreground">Recursos habilitados:</p>
-                        <ul className="text-sm text-muted-foreground space-y-1">
-                          <li className="flex items-center gap-2">
-                            <Check className="w-4 h-4 text-success" />
-                            Assistente de Liderança (chat com IA)
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="w-4 h-4 text-success" />
-                            Detecção automática de membros ausentes
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="w-4 h-4 text-success" />
-                            Relatórios inteligentes de célula
-                          </li>
-                        </ul>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Limite: 10 execuções por dia por usuário.
-                        </p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
+
 
       <InviteUserModal
         open={inviteModalOpen}

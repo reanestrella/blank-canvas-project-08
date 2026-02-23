@@ -12,6 +12,7 @@ import { WeddingAnniversaryCard } from "@/components/dashboard/WeddingAnniversar
 import { NetworkOverview } from "@/components/dashboard/NetworkOverview";
 import { AlertsCard } from "@/components/dashboard/AlertsCard";
 import { AiAlertsCard } from "@/components/ai/AiAlertsCard";
+import { AssistantCard } from "@/components/ai/AssistantCard";
 import { CongregationSelector } from "@/components/layout/CongregationSelector";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useCongregations } from "@/hooks/useCongregations";
@@ -62,6 +63,11 @@ function PastorDashboard() {
       {stats.recentAlerts.length > 0 && <AlertsCard alerts={stats.recentAlerts} />}
 
       <AiAlertsCard />
+
+      <AssistantCard onOpenChat={(msg) => {
+        const openChat = (window as any).__openAiChat;
+        if (openChat) openChat(msg);
+      }} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -224,6 +230,12 @@ function CellLeaderDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* AI Assistant */}
+      <AssistantCard onOpenChat={(msg) => {
+        const openChat = (window as any).__openAiChat;
+        if (openChat) openChat(msg);
+      }} />
 
       {/* Recent Reports */}
       <Card>

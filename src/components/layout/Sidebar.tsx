@@ -3,12 +3,12 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, Heart, GraduationCap, Grid3X3, DollarSign,
   Calendar, User, Settings, ChevronLeft, ChevronRight, Church, LogOut,
-  Crown, Handshake, BookOpen, Home, Armchair, Bell,
+  Crown, Handshake, BookOpen, Home, Armchair, Bell, Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 type AppRole = "pastor" | "tesoureiro" | "secretario" | "lider_celula" | "lider_ministerio" | "consolidacao" | "membro";
 
 interface MenuItem {
@@ -43,6 +43,7 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { church, signOut, roles, isAdmin, currentChurchId } = useAuth();
+  const { isSuperAdmin } = useSuperAdmin();
 
   const userRoles = useMemo(() => roles.map(r => r.role), [roles]);
 
@@ -55,12 +56,16 @@ export function Sidebar() {
   }, [userRoles, isAdmin]);
 
   const filteredBottomItems = useMemo(() => {
-    if (isAdmin()) return bottomItems;
-    return bottomItems.filter(item => {
+    const items = [...bottomItems];
+    if (isSuperAdmin) {
+      items.unshift({ icon: Shield, label: "Super Admin", path: "/dev-admin" });
+    }
+    if (isAdmin()) return items;
+    return items.filter(item => {
       if (!item.allowedRoles) return true;
       return item.allowedRoles.some(role => userRoles.includes(role));
     });
-  }, [userRoles, isAdmin]);
+  }, [userRoles, isAdmin, isSuperAdmin]);
 
   const handleSignOut = async () => {
     await signOut();

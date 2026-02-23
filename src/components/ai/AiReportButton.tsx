@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useAiFeatureAccess } from "@/hooks/useAiFeatureAccess";
 
 interface AiReportButtonProps {
   reportId: string;
@@ -14,9 +15,21 @@ export function AiReportButton({ reportId, onReportGenerated }: AiReportButtonPr
   const [isGenerating, setIsGenerating] = useState(false);
   const { currentChurchId, session } = useAuth();
   const { toast } = useToast();
+  const { hasAccess, checkAccess, showPremiumMessage } = useAiFeatureAccess();
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    checkAccess().then(() => setChecked(true));
+  }, [checkAccess]);
 
   const generateReport = async () => {
     if (!currentChurchId || !session?.access_token) return;
+    
+    if (checked && hasAccess === false) {
+      showPremiumMessage();
+      return;
+    }
+
     setIsGenerating(true);
 
     try {
@@ -27,7 +40,7 @@ export function AiReportButton({ reportId, onReportGenerated }: AiReportButtonPr
       if (resp.error) {
         const errBody = typeof resp.error === "object" ? resp.error : { message: String(resp.error) };
         if ((errBody as any).context?.status === 403) {
-          toast({ title: "Recurso Premium", description: "Recurso disponível no plano premium.", variant: "destructive" });
+          showPremiumMessage();
           return;
         }
         if ((errBody as any).context?.status === 429) {
@@ -49,6 +62,9 @@ export function AiReportButton({ reportId, onReportGenerated }: AiReportButtonPr
       setIsGenerating(false);
     }
   };
+
+  // Don't render button if no access
+  if (checked && hasAccess === false) return null;
 
   return (
     <Button variant="outline" size="sm" onClick={generateReport} disabled={isGenerating}>

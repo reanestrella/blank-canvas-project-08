@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { Bot, Send, X, Loader2, Trash2 } from "lucide-react";
+import { Sparkles, Send, X, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAiChat } from "@/hooks/useAiChat";
 import { useAiFeatureAccess } from "@/hooks/useAiFeatureAccess";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
 export function AiChatFab() {
@@ -11,23 +12,30 @@ export function AiChatFab() {
   const [input, setInput] = useState("");
   const { messages, isLoading, sendMessage, clearMessages } = useAiChat();
   const { hasAccess, checkAccess, showPremiumMessage } = useAiFeatureAccess();
+  const { hasRole, hasAnyRole } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
     checkAccess().then(() => setChecked(true));
-  }, []);
+  }, [checkAccess]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleOpen = () => {
+  // Only show for leaders/pastors, not regular members
+  const canSeeAssistant = hasAnyRole("pastor", "lider_celula", "lider_ministerio");
+  
+  const handleOpen = (initialMessage?: string) => {
     if (checked && hasAccess === false) {
       showPremiumMessage();
       return;
     }
     setIsOpen(true);
+    if (initialMessage) {
+      setTimeout(() => sendMessage(initialMessage), 100);
+    }
   };
 
   const handleSend = () => {
@@ -43,18 +51,21 @@ export function AiChatFab() {
     }
   };
 
-  if (!checked) return null;
+  if (!checked || !canSeeAssistant) return null;
+
+  // Expose openChat for external use via window
+  (window as any).__openAiChat = handleOpen;
 
   return (
     <>
       {/* FAB Button */}
       {!isOpen && (
         <button
-          onClick={handleOpen}
+          onClick={() => handleOpen()}
           className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all flex items-center justify-center"
           title="Assistente do Líder"
         >
-          <Bot className="w-6 h-6" />
+          <Sparkles className="w-6 h-6" />
         </button>
       )}
 
@@ -64,7 +75,7 @@ export function AiChatFab() {
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-2">
-              <Bot className="w-5 h-5 text-primary" />
+              <Sparkles className="w-5 h-5 text-primary" />
               <h3 className="font-semibold text-sm">Assistente do Líder</h3>
             </div>
             <div className="flex items-center gap-1">
@@ -81,7 +92,7 @@ export function AiChatFab() {
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-                <Bot className="w-10 h-10 mb-3 opacity-50" />
+                <Sparkles className="w-10 h-10 mb-3 opacity-50" />
                 <p className="text-sm">Olá! Sou seu assistente pastoral.</p>
                 <p className="text-xs mt-1">Pergunte sobre liderança, discipulado, cuidado pastoral ou crescimento de células.</p>
               </div>
