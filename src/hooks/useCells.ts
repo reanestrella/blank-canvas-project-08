@@ -108,15 +108,19 @@ export function useCells(churchId?: string, leaderUserId?: string | null) {
       return;
     }
     try {
-      // Reports don't have church_id directly - filter via cells that belong to this church
       let query = supabase
         .from("cell_reports")
-        .select("*, cell:cells!inner(church_id)")
+        .select("*, cell:cells!inner(church_id, leader_user_id)")
         .eq("cell.church_id", churchId)
         .order("report_date", { ascending: false });
       
       if (cellId) {
         query = query.eq("cell_id", cellId);
+      }
+
+      // Cell leader: only show reports for their own cells
+      if (leaderUserId) {
+        query = query.eq("cell.leader_user_id", leaderUserId);
       }
       
       const { data, error } = await query;
