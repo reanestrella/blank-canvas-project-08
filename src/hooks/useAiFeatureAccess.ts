@@ -27,14 +27,14 @@ export function useAiFeatureAccess() {
     }
     setIsChecking(true);
     try {
-      const { data: churchFeature } = await supabase
+      const { data: cf } = await supabase
         .from("church_features")
         .select("ai_enabled, ai_trial_enabled, ai_trial_end")
         .eq("church_id", currentChurchId)
         .maybeSingle();
 
       // Check direct enable
-      if (churchFeature?.ai_enabled) {
+      if (cf?.ai_enabled) {
         setHasAccess(true);
         setIsTrial(false);
         setTrialEnd(null);
@@ -42,29 +42,14 @@ export function useAiFeatureAccess() {
       }
 
       // Check active trial
-      if (churchFeature?.ai_trial_enabled && churchFeature?.ai_trial_end) {
-        const end = new Date(churchFeature.ai_trial_end);
+      if (cf?.ai_trial_enabled && cf?.ai_trial_end) {
+        const end = new Date(cf.ai_trial_end);
         if (new Date() <= end) {
           setHasAccess(true);
           setIsTrial(true);
-          setTrialEnd(churchFeature.ai_trial_end);
+          setTrialEnd(cf.ai_trial_end);
           return true;
         }
-      }
-
-      // Check user-level feature
-      const { data: userFeature } = await supabase
-        .from("user_features")
-        .select("ai_enabled")
-        .eq("user_id", user.id)
-        .eq("church_id", currentChurchId)
-        .maybeSingle();
-
-      if (userFeature?.ai_enabled) {
-        setHasAccess(true);
-        setIsTrial(false);
-        setTrialEnd(null);
-        return true;
       }
 
       setHasAccess(false);
