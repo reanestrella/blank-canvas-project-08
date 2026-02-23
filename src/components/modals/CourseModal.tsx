@@ -81,8 +81,8 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
       form.reset({
         name: course?.name || "",
         description: course?.description || "",
-        track: course?.track || "",
-        teacher_id: course?.teacher_id || "",
+        track: course?.track || "none",
+        teacher_id: course?.teacher_id || "none",
         start_date: course?.start_date || "",
         end_date: course?.end_date || "",
       });
@@ -95,8 +95,8 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
       const cleanedData = {
         name: data.name,
         description: data.description || null,
-        track: data.track || null,
-        teacher_id: data.teacher_id || null,
+        track: data.track && data.track !== "none" ? data.track : null,
+        teacher_id: data.teacher_id && data.teacher_id !== "none" ? data.teacher_id : null,
         start_date: data.start_date || null,
         end_date: data.end_date || null,
       };
@@ -173,7 +173,7 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Nenhuma</SelectItem>
+                      <SelectItem value="none">Nenhuma</SelectItem>
                       <SelectItem value="novo_convertido">Novo Convertido</SelectItem>
                       <SelectItem value="discipulado">Discipulado</SelectItem>
                       <SelectItem value="lideranca">Liderança</SelectItem>
@@ -198,7 +198,7 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Sem professor definido</SelectItem>
+                      <SelectItem value="none">Sem professor definido</SelectItem>
                       {teacherCandidates.map((member) => (
                         <SelectItem key={member.id} value={member.id}>
                           {member.full_name}

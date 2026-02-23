@@ -256,6 +256,42 @@ export function useCells(churchId?: string, leaderUserId?: string | null) {
     }
   };
 
+  const updateReport = async (id: string, data: Partial<CreateCellReportData>) => {
+    try {
+      const payload: Record<string, any> = {};
+      if (data.attendance !== undefined) payload.attendance = data.attendance;
+      if (data.visitors !== undefined) payload.visitors = data.visitors;
+      if (data.conversions !== undefined) payload.conversions = data.conversions;
+      if (data.offering !== undefined) payload.offering = data.offering;
+      if (data.notes !== undefined) payload.notes = data.notes;
+      if (data.decided !== undefined) payload.decided = data.decided;
+      if (data.report_date) payload.report_date = data.report_date;
+
+      const { data: updated, error } = await supabase
+        .from("cell_reports")
+        .update(payload)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setReports((prev) =>
+        prev.map((r) => (r.id === id ? (updated as CellReport) : r))
+      );
+      toast({ title: "Sucesso", description: "Relatório atualizado com sucesso!" });
+      return { data: updated as CellReport, error: null };
+    } catch (error: any) {
+      console.error("Error updating report:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível atualizar o relatório.",
+        variant: "destructive",
+      });
+      return { data: null, error };
+    }
+  };
+
   useEffect(() => {
     fetchCells();
     fetchReports();
@@ -271,5 +307,6 @@ export function useCells(churchId?: string, leaderUserId?: string | null) {
     updateCell,
     deleteCell,
     createReport,
+    updateReport,
   };
 }
