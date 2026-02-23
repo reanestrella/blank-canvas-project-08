@@ -34,7 +34,7 @@ export function useAiChat() {
           Authorization: `Bearer ${session.access_token}`,
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: JSON.stringify({ message: input, church_id: currentChurchId }),
+        body: JSON.stringify({ message: input, church_id: currentChurchId, context: undefined }),
       });
 
       if (!resp.ok) {
@@ -112,7 +112,7 @@ export function useAiChat() {
       }
     } catch (e: any) {
       console.error("AI chat error:", e);
-      toast({ title: "Erro", description: "Não foi possível gerar sugestão no momento.", variant: "destructive" });
+      toast({ title: "Erro", description: "Não consegui gerar agora. Tente novamente em alguns segundos.", variant: "destructive" });
       setMessages((prev) => prev.slice(0, -1));
     } finally {
       setIsLoading(false);

@@ -30,6 +30,7 @@ import Lembretes from "./pages/Lembretes";
 import Cadastrar from "./pages/Cadastrar";
 import Instalar from "./pages/Instalar";
 import DevAdmin from "./pages/DevAdmin";
+import Assistente from "./pages/Assistente";
 import NotFound from "./pages/NotFound";
 import { AiChatFab } from "@/components/ai/AiChatFab";
 import { queryClient } from "@/lib/queryClient";
@@ -129,6 +130,11 @@ const App = () => (
               <Route path="/configuracoes" element={
                 <RequireAnyRole allowedRoles={["pastor"]}>
                   <Configuracoes />
+                </RequireAnyRole>
+              } />
+              <Route path="/assistente" element={
+                <RequireAnyRole allowedRoles={["pastor", "lider_celula", "lider_ministerio"]}>
+                  <Assistente />
                 </RequireAnyRole>
               } />
               <Route path="/dev-admin" element={<DevAdmin />} />
