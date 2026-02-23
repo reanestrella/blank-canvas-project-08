@@ -159,10 +159,10 @@ export default function Celulas() {
 
   // Register offering as financial transaction
   const registerOfferingTransaction = async (cellId: string, amount: number, reportDate: string) => {
-    if (!churchId || !offeringAccountId || amount <= 0) return;
+    if (!churchId || !offeringAccountId || offeringAccountId === "none" || amount <= 0) return;
     const cellName = cells.find(c => c.id === cellId)?.name || "Célula";
     try {
-      await supabase.from("financial_transactions").insert([{
+      const { error } = await supabase.from("financial_transactions").insert([{
         church_id: churchId,
         type: "receita",
         description: `Oferta da ${cellName}`,
@@ -171,8 +171,15 @@ export default function Celulas() {
         account_id: offeringAccountId,
         created_by: user?.id,
       }]);
+      if (error) {
+        console.error("Erro ao registrar oferta no financeiro:", error);
+        toast({ title: "Aviso", description: "Oferta registrada no relatório mas houve erro ao registrar no financeiro.", variant: "destructive" });
+      } else {
+        toast({ title: "Oferta registrada", description: `R$ ${amount.toFixed(2)} registrado na conta financeira.` });
+      }
     } catch (err) {
       console.error("Erro ao registrar oferta no financeiro:", err);
+      toast({ title: "Aviso", description: "Oferta registrada no relatório mas houve erro ao registrar no financeiro.", variant: "destructive" });
     }
   };
 
@@ -432,6 +439,7 @@ export default function Celulas() {
               getMemberName={getMemberName}
               cellMemberCounts={cellMemberCounts}
               onEditReport={(report) => setEditingReport(report)}
+              isLeader={isOnlyCellLeader}
             />
           </TabsContent>
 

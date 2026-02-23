@@ -26,6 +26,7 @@ import {
 import { useCourses, CreateCourseData } from "@/hooks/useCourses";
 import { useMembers } from "@/hooks/useMembers";
 import { CourseModal } from "@/components/modals/CourseModal";
+import { CourseLessonsModal } from "@/components/modals/CourseLessonsModal";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Course } from "@/hooks/useCourses";
@@ -48,6 +49,7 @@ export default function Ensino() {
   const [courseModalOpen, setCourseModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | undefined>();
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
+  const [lessonsCourse, setLessonsCourse] = useState<Course | null>(null);
   
   const { profile } = useAuth();
   const churchId = profile?.church_id;
@@ -193,6 +195,9 @@ export default function Ensino() {
                                 <DropdownMenuItem onClick={() => handleOpenEdit(course)}>
                                   Editar
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setLessonsCourse(course)}>
+                                  Gerenciar Aulas
+                                </DropdownMenuItem>
                                 <DropdownMenuItem>Ver alunos</DropdownMenuItem>
                                 <DropdownMenuItem 
                                   className="text-destructive"
@@ -259,6 +264,14 @@ export default function Ensino() {
         title="Excluir Curso"
         description={`Tem certeza que deseja excluir "${deletingCourse?.name}"? Esta ação não pode ser desfeita.`}
         onConfirm={() => deleteCourse(deletingCourse!.id)}
+      />
+
+      {/* Course Lessons Modal */}
+      <CourseLessonsModal
+        open={!!lessonsCourse}
+        onOpenChange={(open) => !open && setLessonsCourse(null)}
+        courseId={lessonsCourse?.id || ""}
+        courseName={lessonsCourse?.name || ""}
       />
     </AppLayout>
   );
