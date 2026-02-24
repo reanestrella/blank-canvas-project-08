@@ -16,6 +16,7 @@ interface Course {
   description: string | null;
   track: string | null;
   is_active: boolean;
+  cover_image_url: string | null;
 }
 
 interface Lesson {
@@ -68,7 +69,7 @@ export function CoursesTab() {
     setIsLoading(true);
     const { data } = await supabase
       .from("courses")
-      .select("id, name, description, track, is_active")
+      .select("id, name, description, track, is_active, cover_image_url")
       .eq("church_id", churchId!)
       .eq("is_active", true)
       .order("name");
@@ -205,7 +206,11 @@ export function CoursesTab() {
                     onClick={() => openCourse(course)}
                   >
                     <div className="aspect-video bg-gradient-to-br from-primary/20 to-primary/5 rounded-t-lg flex items-center justify-center relative overflow-hidden">
-                      <Play className="w-12 h-12 text-primary/40 group-hover:text-primary/70 transition-colors" />
+                      {course.cover_image_url ? (
+                        <img src={course.cover_image_url} alt={course.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Play className="w-12 h-12 text-primary/40 group-hover:text-primary/70 transition-colors" />
+                      )}
                       {enrolled?.completed && (
                         <Badge className="absolute top-2 right-2 bg-success text-success-foreground">
                           <CheckCircle className="w-3 h-3 mr-1" /> Concluído

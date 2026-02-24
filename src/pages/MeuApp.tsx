@@ -215,33 +215,57 @@ export default function MeuApp() {
         .limit(5);
       setEvents((eventsData as UpcomingEvent[]) || []);
 
-      if (profile.member_id) {
-        const { data: schedulesData } = await supabase
-          .from("schedule_volunteers")
-          .select(`id, schedule_id, role, confirmed, schedule:ministry_schedules(id, event_name, event_date, notes, ministry:ministries(name))`)
-          .eq("member_id", profile.member_id);
-        const allSchedules = ((schedulesData as any[]) || [])
-          .filter((s: any) => s.schedule)
-          .sort((a: any, b: any) => a.schedule.event_date.localeCompare(b.schedule.event_date));
-        setSchedules(allSchedules as MySchedule[]);
-      } else if (profile.email) {
-        // Fallback: find member by email and fetch schedules
+      // Find the member_id to use for schedule lookup
+      let memberId = profile.member_id;
+      if (!memberId && profile.email) {
         const { data: memberData } = await supabase
           .from("members")
           .select("id")
           .eq("church_id", profile.church_id!)
-          .eq("email", profile.email)
+          .ilike("email", profile.email)
           .limit(1);
         if (memberData && memberData.length > 0) {
-          const memberId = memberData[0].id;
+          memberId = memberData[0].id;
+        }
+      }
+
+      if (memberId) {
+        // First get schedule_volunteers for this member
+        const { data: svData } = await supabase
+          .from("schedule_volunteers")
+          .select("id, schedule_id, role, confirmed, member_id")
+          .eq("member_id", memberId);
+
+        if (svData && svData.length > 0) {
+          const scheduleIds = [...new Set(svData.map(sv => sv.schedule_id))];
           const { data: schedulesData } = await supabase
-            .from("schedule_volunteers")
-            .select(`id, schedule_id, role, confirmed, schedule:ministry_schedules(id, event_name, event_date, notes, ministry:ministries(name))`)
-            .eq("member_id", memberId);
-          const allSchedules = ((schedulesData as any[]) || [])
-            .filter((s: any) => s.schedule)
-            .sort((a: any, b: any) => a.schedule.event_date.localeCompare(b.schedule.event_date));
-          setSchedules(allSchedules as MySchedule[]);
+            .from("ministry_schedules")
+            .select("id, event_name, event_date, notes, ministry_id, ministry:ministries(name)")
+            .in("id", scheduleIds)
+            .order("event_date", { ascending: true });
+
+          const scheduleMap = new Map((schedulesData || []).map((s: any) => [s.id, s]));
+          const allSchedules: MySchedule[] = svData
+            .map((sv: any) => {
+              const sched = scheduleMap.get(sv.schedule_id);
+              if (!sched) return null;
+              return {
+                id: sv.id,
+                schedule_id: sv.schedule_id,
+                role: sv.role,
+                confirmed: sv.confirmed,
+                schedule: {
+                  id: sched.id,
+                  event_name: sched.event_name,
+                  event_date: sched.event_date,
+                  notes: sched.notes,
+                  ministry: sched.ministry,
+                },
+              };
+            })
+            .filter(Boolean) as MySchedule[];
+          allSchedules.sort((a, b) => (a.schedule?.event_date || "").localeCompare(b.schedule?.event_date || ""));
+          setSchedules(allSchedules);
         }
       }
     } catch (error) {
@@ -358,7 +382,7 @@ export default function MeuApp() {
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-secondary" />Próximos Eventos
+                      <CalendarIcon className="w-5 h-5 text-secondary" />Próximos Eventos
                     </CardTitle>
                   </CardHeader>
                   <CardContent>

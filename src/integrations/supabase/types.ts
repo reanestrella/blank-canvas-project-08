@@ -1152,6 +1152,7 @@ export type Database = {
       courses: {
         Row: {
           church_id: string
+          cover_image_url: string | null
           created_at: string
           description: string | null
           end_date: string | null
@@ -1164,6 +1165,7 @@ export type Database = {
         }
         Insert: {
           church_id: string
+          cover_image_url?: string | null
           created_at?: string
           description?: string | null
           end_date?: string | null
@@ -1176,6 +1178,7 @@ export type Database = {
         }
         Update: {
           church_id?: string
+          cover_image_url?: string | null
           created_at?: string
           description?: string | null
           end_date?: string | null

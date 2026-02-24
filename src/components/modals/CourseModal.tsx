@@ -31,6 +31,15 @@ import {
 import { Loader2 } from "lucide-react";
 import type { Member } from "@/hooks/useMembers";
 
+const DEMO_COVERS = [
+  "https://images.unsplash.com/photo-1504052434569-70ad5836ab65?w=600&h=340&fit=crop",
+  "https://images.unsplash.com/photo-1519834785169-98be25ec3f84?w=600&h=340&fit=crop",
+  "https://images.unsplash.com/photo-1507692049790-de58290a4334?w=600&h=340&fit=crop",
+  "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600&h=340&fit=crop",
+  "https://images.unsplash.com/photo-1523050854058-8df90110c476?w=600&h=340&fit=crop",
+  "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?w=600&h=340&fit=crop",
+];
+
 const courseSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   description: z.string().optional(),
@@ -38,6 +47,7 @@ const courseSchema = z.object({
   teacher_id: z.string().optional(),
   start_date: z.string().optional(),
   end_date: z.string().optional(),
+  cover_image_url: z.string().optional(),
 });
 
 type CourseFormData = z.infer<typeof courseSchema>;
@@ -51,6 +61,7 @@ interface Course {
   start_date: string | null;
   end_date: string | null;
   is_active: boolean;
+  cover_image_url?: string | null;
 }
 
 interface CourseModalProps {
@@ -73,6 +84,7 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
       teacher_id: "",
       start_date: "",
       end_date: "",
+      cover_image_url: "",
     },
   });
 
@@ -85,6 +97,7 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
         teacher_id: course?.teacher_id || "none",
         start_date: course?.start_date || "",
         end_date: course?.end_date || "",
+        cover_image_url: course?.cover_image_url || "",
       });
     }
   }, [open, course, form]);
@@ -99,6 +112,7 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
         teacher_id: data.teacher_id && data.teacher_id !== "none" ? data.teacher_id : null,
         start_date: data.start_date || null,
         end_date: data.end_date || null,
+        cover_image_url: data.cover_image_url || null,
       };
       
       const result = await onSubmit(cleanedData);
@@ -240,6 +254,39 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
                 )}
               />
             </div>
+
+            {/* Cover Image */}
+            <FormField
+              control={form.control}
+              name="cover_image_url"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Capa do Curso</FormLabel>
+                  <FormControl>
+                    <Input placeholder="URL da imagem de capa" {...field} />
+                  </FormControl>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    {DEMO_COVERS.map((url, i) => (
+                      <div
+                        key={i}
+                        onClick={() => form.setValue("cover_image_url", url)}
+                        className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all aspect-video ${
+                          field.value === url ? "border-primary ring-2 ring-primary/30" : "border-transparent hover:border-muted-foreground/30"
+                        }`}
+                      >
+                        <img src={url} alt={`Capa ${i + 1}`} className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                  {field.value && (
+                    <div className="mt-2 rounded-lg overflow-hidden border aspect-video max-w-[200px]">
+                      <img src={field.value} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
