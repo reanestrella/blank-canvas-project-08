@@ -284,8 +284,8 @@ export default function MeuApp() {
         <Card className="gradient-hero text-primary-foreground">
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row md:items-center gap-6">
-              <Avatar className="w-20 h-20 border-4 border-primary-foreground/20">
-                <AvatarImage src={profile?.avatar_url || ""} />
+              <Avatar className="w-20 h-20 border-4 border-primary-foreground/20 flex-shrink-0">
+                <AvatarImage src={profile?.avatar_url || ""} className="object-cover" />
                 <AvatarFallback className="text-2xl bg-primary-foreground/20 text-primary-foreground">{initials}</AvatarFallback>
               </Avatar>
               <div className="flex-1">

@@ -120,15 +120,15 @@ export function ProfileEditTab() {
         <CardContent className="space-y-6">
           {/* Avatar Upload */}
           <div className="flex items-center gap-6">
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <Avatar className="w-24 h-24">
-                <AvatarImage src={avatarUrl} />
+                <AvatarImage src={avatarUrl} className="object-cover" />
                 <AvatarFallback className="bg-primary text-primary-foreground text-2xl">{initials}</AvatarFallback>
               </Avatar>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
-                className="absolute bottom-0 right-0 p-2 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors shadow-lg"
+                className="absolute bottom-0 right-0 p-2 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors shadow-lg border-2 border-card"
               >
                 {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
               </button>
@@ -140,9 +140,9 @@ export function ProfileEditTab() {
                 className="hidden"
               />
             </div>
-            <div>
-              <p className="font-medium">{fullName || "Seu nome"}</p>
-              <p className="text-sm text-muted-foreground">{church?.name || ""}</p>
+            <div className="min-w-0">
+              <p className="font-medium truncate">{fullName || "Seu nome"}</p>
+              <p className="text-sm text-muted-foreground truncate">{church?.name || ""}</p>
             </div>
           </div>
 
