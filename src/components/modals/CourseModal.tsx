@@ -1,34 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import type { Member } from "@/hooks/useMembers";
 
 const DEMO_COVERS = [
@@ -74,17 +62,14 @@ interface CourseModalProps {
 
 export function CourseModal({ open, onOpenChange, course, members, onSubmit }: CourseModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
   
   const form = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
     defaultValues: {
-      name: "",
-      description: "",
-      track: "",
-      teacher_id: "",
-      start_date: "",
-      end_date: "",
-      cover_image_url: "",
+      name: "", description: "", track: "", teacher_id: "", start_date: "", end_date: "", cover_image_url: "",
     },
   });
 
@@ -101,6 +86,43 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
       });
     }
   }, [open, course, form]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      toast({ title: "Formato inválido", description: "Use JPG, PNG ou WebP.", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Arquivo muito grande", description: "Máximo 5MB.", variant: "destructive" });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("course-covers")
+        .upload(fileName, file, { contentType: file.type, upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("course-covers").getPublicUrl(fileName);
+      form.setValue("cover_image_url", urlData.publicUrl);
+      console.log("[CourseModal] Cover uploaded:", urlData.publicUrl);
+      toast({ title: "Capa enviada!", description: "Imagem carregada com sucesso." });
+    } catch (err: any) {
+      console.error("[CourseModal] Upload error:", err);
+      toast({ title: "Erro no upload", description: err.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleSubmit = async (data: CourseFormData) => {
     setIsSubmitting(true);
@@ -129,169 +151,158 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
     m.spiritual_status === "lider" || m.spiritual_status === "discipulador"
   );
 
+  const currentCover = form.watch("cover_image_url");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{course ? "Editar Curso" : "Novo Curso"}</DialogTitle>
           <DialogDescription>
-            {course
-              ? "Edite as informações do curso."
-              : "Preencha os dados para criar um novo curso."}
+            {course ? "Edite as informações do curso." : "Preencha os dados para criar um novo curso."}
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome do Curso *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Fundamentos da Fé" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <FormField control={form.control} name="name" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nome do Curso *</FormLabel>
+                <FormControl><Input placeholder="Ex: Fundamentos da Fé" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Descreva o objetivo do curso" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <FormField control={form.control} name="description" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Descrição</FormLabel>
+                <FormControl><Textarea placeholder="Descreva o objetivo do curso" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
 
-            <FormField
-              control={form.control}
-              name="track"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Trilha</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a trilha" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhuma</SelectItem>
-                      <SelectItem value="novo_convertido">Novo Convertido</SelectItem>
-                      <SelectItem value="discipulado">Discipulado</SelectItem>
-                      <SelectItem value="lideranca">Liderança</SelectItem>
-                      <SelectItem value="ebd">EBD</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <FormField control={form.control} name="track" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Trilha</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl><SelectTrigger><SelectValue placeholder="Selecione a trilha" /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhuma</SelectItem>
+                    <SelectItem value="novo_convertido">Novo Convertido</SelectItem>
+                    <SelectItem value="discipulado">Discipulado</SelectItem>
+                    <SelectItem value="lideranca">Liderança</SelectItem>
+                    <SelectItem value="ebd">EBD</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
 
-            <FormField
-              control={form.control}
-              name="teacher_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Professor</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o professor" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">Sem professor definido</SelectItem>
-                      {teacherCandidates.map((member) => (
-                        <SelectItem key={member.id} value={member.id}>
-                          {member.full_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <FormField control={form.control} name="teacher_id" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Professor</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl><SelectTrigger><SelectValue placeholder="Selecione o professor" /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">Sem professor definido</SelectItem>
+                    {teacherCandidates.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>{member.full_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="start_date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data de Início</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="end_date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data de Término</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Cover Image */}
-            <FormField
-              control={form.control}
-              name="cover_image_url"
-              render={({ field }) => (
+              <FormField control={form.control} name="start_date" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Capa do Curso</FormLabel>
-                  <FormControl>
-                    <Input placeholder="URL da imagem de capa" {...field} />
-                  </FormControl>
-                  <div className="grid grid-cols-3 gap-2 mt-2">
-                    {DEMO_COVERS.map((url, i) => (
-                      <div
-                        key={i}
-                        onClick={() => form.setValue("cover_image_url", url)}
-                        className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all aspect-video ${
-                          field.value === url ? "border-primary ring-2 ring-primary/30" : "border-transparent hover:border-muted-foreground/30"
-                        }`}
-                      >
-                        <img src={url} alt={`Capa ${i + 1}`} className="w-full h-full object-cover" />
-                      </div>
-                    ))}
-                  </div>
-                  {field.value && (
-                    <div className="mt-2 rounded-lg overflow-hidden border aspect-video max-w-[200px]">
-                      <img src={field.value} alt="Preview" className="w-full h-full object-cover" />
-                    </div>
-                  )}
+                  <FormLabel>Data de Início</FormLabel>
+                  <FormControl><Input type="date" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
-              )}
-            />
+              )} />
+              <FormField control={form.control} name="end_date" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Data de Término</FormLabel>
+                  <FormControl><Input type="date" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+
+            {/* Cover Image — Upload + Demo */}
+            <FormField control={form.control} name="cover_image_url" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Capa do Curso</FormLabel>
+                <div className="space-y-3">
+                  {/* Upload button */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={isUploading}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {isUploading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
+                      {isUploading ? "Enviando..." : "Enviar imagem"}
+                    </Button>
+                    <span className="text-xs text-muted-foreground">JPG, PNG ou WebP (máx 5MB)</span>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={handleFileUpload}
+                    />
+                  </div>
+
+                  {/* Or URL */}
+                  <FormControl>
+                    <Input placeholder="Ou cole uma URL de imagem" {...field} />
+                  </FormControl>
+
+                  {/* Demo covers */}
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Ou escolha uma capa demo:</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {DEMO_COVERS.map((url, i) => (
+                        <div
+                          key={i}
+                          onClick={() => form.setValue("cover_image_url", url)}
+                          className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all aspect-video ${
+                            field.value === url ? "border-primary ring-2 ring-primary/30" : "border-transparent hover:border-muted-foreground/30"
+                          }`}
+                        >
+                          <img src={url} alt={`Capa ${i + 1}`} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Preview */}
+                  {currentCover && (
+                    <div className="relative rounded-lg overflow-hidden border aspect-video max-w-[200px]">
+                      <img src={currentCover} alt="Preview" className="w-full h-full object-cover" />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-1 right-1 h-6 w-6"
+                        onClick={() => form.setValue("cover_image_url", "")}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <FormMessage />
+              </FormItem>
+            )} />
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {course ? "Salvar" : "Criar Curso"}

@@ -13,6 +13,7 @@ export interface Course {
   end_date: string | null;
   is_active: boolean;
   created_at: string;
+  cover_image_url: string | null;
 }
 
 export interface CreateCourseData {
@@ -22,6 +23,7 @@ export interface CreateCourseData {
   teacher_id?: string;
   start_date?: string;
   end_date?: string;
+  cover_image_url?: string | null;
 }
 
 export function useCourses(churchId?: string) {
@@ -47,11 +49,7 @@ export function useCourses(churchId?: string) {
       setCourses((data as Course[]) || []);
     } catch (error: any) {
       console.error("Error fetching courses:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os cursos.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: "Não foi possível carregar os cursos.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -66,20 +64,12 @@ export function useCourses(churchId?: string) {
         .single();
       
       if (error) throw error;
-      
       setCourses((prev) => [...prev, newCourse as Course]);
-      toast({
-        title: "Sucesso",
-        description: "Curso criado com sucesso!",
-      });
+      toast({ title: "Sucesso", description: "Curso criado com sucesso!" });
       return { data: newCourse as Course, error: null };
     } catch (error: any) {
       console.error("Error creating course:", error);
-      toast({
-        title: "Erro",
-        description: error.message || "Não foi possível criar o curso.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: error.message || "Não foi possível criar o curso.", variant: "destructive" });
       return { data: null, error };
     }
   };
@@ -94,22 +84,12 @@ export function useCourses(churchId?: string) {
         .single();
       
       if (error) throw error;
-      
-      setCourses((prev) =>
-        prev.map((c) => (c.id === id ? (updatedCourse as Course) : c))
-      );
-      toast({
-        title: "Sucesso",
-        description: "Curso atualizado com sucesso!",
-      });
+      setCourses((prev) => prev.map((c) => (c.id === id ? (updatedCourse as Course) : c)));
+      toast({ title: "Sucesso", description: "Curso atualizado com sucesso!" });
       return { data: updatedCourse as Course, error: null };
     } catch (error: any) {
       console.error("Error updating course:", error);
-      toast({
-        title: "Erro",
-        description: error.message || "Não foi possível atualizar o curso.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: error.message || "Não foi possível atualizar o curso.", variant: "destructive" });
       return { data: null, error };
     }
   };
@@ -117,22 +97,13 @@ export function useCourses(churchId?: string) {
   const deleteCourse = async (id: string) => {
     try {
       const { error } = await supabase.from("courses").delete().eq("id", id);
-      
       if (error) throw error;
-      
       setCourses((prev) => prev.filter((c) => c.id !== id));
-      toast({
-        title: "Sucesso",
-        description: "Curso removido com sucesso!",
-      });
+      toast({ title: "Sucesso", description: "Curso removido com sucesso!" });
       return { error: null };
     } catch (error: any) {
       console.error("Error deleting course:", error);
-      toast({
-        title: "Erro",
-        description: error.message || "Não foi possível remover o curso.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: error.message || "Não foi possível remover o curso.", variant: "destructive" });
       return { error };
     }
   };
@@ -141,12 +112,5 @@ export function useCourses(churchId?: string) {
     fetchCourses();
   }, [churchId]);
 
-  return {
-    courses,
-    isLoading,
-    fetchCourses,
-    createCourse,
-    updateCourse,
-    deleteCourse,
-  };
+  return { courses, isLoading, fetchCourses, createCourse, updateCourse, deleteCourse };
 }

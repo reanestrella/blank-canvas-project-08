@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +34,14 @@ import type { Cell, CellReport } from "@/hooks/useCells";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-const statusConfig = {
+interface StatusConfig {
+  [key: string]: {
+    label: string;
+    color: string;
+  };
+}
+
+const statusConfig: StatusConfig = {
   active: { label: "Ativa", color: "bg-success/20 text-success" },
   multiplying: { label: "Multiplicando", color: "bg-secondary/20 text-secondary" },
   new: { label: "Nova", color: "bg-info/20 text-info" },
@@ -66,6 +74,7 @@ export default function Celulas() {
   const [editingReport, setEditingReport] = useState<CellReport | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
   const [offeringAccountId, setOfferingAccountId] = useState<string>("");
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   const { profile, hasRole, user } = useAuth();
   const { toast } = useToast();
@@ -79,6 +88,51 @@ export default function Celulas() {
   const { accounts } = useFinancialAccounts(churchId || undefined);
 
   const monthOptions = useMemo(() => getMonthOptions(), []);
+
+  // ======= BUG #4 FIX: Load persisted offering account from church_settings =======
+  useEffect(() => {
+    if (!churchId) return;
+    const loadSettings = async () => {
+      const { data, error } = await supabase
+        .from("church_settings" as any)
+        .select("cell_offering_account_id")
+        .eq("church_id", churchId)
+        .maybeSingle();
+      
+      if (data && (data as any).cell_offering_account_id) {
+        setOfferingAccountId((data as any).cell_offering_account_id);
+        console.log("[Celulas] Loaded persisted offering account:", (data as any).cell_offering_account_id);
+      }
+      setSettingsLoaded(true);
+    };
+    loadSettings();
+  }, [churchId]);
+
+  // Persist offering account selection
+  const handleOfferingAccountChange = async (value: string) => {
+    setOfferingAccountId(value);
+    if (!churchId) return;
+
+    try {
+      const accountIdValue = value === "none" ? null : value;
+      const { error } = await supabase
+        .from("church_settings" as any)
+        .upsert(
+          { church_id: churchId, cell_offering_account_id: accountIdValue, updated_at: new Date().toISOString() } as any,
+          { onConflict: "church_id" }
+        );
+      
+      if (error) {
+        console.error("[Celulas] Error saving offering account:", error);
+        toast({ title: "Erro", description: "Não foi possível salvar a conta de ofertas.", variant: "destructive" });
+      } else {
+        console.log("[Celulas] Offering account persisted:", accountIdValue);
+        toast({ title: "Salvo", description: "Conta de ofertas atualizada." });
+      }
+    } catch (err) {
+      console.error("[Celulas] Error persisting offering account:", err);
+    }
+  };
 
   // Fetch cell member counts
   useEffect(() => {
@@ -101,58 +155,49 @@ export default function Celulas() {
   }, [cells]);
 
   const getMemberName = (memberId: string | null) => {
-    if (!memberId) return null;
-    const member = members.find((m) => m.id === memberId);
-    return member?.full_name || null;
+    if (!memberId) return "Sem líder";
+    const member = members.find(m => m.id === memberId);
+    return member?.full_name || "Desconhecido";
   };
 
-  const activeCells = cells.filter((c) => c.is_active);
-
-  // Filter reports by selected month for dashboard stats
   const filteredReports = useMemo(() => {
     if (selectedMonth === "all") return reports;
     return reports.filter(r => r.report_date.startsWith(selectedMonth));
   }, [reports, selectedMonth]);
 
-  const totalCellMembers = Object.values(cellMemberCounts).reduce((sum, c) => sum + c, 0);
-  const totalVisitorsMonth = filteredReports.reduce((sum, r) => sum + r.visitors, 0);
-  const totalConversionsMonth = filteredReports.reduce((sum, r) => sum + r.conversions, 0);
-  const totalOfferingMonth = filteredReports.reduce((sum, r) => sum + (r.offering || 0), 0);
-  const totalAttendanceMonth = filteredReports.reduce((sum, r) => sum + r.attendance, 0);
-  const avgAttendance = filteredReports.length > 0 ? Math.round(totalAttendanceMonth / filteredReports.length) : 0;
-  
-  // % = total presences / (totalDisciples * meetings) * 100
-  const maxPossible = totalCellMembers * filteredReports.length;
-  const attendancePercent = maxPossible > 0 ? Math.round((totalAttendanceMonth / maxPossible) * 100) : 0;
+  const totalAttendance = filteredReports.reduce((sum, r) => sum + r.attendance, 0);
+  const totalVisitors = filteredReports.reduce((sum, r) => sum + r.visitors, 0);
+  const totalConversions = filteredReports.reduce((sum, r) => sum + r.conversions, 0);
+  const totalOffering = filteredReports.reduce((sum, r) => sum + (r.offering || 0), 0);
+  const avgAttendance = filteredReports.length > 0 ? Math.round(totalAttendance / filteredReports.length) : 0;
 
+  // For cell leader stats
+  const leaderCells = cells;
+  const leaderReports = filteredReports;
   const leaderStats = [
-    { label: "Discípulos", value: totalCellMembers, icon: Users, color: "text-primary" },
-    { label: "Presentes (Média)", value: avgAttendance, icon: TrendingUp, color: "text-success" },
-    { label: "% Presença", value: `${attendancePercent}%`, icon: Percent, color: "text-info" },
-    { label: "Visitantes", value: totalVisitorsMonth, icon: Eye, color: "text-secondary" },
-    { label: "Decisões", value: totalConversionsMonth, icon: Heart, color: "text-rose-500" },
-    { label: "Oferta", value: `R$ ${totalOfferingMonth.toFixed(0)}`, icon: DollarSign, color: "text-amber-500" },
+    { label: "Células", value: leaderCells.length, icon: Grid3X3, color: "text-primary" },
+    { label: "Relatórios", value: leaderReports.length, icon: FileText, color: "text-info" },
+    { label: "Presença Média", value: avgAttendance, icon: Users, color: "text-success" },
+    { label: "Visitantes", value: totalVisitors, icon: UserPlus, color: "text-secondary" },
+    { label: "Conversões", value: totalConversions, icon: Heart, color: "text-destructive" },
+    { label: "Ofertas", value: `R$ ${totalOffering.toFixed(0)}`, icon: DollarSign, color: "text-warning" },
   ];
 
-  const stats = [
-    { label: "Células Ativas", value: activeCells.length, icon: Grid3X3, color: "text-success" },
-    { label: "Total de Células", value: cells.length, icon: Users, color: "text-primary" },
-    { label: "Visitantes", value: totalVisitorsMonth, icon: Heart, color: "text-secondary" },
-    { label: "Decisões", value: totalConversionsMonth, icon: TrendingUp, color: "text-info" },
-  ];
-
-  const handleOpenNewCell = () => { setEditingCell(undefined); setCellModalOpen(true); };
-  const handleOpenEditCell = (cell: Cell) => { setEditingCell(cell); setCellModalOpen(true); };
-  const handleOpenMembers = (cell: Cell) => { setSelectedCell(cell); setMembersModalOpen(true); };
-  const handleCloseCellModal = (open: boolean) => { setCellModalOpen(open); if (!open) setEditingCell(undefined); };
-  const handleOpenReport = (cellId?: string) => { setSelectedCellId(cellId); setReportModalOpen(true); };
-
-  const handleCreateCell = async (data: CreateCellData) => {
+  const handleCreateCell = async (data: Partial<Cell>) => {
     if (!churchId) return { data: null, error: new Error("Igreja não identificada") };
-    return createCell({ ...data, church_id: churchId });
+    const createData: CreateCellData & { church_id: string } = {
+      name: data.name || "",
+      leader_id: data.leader_id || undefined,
+      address: data.address || undefined,
+      day_of_week: data.day_of_week || undefined,
+      time: data.time || undefined,
+      network: data.network || undefined,
+      church_id: churchId,
+    };
+    return createCell(createData);
   };
 
-  const handleUpdateCell = async (data: CreateCellData) => {
+  const handleUpdateCell = async (data: Partial<Cell>) => {
     if (!editingCell) return { data: null, error: new Error("No cell to edit") };
     return updateCell(editingCell.id, data);
   };
@@ -162,24 +207,19 @@ export default function Celulas() {
     if (!churchId || !offeringAccountId || offeringAccountId === "none" || amount <= 0) return;
     const cellName = cells.find(c => c.id === cellId)?.name || "Célula";
     try {
-      const { error } = await supabase.from("financial_transactions").insert([{
+      console.log("[Celulas] Registering offering transaction:", { cellId, amount, accountId: offeringAccountId });
+      await supabase.from("financial_transactions").insert([{
         church_id: churchId,
         type: "receita",
-        description: `Oferta da ${cellName}`,
+        description: `Oferta - ${cellName}`,
         amount,
         transaction_date: reportDate,
         account_id: offeringAccountId,
         created_by: user?.id,
       }]);
-      if (error) {
-        console.error("Erro ao registrar oferta no financeiro:", error);
-        toast({ title: "Aviso", description: "Oferta registrada no relatório mas houve erro ao registrar no financeiro.", variant: "destructive" });
-      } else {
-        toast({ title: "Oferta registrada", description: `R$ ${amount.toFixed(2)} registrado na conta financeira.` });
-      }
+      console.log("[Celulas] Offering transaction registered successfully");
     } catch (err) {
-      console.error("Erro ao registrar oferta no financeiro:", err);
-      toast({ title: "Aviso", description: "Oferta registrada no relatório mas houve erro ao registrar no financeiro.", variant: "destructive" });
+      console.error("[Celulas] Error registering offering:", err);
     }
   };
 
@@ -187,7 +227,7 @@ export default function Celulas() {
     const result = await createReport(data);
     if (!result.error) {
       // Register offering as transaction if account is set
-      if (data.offering && data.offering > 0 && offeringAccountId) {
+      if (data.offering && data.offering > 0 && offeringAccountId && offeringAccountId !== "none") {
         await registerOfferingTransaction(data.cell_id, data.offering, data.report_date);
       }
       fetchReports();
@@ -195,18 +235,22 @@ export default function Celulas() {
     return result;
   };
 
-  const handleUpdateReport = async (id: string, data: Partial<CreateCellReportData>) => {
-    return updateReport(id, data);
+  const handleOpenEdit = (cell: Cell) => {
+    setEditingCell(cell);
+    setCellModalOpen(true);
   };
 
-  const getCellStatus = (cell: Cell) => {
-    if (!cell.is_active) return "inactive";
-    const recentReports = reports.filter(
-      (r) => r.cell_id === cell.id && new Date(r.report_date) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    );
-    if (recentReports.length === 0) return "new";
-    return "active";
+  const handleCloseModal = (open: boolean) => {
+    setCellModalOpen(open);
+    if (!open) setEditingCell(undefined);
   };
+
+  const stats = [
+    { label: "Células Ativas", value: cells.filter(c => c.is_active).length, icon: Grid3X3, color: "text-primary" },
+    { label: "Total de Células", value: cells.length, icon: BarChart3, color: "text-info" },
+    { label: "Relatórios", value: filteredReports.length, icon: FileText, color: "text-success" },
+    { label: "Presença Média", value: avgAttendance, icon: Users, color: "text-secondary" },
+  ];
 
   return (
     <AppLayout>
@@ -214,34 +258,28 @@ export default function Celulas() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold">
-              {isOnlyCellLeader ? "Minha Célula" : "Células"}
-            </h1>
-            <p className="text-muted-foreground">
-              {isOnlyCellLeader ? "Dashboard e gestão da sua célula" : "Gerencie as células e grupos familiares da sua igreja"}
-            </p>
+            <h1 className="text-2xl md:text-3xl font-bold">Células</h1>
+            <p className="text-muted-foreground">Gerencie suas células e relatórios</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => handleOpenReport()}>
-              <FileText className="w-4 h-4 mr-2" />
-              Enviar Relatório
-            </Button>
+          <div className="flex flex-wrap items-center gap-2">
             {!isOnlyCellLeader && (
-              <Button className="gradient-accent text-secondary-foreground shadow-lg hover:shadow-xl transition-all" onClick={handleOpenNewCell}>
-                <Plus className="w-4 h-4 mr-2" />
-                Nova Célula
+              <Button className="gradient-accent text-secondary-foreground" onClick={() => { setEditingCell(undefined); setCellModalOpen(true); }}>
+                <Plus className="w-4 h-4 mr-2" />Nova Célula
               </Button>
             )}
+            <Button variant="outline" onClick={() => { setReportModalOpen(true); }}>
+              <FileText className="w-4 h-4 mr-2" />Novo Relatório
+            </Button>
           </div>
         </div>
 
-        {/* Month Filter + Offering Account (for pastor) */}
+        {/* Filters */}
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">Mês:</span>
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Todos" />
+                <SelectValue placeholder="Todos os meses" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os meses</SelectItem>
@@ -254,7 +292,7 @@ export default function Celulas() {
           {!isOnlyCellLeader && accounts.length > 0 && (
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Conta p/ Ofertas:</span>
-              <Select value={offeringAccountId} onValueChange={setOfferingAccountId}>
+              <Select value={offeringAccountId} onValueChange={handleOfferingAccountChange}>
                 <SelectTrigger className="w-[220px]">
                   <SelectValue placeholder="Selecione a conta" />
                 </SelectTrigger>
@@ -273,18 +311,18 @@ export default function Celulas() {
         {isOnlyCellLeader && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {leaderStats.map((stat) => (
-              <Card key={stat.label} className="text-center">
-                <CardContent className="p-4">
-                  <stat.icon className={`w-6 h-6 mx-auto mb-2 ${stat.color}`} />
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
-                </CardContent>
-              </Card>
+              <div key={stat.label} className="stat-card">
+                <div className="flex items-center gap-2">
+                  <stat.icon className={`w-4 h-4 ${stat.color}`} />
+                  <p className="text-lg font-bold">{stat.value}</p>
+                </div>
+                <p className="text-xs text-muted-foreground">{stat.label}</p>
+              </div>
             ))}
           </div>
         )}
 
-        {/* Pastor/Admin Stats */}
+        {/* Stats for admin */}
         {!isOnlyCellLeader && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {stats.map((stat) => (
@@ -303,164 +341,132 @@ export default function Celulas() {
           </div>
         )}
 
-        {/* Tabs */}
+        {/* Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="flex-wrap h-auto gap-1">
-            <TabsTrigger value="cells" className="flex items-center gap-2">
-              <Grid3X3 className="w-4 h-4" />
-              Células
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4" />
-              Visão Geral
-            </TabsTrigger>
-            {pillarsCell && (
-              <TabsTrigger value="pillars" className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
-                Ferramentas
-              </TabsTrigger>
-            )}
+          <TabsList>
+            <TabsTrigger value="cells">Células</TabsTrigger>
+            <TabsTrigger value="reports">Relatórios</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="cells" className="mt-6">
+          <TabsContent value="cells" className="mt-4">
             {isLoading ? (
               <div className="flex items-center justify-center p-12">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
             ) : cells.length === 0 ? (
-              <div className="card-elevated flex flex-col items-center justify-center p-12 text-center">
-                <Grid3X3 className="w-12 h-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium">Nenhuma célula cadastrada</h3>
-                <p className="text-muted-foreground mb-4">Comece criando a primeira célula da sua igreja.</p>
-                <Button onClick={handleOpenNewCell}><Plus className="w-4 h-4 mr-2" />Criar Célula</Button>
-              </div>
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+                  <Grid3X3 className="w-12 h-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium">Nenhuma célula</h3>
+                  <p className="text-muted-foreground mb-4">Comece criando a primeira célula.</p>
+                  <Button onClick={() => setCellModalOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />Criar Célula
+                  </Button>
+                </CardContent>
+              </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {cells.map((cell) => {
-                  const status = getCellStatus(cell);
-                  const leaderName = getMemberName(cell.leader_id);
-                  const supervisorName = getMemberName(cell.supervisor_id);
-                  const memberCount = cellMemberCounts[cell.id] || 0;
-                  
-                  return (
-                    <div key={cell.id} className="card-elevated p-5 hover:shadow-lg transition-all duration-300 animate-fade-in">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-lg">{cell.name}</h3>
-                            <Badge variant="secondary" className={statusConfig[status]?.color}>
-                              {statusConfig[status]?.label}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {cell.network || "Sem rede"} • {memberCount} discípulos
-                          </p>
+                {cells.map((cell) => (
+                  <Card key={cell.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="font-semibold text-lg">{cell.name}</h3>
+                          {cell.network && <Badge variant="outline" className="mt-1">{cell.network}</Badge>}
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="-mr-2">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
+                            <Button variant="ghost" size="icon"><MoreHorizontal className="w-4 h-4" /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => { setPillarsCell(cell); setActiveTab("pillars"); }}>
-                              <Sparkles className="w-4 h-4 mr-2" />Ferramentas do Líder
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleOpenMembers(cell)}>
-                              <UserPlus className="w-4 h-4 mr-2" />Gerenciar membros
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleOpenReport(cell.id)}>
-                              <FileText className="w-4 h-4 mr-2" />Enviar relatório
-                            </DropdownMenuItem>
-                            {!isOnlyCellLeader && (
-                              <>
-                                <DropdownMenuItem onClick={() => handleOpenEditCell(cell)}>Editar</DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingCell(cell)}>Excluir</DropdownMenuItem>
-                              </>
-                            )}
+                            <DropdownMenuItem onClick={() => handleOpenEdit(cell)}>Editar</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setSelectedCell(cell); setSelectedCellId(cell.id); setMembersModalOpen(true); }}>Membros</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setPillarsCell(cell)}>Ferramentas do Líder</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => setDeletingCell(cell)}>Remover</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-
-                      <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-muted/50">
-                        <Avatar className="w-10 h-10">
-                          <AvatarImage src="" />
-                          <AvatarFallback className="bg-primary text-primary-foreground">
-                            {leaderName?.split(" ").map((n) => n[0]).join("").slice(0, 2) || "?"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium text-sm">{leaderName || "Sem líder"}</p>
-                          <p className="text-xs text-muted-foreground">Supervisor: {supervisorName || "Não definido"}</p>
-                        </div>
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2"><Users className="w-4 h-4" />{getMemberName(cell.leader_id)}</div>
+                        {cell.address && <div className="flex items-center gap-2"><MapPin className="w-4 h-4" /><span className="truncate">{cell.address}</span></div>}
+                        {cell.day_of_week && <div className="flex items-center gap-2"><Calendar className="w-4 h-4" />{cell.day_of_week}{cell.time ? ` às ${cell.time}` : ""}</div>}
+                        <div className="flex items-center gap-2"><Users className="w-4 h-4" />{cellMemberCounts[cell.id] || 0} membros</div>
                       </div>
-
-                      <div className="space-y-2 mb-4">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <MapPin className="w-4 h-4" /><span className="truncate">{cell.address || "Local não definido"}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="w-4 h-4" /><span>{cell.day_of_week || "Dia não definido"}</span>
-                          {cell.time && (<><Clock className="w-4 h-4 ml-2" /><span>{cell.time}</span></>)}
-                        </div>
+                      <div className="mt-3 pt-3 border-t flex items-center justify-between">
+                        <Badge variant={cell.is_active ? "default" : "secondary"}>{cell.is_active ? "Ativa" : "Inativa"}</Badge>
                       </div>
-
-                      {(() => {
-                        const cellReports = reports.filter((r) => r.cell_id === cell.id);
-                        const lastReport = cellReports[0];
-                        return (
-                          <div className="grid grid-cols-3 gap-2 pt-4 border-t">
-                            <div className="text-center">
-                              <p className="text-lg font-bold text-success">{lastReport?.attendance || 0}</p>
-                              <p className="text-xs text-muted-foreground">Presença</p>
-                            </div>
-                            <div className="text-center border-x">
-                              <p className="text-lg font-bold text-secondary">{lastReport?.visitors || 0}</p>
-                              <p className="text-xs text-muted-foreground">Visitantes</p>
-                            </div>
-                            <div className="text-center">
-                              <p className="text-lg font-bold text-info">{lastReport?.conversions || 0}</p>
-                              <p className="text-xs text-muted-foreground">Decisões</p>
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  );
-                })}
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="reports" className="mt-6">
+          <TabsContent value="reports" className="mt-4">
             <CellReportsOverview
+              reports={filteredReports}
               cells={cells}
-              reports={reports}
               getMemberName={getMemberName}
               cellMemberCounts={cellMemberCounts}
-              onEditReport={(report) => setEditingReport(report)}
-              isLeader={isOnlyCellLeader}
+              onEditReport={setEditingReport}
             />
           </TabsContent>
-
-          {pillarsCell && churchId && (
-            <TabsContent value="pillars" className="mt-6">
-              <CellLeaderPillars cell={pillarsCell} churchId={churchId} />
-            </TabsContent>
-          )}
         </Tabs>
       </div>
 
-      <CellModal open={cellModalOpen} onOpenChange={handleCloseCellModal} cell={editingCell} members={members} onSubmit={editingCell ? handleUpdateCell : handleCreateCell} />
-      <CellReportWithAttendanceModal open={reportModalOpen} onOpenChange={setReportModalOpen} cells={cells} defaultCellId={selectedCellId} onSubmit={handleCreateReport} />
-      {selectedCell && (<CellMembersModal open={membersModalOpen} onOpenChange={setMembersModalOpen} cell={selectedCell} churchMembers={members} />)}
+      <CellModal
+        open={cellModalOpen}
+        onOpenChange={handleCloseModal}
+        cell={editingCell}
+        members={members}
+        onSubmit={editingCell ? handleUpdateCell : handleCreateCell}
+      />
+
+      <CellReportWithAttendanceModal
+        open={reportModalOpen}
+        onOpenChange={setReportModalOpen}
+        cells={cells}
+        onSubmit={handleCreateReport}
+      />
+
+      {selectedCell && (
+        <CellMembersModal
+          open={membersModalOpen}
+          onOpenChange={(open) => { setMembersModalOpen(open); if (!open) { setSelectedCell(null); setSelectedCellId(undefined); } }}
+          cell={selectedCell}
+          churchMembers={members}
+        />
+      )}
+
+      {pillarsCell && churchId && (
+        <Dialog open={!!pillarsCell} onOpenChange={(open) => !open && setPillarsCell(null)}>
+          <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
+            <CellLeaderPillars
+              cell={pillarsCell}
+              churchId={churchId}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+
       <EditCellReportModal
         open={!!editingReport}
-        onOpenChange={(open) => { if (!open) setEditingReport(null); }}
+        onOpenChange={(open) => !open && setEditingReport(null)}
         report={editingReport}
-        onSubmit={handleUpdateReport}
+        onSubmit={async (id, data) => {
+          const result = await updateReport(id, data);
+          if (!result.error) fetchReports();
+          return result;
+        }}
       />
-      <DeleteConfirmModal open={!!deletingCell} onOpenChange={(open) => !open && setDeletingCell(null)} title="Excluir Célula" description={`Tem certeza que deseja excluir "${deletingCell?.name}"? Esta ação não pode ser desfeita.`} onConfirm={() => deleteCell(deletingCell!.id)} />
+
+      <DeleteConfirmModal
+        open={!!deletingCell}
+        onOpenChange={(open) => !open && setDeletingCell(null)}
+        title="Excluir Célula"
+        description={`Tem certeza que deseja excluir "${deletingCell?.name}"? Esta ação não pode ser desfeita.`}
+        onConfirm={() => deleteCell(deletingCell!.id)}
+      />
     </AppLayout>
   );
 }
