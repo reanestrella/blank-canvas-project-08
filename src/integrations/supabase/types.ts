@@ -758,6 +758,45 @@ export type Database = {
           },
         ]
       }
+      church_settings: {
+        Row: {
+          cell_offering_account_id: string | null
+          church_id: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          cell_offering_account_id?: string | null
+          church_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          cell_offering_account_id?: string | null
+          church_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "church_settings_cell_offering_account_id_fkey"
+            columns: ["cell_offering_account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "church_settings_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: true
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       churches: {
         Row: {
           address: string | null

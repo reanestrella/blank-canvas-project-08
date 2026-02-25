@@ -13,12 +13,12 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { DevotionalCard } from "@/components/meuapp/DevotionalCard";
 import { ProfileEditTab } from "@/components/meuapp/ProfileEditTab";
 import { CoursesTab } from "@/components/meuapp/CoursesTab";
 import { useNavigate } from "react-router-dom";
 import { ptBR } from "date-fns/locale";
 import { format, isSameDay } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface Announcement {
   id: string;
@@ -107,16 +107,18 @@ function SchedulesView({ schedules }: { schedules: MySchedule[] }) {
 
       {viewMode === "calendar" && (
         <Card>
-          <CardContent className="p-4 flex justify-center">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={setSelectedDate}
-              locale={ptBR}
-              modifiers={{ scheduled: scheduleDates }}
-              modifiersClassNames={{ scheduled: "bg-primary/20 font-bold text-primary" }}
-              className="rounded-md"
-            />
+          <CardContent className="p-4 flex justify-center overflow-hidden">
+            <div className="w-full max-w-sm">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                locale={ptBR}
+                modifiers={{ scheduled: scheduleDates }}
+                modifiersClassNames={{ scheduled: "bg-primary/20 font-bold text-primary" }}
+                className="rounded-md mx-auto"
+              />
+            </div>
           </CardContent>
         </Card>
       )}
@@ -166,8 +168,9 @@ function SchedulesView({ schedules }: { schedules: MySchedule[] }) {
 }
 
 export default function MeuApp() {
-  const { profile, church } = useAuth();
+  const { profile, church, user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [birthdays, setBirthdays] = useState<BirthdayMember[]>([]);
   const [events, setEvents] = useState<UpcomingEvent[]>([]);
@@ -215,8 +218,11 @@ export default function MeuApp() {
         .limit(5);
       setEvents((eventsData as UpcomingEvent[]) || []);
 
-      // Find the member_id to use for schedule lookup
+      // ======= SCHEDULE LOOKUP (BUG #1 FIX) =======
+      // Step 1: Find the member_id linked to this user
       let memberId = profile.member_id;
+      console.log("[MeuApp] Schedule lookup — profile.member_id:", memberId, "profile.email:", profile.email);
+
       if (!memberId && profile.email) {
         const { data: memberData } = await supabase
           .from("members")
@@ -226,23 +232,30 @@ export default function MeuApp() {
           .limit(1);
         if (memberData && memberData.length > 0) {
           memberId = memberData[0].id;
+          console.log("[MeuApp] Found member_id via email fallback:", memberId);
         }
       }
 
       if (memberId) {
-        // First get schedule_volunteers for this member
-        const { data: svData } = await supabase
+        // Step 2: Query schedule_volunteers for this member
+        const { data: svData, error: svError } = await supabase
           .from("schedule_volunteers")
           .select("id, schedule_id, role, confirmed, member_id")
           .eq("member_id", memberId);
 
+        console.log("[MeuApp] schedule_volunteers query result:", { count: svData?.length, error: svError });
+
         if (svData && svData.length > 0) {
           const scheduleIds = [...new Set(svData.map(sv => sv.schedule_id))];
-          const { data: schedulesData } = await supabase
+          
+          // Step 3: Fetch ministry_schedules for those IDs, including ministry name
+          const { data: schedulesData, error: schedError } = await supabase
             .from("ministry_schedules")
             .select("id, event_name, event_date, notes, ministry_id, ministry:ministries(name)")
             .in("id", scheduleIds)
             .order("event_date", { ascending: true });
+
+          console.log("[MeuApp] ministry_schedules query result:", { count: schedulesData?.length, error: schedError });
 
           const scheduleMap = new Map((schedulesData || []).map((s: any) => [s.id, s]));
           const allSchedules: MySchedule[] = svData
@@ -266,10 +279,22 @@ export default function MeuApp() {
             .filter(Boolean) as MySchedule[];
           allSchedules.sort((a, b) => (a.schedule?.event_date || "").localeCompare(b.schedule?.event_date || ""));
           setSchedules(allSchedules);
+          console.log("[MeuApp] Final schedules loaded:", allSchedules.length);
+        } else {
+          console.log("[MeuApp] No schedule_volunteers found for member:", memberId);
+          setSchedules([]);
         }
+      } else {
+        console.log("[MeuApp] No member_id found — cannot load schedules");
+        setSchedules([]);
       }
     } catch (error) {
-      console.error("Error fetching MeuApp data:", error);
+      console.error("[MeuApp] Error fetching data:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os dados do app.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -288,16 +313,16 @@ export default function MeuApp() {
                 <AvatarImage src={profile?.avatar_url || ""} className="object-cover" />
                 <AvatarFallback className="text-2xl bg-primary-foreground/20 text-primary-foreground">{initials}</AvatarFallback>
               </Avatar>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-2xl font-bold">{profile?.full_name || "Membro"}</h1>
-                  <Badge className="bg-primary-foreground/20 text-primary-foreground border-0">Membro</Badge>
+                  <h1 className="text-2xl font-bold truncate">{profile?.full_name || "Membro"}</h1>
+                  <Badge className="bg-primary-foreground/20 text-primary-foreground border-0 flex-shrink-0">Membro</Badge>
                 </div>
                 <div className="flex flex-wrap gap-4 text-sm opacity-90">
-                  <span>{profile?.email || ""}</span>
+                  <span className="truncate">{profile?.email || ""}</span>
                   {profile?.phone && <span>• {profile.phone}</span>}
                 </div>
-                <p className="text-sm opacity-70 mt-1">{church?.name || ""}</p>
+                <p className="text-sm opacity-70 mt-1 truncate">{church?.name || ""}</p>
               </div>
             </div>
           </CardContent>
@@ -311,7 +336,6 @@ export default function MeuApp() {
           <Tabs defaultValue="overview">
             <TabsList className="w-full md:w-auto flex-wrap h-auto gap-1">
               <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-              <TabsTrigger value="devotional">Devocional</TabsTrigger>
               <TabsTrigger value="courses">Cursos</TabsTrigger>
               <TabsTrigger value="schedules">Escalas</TabsTrigger>
               <TabsTrigger value="events">Eventos</TabsTrigger>
@@ -426,11 +450,6 @@ export default function MeuApp() {
                   <CalendarIcon className="w-6 h-6 text-primary" /><span className="text-sm">Inscrições</span>
                 </Button>
               </div>
-            </TabsContent>
-
-            {/* Devotional Tab */}
-            <TabsContent value="devotional" className="mt-6">
-              <DevotionalCard />
             </TabsContent>
 
             {/* Courses Tab */}
