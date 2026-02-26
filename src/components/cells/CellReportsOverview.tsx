@@ -75,11 +75,13 @@ export function CellReportsOverview({
     return Object.values(cellMemberCounts).reduce((s, c) => s + c, 0);
   }, [selectedCellId, cellMemberCounts]);
 
-  // Per-report attendance % helper
+  // Per-report attendance % helper — uses ONLY disciples (attendance - visitors)
   const getReportAttendancePercent = (report: CellReport) => {
     const disciples = cellMemberCounts[report.cell_id] || 0;
     if (disciples <= 0) return 0;
-    return Math.round((report.attendance / disciples) * 100);
+    // attendance field includes visitors, so subtract them for disciple-only count
+    const disciplePresent = Math.max(0, report.attendance - report.visitors);
+    return Math.round((disciplePresent / disciples) * 100);
   };
 
   const summaryStats = useMemo(() => {
@@ -90,10 +92,11 @@ export function CellReportsOverview({
     const totalOffering = filteredReports.reduce((sum, r) => sum + (r.offering || 0), 0);
     const avgAttendance = totalReports > 0 ? Math.round(totalAttendance / totalReports) : 0;
     
-    // Average attendance % = average of each meeting's (attendance/disciples*100)
+    // Average attendance % = average of each meeting's ((attendance - visitors)/disciples*100)
     const perMeetingPercents = filteredReports.map(r => {
       const disciples = cellMemberCounts[r.cell_id] || 0;
-      return disciples > 0 ? (r.attendance / disciples) * 100 : 0;
+      const disciplePresent = Math.max(0, r.attendance - r.visitors);
+      return disciples > 0 ? (disciplePresent / disciples) * 100 : 0;
     });
     const avgAttendancePercent = perMeetingPercents.length > 0
       ? Math.round(perMeetingPercents.reduce((s, p) => s + p, 0) / perMeetingPercents.length)
@@ -117,7 +120,8 @@ export function CellReportsOverview({
       grouped[key].oferta += r.offering || 0;
       const disciples = cellMemberCounts[r.cell_id] || 0;
       if (disciples > 0) {
-        grouped[key].percentual += (r.attendance / disciples) * 100;
+        const disciplePresent = Math.max(0, r.attendance - r.visitors);
+        grouped[key].percentual += (disciplePresent / disciples) * 100;
         grouped[key].count += 1;
       }
     }

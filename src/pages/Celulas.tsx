@@ -60,6 +60,53 @@ function getMonthOptions() {
   return options;
 }
 
+// Offering Account Selector with persist + "Alterar" pattern
+function OfferingAccountSelector({
+  accounts,
+  offeringAccountId,
+  settingsLoaded,
+  onAccountChange,
+}: {
+  accounts: { id: string; name: string }[];
+  offeringAccountId: string;
+  settingsLoaded: boolean;
+  onAccountChange: (value: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const selectedAccount = accounts.find(a => a.id === offeringAccountId);
+  const hasSaved = !!selectedAccount && settingsLoaded;
+
+  if (!settingsLoaded) return null;
+
+  if (hasSaved && !editing) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium">Conta p/ Ofertas:</span>
+        <Badge variant="outline" className="text-sm py-1 px-3">{selectedAccount.name}</Badge>
+        <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>Alterar</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm font-medium">Conta p/ Ofertas:</span>
+      <Select value={offeringAccountId} onValueChange={(v) => { onAccountChange(v); setEditing(false); }}>
+        <SelectTrigger className="w-[220px]">
+          <SelectValue placeholder="Selecione a conta" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">Nenhuma (não registrar)</SelectItem>
+          {accounts.map((acc) => (
+            <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {hasSaved && <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>Cancelar</Button>}
+    </div>
+  );
+}
+
 export default function Celulas() {
   const [activeTab, setActiveTab] = useState("cells");
   const [cellModalOpen, setCellModalOpen] = useState(false);
@@ -180,7 +227,6 @@ export default function Celulas() {
     { label: "Presença Média", value: avgAttendance, icon: Users, color: "text-success" },
     { label: "Visitantes", value: totalVisitors, icon: UserPlus, color: "text-secondary" },
     { label: "Conversões", value: totalConversions, icon: Heart, color: "text-destructive" },
-    { label: "Ofertas", value: `R$ ${totalOffering.toFixed(0)}`, icon: DollarSign, color: "text-warning" },
   ];
 
   const handleCreateCell = async (data: Partial<Cell>) => {
@@ -290,20 +336,12 @@ export default function Celulas() {
             </Select>
           </div>
           {!isOnlyCellLeader && accounts.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Conta p/ Ofertas:</span>
-              <Select value={offeringAccountId} onValueChange={handleOfferingAccountChange}>
-                <SelectTrigger className="w-[220px]">
-                  <SelectValue placeholder="Selecione a conta" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhuma (não registrar)</SelectItem>
-                  {accounts.map((acc) => (
-                    <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <OfferingAccountSelector
+              accounts={accounts}
+              offeringAccountId={offeringAccountId}
+              settingsLoaded={settingsLoaded}
+              onAccountChange={handleOfferingAccountChange}
+            />
           )}
         </div>
 
@@ -346,6 +384,9 @@ export default function Celulas() {
           <TabsList>
             <TabsTrigger value="cells">Células</TabsTrigger>
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
+            {isOnlyCellLeader && cells.length > 0 && (
+              <TabsTrigger value="tools">Ferramentas do Líder</TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="cells" className="mt-4">
@@ -409,8 +450,19 @@ export default function Celulas() {
               getMemberName={getMemberName}
               cellMemberCounts={cellMemberCounts}
               onEditReport={setEditingReport}
+              isLeader={isOnlyCellLeader}
             />
           </TabsContent>
+
+          {isOnlyCellLeader && cells.length > 0 && (
+            <TabsContent value="tools" className="mt-4">
+              <div className="space-y-6">
+                {cells.map((cell) => (
+                  <CellLeaderPillars key={cell.id} cell={cell} churchId={churchId!} />
+                ))}
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
 
