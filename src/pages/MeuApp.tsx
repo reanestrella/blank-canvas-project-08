@@ -218,50 +218,68 @@ export default function MeuApp() {
         .limit(5);
       setEvents((eventsData as UpcomingEvent[]) || []);
 
-      // ======= SCHEDULE LOOKUP (BUG #1 FIX) =======
-      // Step 1: Find the member_id linked to this user
+      // ======= SCHEDULE LOOKUP (BUG #1 DEFINITIVE FIX) =======
+      // Step 1: Resolve member_id from profile or fallback via email
       let memberId = profile.member_id;
-      console.log("[MeuApp] Schedule lookup — profile.member_id:", memberId, "profile.email:", profile.email);
+      console.log("[MeuApp] Schedule lookup — profile.member_id:", memberId, "user_id:", user?.id, "email:", profile.email);
 
+      // Fallback 1: profile has no member_id, try to find member by email
       if (!memberId && profile.email) {
-        const { data: memberData } = await supabase
+        const { data: memberByEmail } = await supabase
           .from("members")
           .select("id")
           .eq("church_id", profile.church_id!)
-          .ilike("email", profile.email)
+          .ilike("email", profile.email.trim())
           .limit(1);
-        if (memberData && memberData.length > 0) {
-          memberId = memberData[0].id;
+        if (memberByEmail && memberByEmail.length > 0) {
+          memberId = memberByEmail[0].id;
           console.log("[MeuApp] Found member_id via email fallback:", memberId);
         }
       }
 
+      // Fallback 2: try finding by full_name match
+      if (!memberId && profile.full_name) {
+        const { data: memberByName } = await supabase
+          .from("members")
+          .select("id")
+          .eq("church_id", profile.church_id!)
+          .ilike("full_name", profile.full_name.trim())
+          .limit(1);
+        if (memberByName && memberByName.length > 0) {
+          memberId = memberByName[0].id;
+          console.log("[MeuApp] Found member_id via name fallback:", memberId);
+        }
+      }
+
       if (memberId) {
-        // Step 2: Query schedule_volunteers for this member
+        // Step 2: Query schedule_volunteers joined with ministry_schedules + ministry
         const { data: svData, error: svError } = await supabase
           .from("schedule_volunteers")
-          .select("id, schedule_id, role, confirmed, member_id")
+          .select(`
+            id, schedule_id, role, confirmed, member_id,
+            schedule:ministry_schedules!inner(
+              id, event_name, event_date, notes, ministry_id,
+              ministry:ministries(name)
+            )
+          `)
           .eq("member_id", memberId);
 
-        console.log("[MeuApp] schedule_volunteers query result:", { count: svData?.length, error: svError });
+        console.log("[MeuApp] schedule_volunteers joined query:", { count: svData?.length, error: svError?.message });
 
         if (svData && svData.length > 0) {
-          const scheduleIds = [...new Set(svData.map(sv => sv.schedule_id))];
-          
-          // Step 3: Fetch ministry_schedules for those IDs, including ministry name
-          const { data: schedulesData, error: schedError } = await supabase
-            .from("ministry_schedules")
-            .select("id, event_name, event_date, notes, ministry_id, ministry:ministries(name)")
-            .in("id", scheduleIds)
-            .order("event_date", { ascending: true });
+          // Filter to only schedules from ministries in the same church
+          const { data: churchMinistries } = await supabase
+            .from("ministries")
+            .select("id")
+            .eq("church_id", profile.church_id!);
+          const churchMinistryIds = new Set((churchMinistries || []).map((m: any) => m.id));
 
-          console.log("[MeuApp] ministry_schedules query result:", { count: schedulesData?.length, error: schedError });
-
-          const scheduleMap = new Map((schedulesData || []).map((s: any) => [s.id, s]));
           const allSchedules: MySchedule[] = svData
             .map((sv: any) => {
-              const sched = scheduleMap.get(sv.schedule_id);
+              const sched = Array.isArray(sv.schedule) ? sv.schedule[0] : sv.schedule;
               if (!sched) return null;
+              // Multi-tenant filter: only include if ministry belongs to user's church
+              if (!churchMinistryIds.has(sched.ministry_id)) return null;
               return {
                 id: sv.id,
                 schedule_id: sv.schedule_id,
@@ -272,7 +290,7 @@ export default function MeuApp() {
                   event_name: sched.event_name,
                   event_date: sched.event_date,
                   notes: sched.notes,
-                  ministry: sched.ministry,
+                  ministry: Array.isArray(sched.ministry) ? sched.ministry[0] : sched.ministry,
                 },
               };
             })
@@ -285,7 +303,11 @@ export default function MeuApp() {
           setSchedules([]);
         }
       } else {
-        console.log("[MeuApp] No member_id found — cannot load schedules");
+        console.log("[MeuApp] No member_id resolved — cannot load schedules");
+        toast({
+          title: "Aviso",
+          description: "Seu perfil não está vinculado a um membro. Peça ao líder para vincular.",
+        });
         setSchedules([]);
       }
     } catch (error) {
