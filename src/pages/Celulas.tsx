@@ -254,7 +254,7 @@ export default function Celulas() {
     const cellName = cells.find(c => c.id === cellId)?.name || "Célula";
     try {
       console.log("[Celulas] Registering offering transaction:", { cellId, amount, accountId: offeringAccountId });
-      await supabase.from("financial_transactions").insert([{
+      const { data: txResult, error: txError } = await supabase.from("financial_transactions").insert([{
         church_id: churchId,
         type: "receita",
         description: `Oferta - ${cellName}`,
@@ -262,8 +262,15 @@ export default function Celulas() {
         transaction_date: reportDate,
         account_id: offeringAccountId,
         created_by: user?.id,
-      }]);
-      console.log("[Celulas] Offering transaction registered successfully");
+      }]).select("id, account_id").single();
+      
+      if (txError) {
+        console.error("[Celulas] Error inserting offering transaction:", txError);
+        toast({ title: "Erro", description: "Oferta não foi registrada na conta: " + txError.message, variant: "destructive" });
+      } else {
+        console.log("[Celulas] Offering registered OK — id:", txResult?.id, "account_id:", txResult?.account_id);
+        toast({ title: "Oferta registrada", description: `R$ ${amount.toFixed(2)} → ${cellName} (account: ${txResult?.account_id})` });
+      }
     } catch (err) {
       console.error("[Celulas] Error registering offering:", err);
     }
@@ -381,7 +388,7 @@ export default function Celulas() {
 
         {/* Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
+          <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="cells">Células</TabsTrigger>
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
             {isOnlyCellLeader && cells.length > 0 && (

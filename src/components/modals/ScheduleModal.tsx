@@ -292,6 +292,12 @@ export function ScheduleModal({
                       <div className="space-y-2">
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                           Escalados ({scheduleVolunteers.length})
+                          {scheduleVolunteers.length > 0 && (
+                            <span className="ml-2 normal-case">
+                              • {scheduleVolunteers.filter(sv => sv.confirmed).length} confirmados
+                              • {scheduleVolunteers.filter(sv => !sv.confirmed).length} pendentes
+                            </span>
+                          )}
                         </p>
                         {loadingScheduleVol ? (
                           <Loader2 className="w-4 h-4 animate-spin mx-auto" />
@@ -329,10 +335,14 @@ export function ScheduleModal({
                                 </div>
                               </div>
                               <div className="flex items-center gap-1">
-                                {sv.confirmed && (
+                                {sv.confirmed ? (
                                   <Badge variant="outline" className="text-xs text-emerald-600 dark:text-emerald-400">
                                     <Check className="w-3 h-3 mr-1" />
                                     Confirmado
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs text-amber-600 dark:text-amber-400">
+                                    Pendente
                                   </Badge>
                                 )}
                                 <Button

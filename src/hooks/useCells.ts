@@ -7,6 +7,7 @@ export interface Cell {
   church_id: string;
   name: string;
   leader_id: string | null;
+  leader_user_id: string | null;
   supervisor_id: string | null;
   network: string | null;
   address: string | null;
@@ -69,6 +70,7 @@ export function useCells(churchId?: string, leaderUserId?: string | null) {
 
       if (leaderUserId) {
         // Cell leader: filter by leader_user_id (auth uid)
+        // Also try by member_id match in case leader_user_id wasn't synced
         const { data, error } = await supabase
           .from("cells")
           .select("*")
@@ -76,7 +78,40 @@ export function useCells(churchId?: string, leaderUserId?: string | null) {
           .eq("leader_user_id", leaderUserId)
           .order("name");
         if (error) throw error;
-        setCells((data as Cell[]) || []);
+        
+        let result = (data as Cell[]) || [];
+        
+        // Fallback: if no cells found by leader_user_id, try via profile.member_id → cells.leader_id
+        if (result.length === 0) {
+          console.log("[useCells] No cells by leader_user_id, trying profile.member_id fallback");
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("member_id")
+            .eq("user_id", leaderUserId)
+            .maybeSingle();
+          
+          if (profileData?.member_id) {
+            const { data: cellsByMember, error: err2 } = await supabase
+              .from("cells")
+              .select("*")
+              .eq("church_id", churchId)
+              .eq("leader_id", profileData.member_id)
+              .order("name");
+            if (!err2 && cellsByMember) {
+              result = cellsByMember as Cell[];
+              console.log("[useCells] Found", result.length, "cells via leader_id fallback");
+              
+              // Auto-fix: update leader_user_id for these cells
+              for (const cell of result) {
+                if (!cell.leader_user_id || cell.leader_user_id !== leaderUserId) {
+                  await supabase.from("cells").update({ leader_user_id: leaderUserId }).eq("id", cell.id);
+                }
+              }
+            }
+          }
+        }
+        
+        setCells(result);
       } else if (leaderUserId === null) {
         // Explicitly null = cell leader but no user id — show nothing
         setCells([]);

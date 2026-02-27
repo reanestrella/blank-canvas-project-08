@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   User, Users, Bell, Calendar as CalendarIcon, BookOpen, Heart, MessageSquare,
   Clock, MapPin, Plus, Loader2, Camera, GraduationCap, Settings,
-  List, CalendarDays, Check,
+  List, CalendarDays, Check, X, DollarSign, QrCode, Copy,
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -57,7 +57,17 @@ interface MySchedule {
   } | null;
 }
 
-function SchedulesView({ schedules }: { schedules: MySchedule[] }) {
+interface ContribuicaoData {
+  pix_key: string | null;
+  pix_key_type: string | null;
+  pix_holder_name: string | null;
+  bank_name: string | null;
+  bank_agency: string | null;
+  bank_account: string | null;
+  bank_account_type: string | null;
+}
+
+function SchedulesView({ schedules, onConfirm }: { schedules: MySchedule[]; onConfirm: (sv: MySchedule) => void }) {
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
@@ -154,14 +164,128 @@ function SchedulesView({ schedules }: { schedules: MySchedule[] }) {
                     <p className="text-xs text-muted-foreground">{s.schedule?.ministry?.name || "Ministério"}{s.role ? ` • ${s.role}` : ""}</p>
                     {s.schedule?.notes && <p className="text-xs text-muted-foreground mt-1 truncate">{s.schedule.notes}</p>}
                   </div>
-                  <Badge variant={s.confirmed ? "default" : "secondary"} className="flex-shrink-0">
-                    {s.confirmed ? <><Check className="w-3 h-3 mr-1" />Confirmado</> : "Pendente"}
-                  </Badge>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {s.confirmed ? (
+                      <Badge variant="default" className="bg-emerald-600">
+                        <Check className="w-3 h-3 mr-1" />Confirmado
+                      </Badge>
+                    ) : !isPast ? (
+                      <Button size="sm" onClick={() => onConfirm(s)}>
+                        <Check className="w-3 h-3 mr-1" />Confirmar
+                      </Button>
+                    ) : (
+                      <Badge variant="secondary">Pendente</Badge>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );
           })}
         </div>
+      )}
+    </div>
+  );
+}
+
+function ContribuicaoView({ churchId }: { churchId: string }) {
+  const [data, setData] = useState<ContribuicaoData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      const { data: settings } = await supabase
+        .from("church_settings" as any)
+        .select("pix_key, pix_key_type, pix_holder_name, bank_name, bank_agency, bank_account, bank_account_type")
+        .eq("church_id", churchId)
+        .maybeSingle();
+      setData(settings as ContribuicaoData | null);
+      setIsLoading(false);
+    };
+    load();
+  }, [churchId]);
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copiado!", description: "Chave Pix copiada." });
+  };
+
+  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+
+  if (!data || (!data.pix_key && !data.bank_name)) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center">
+          <DollarSign className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">Dados de contribuição ainda não foram configurados.</p>
+          <p className="text-xs text-muted-foreground mt-1">Peça ao pastor/admin para cadastrar as informações.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const pixTypeLabels: Record<string, string> = {
+    cpf: "CPF", cnpj: "CNPJ", email: "E-mail", telefone: "Telefone", aleatoria: "Chave Aleatória",
+  };
+
+  return (
+    <div className="space-y-4">
+      {data.pix_key && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-primary" /> Pix
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {data.pix_key_type && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Tipo:</span>
+                <span className="font-medium">{pixTypeLabels[data.pix_key_type] || data.pix_key_type}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">Chave:</span>
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-medium">{data.pix_key}</span>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(data.pix_key!)}>
+                  <Copy className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+            {data.pix_holder_name && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Favorecido:</span>
+                <span className="font-medium">{data.pix_holder_name}</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {data.bank_name && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-primary" /> Dados Bancários
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {[
+              ["Banco", data.bank_name],
+              ["Agência", data.bank_agency],
+              ["Conta", data.bank_account],
+              ["Tipo", data.bank_account_type],
+              ["Favorecido", data.pix_holder_name],
+            ].filter(([, v]) => v).map(([label, value]) => (
+              <div key={label} className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{label}:</span>
+                <span className="font-medium">{value}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
     </div>
   );
@@ -218,12 +342,10 @@ export default function MeuApp() {
         .limit(5);
       setEvents((eventsData as UpcomingEvent[]) || []);
 
-      // ======= SCHEDULE LOOKUP (BUG #1 DEFINITIVE FIX) =======
-      // Step 1: Resolve member_id from profile or fallback via email
+      // ======= SCHEDULE LOOKUP =======
       let memberId = profile.member_id;
-      console.log("[MeuApp] Schedule lookup — profile.member_id:", memberId, "user_id:", user?.id, "email:", profile.email);
+      console.log("[MeuApp] Schedule lookup — profile.member_id:", memberId, "user_id:", user?.id);
 
-      // Fallback 1: profile has no member_id, try to find member by email
       if (!memberId && profile.email) {
         const { data: memberByEmail } = await supabase
           .from("members")
@@ -237,7 +359,6 @@ export default function MeuApp() {
         }
       }
 
-      // Fallback 2: try finding by full_name match
       if (!memberId && profile.full_name) {
         const { data: memberByName } = await supabase
           .from("members")
@@ -252,7 +373,6 @@ export default function MeuApp() {
       }
 
       if (memberId) {
-        // Step 2: Query schedule_volunteers joined with ministry_schedules + ministry
         const { data: svData, error: svError } = await supabase
           .from("schedule_volunteers")
           .select(`
@@ -264,10 +384,9 @@ export default function MeuApp() {
           `)
           .eq("member_id", memberId);
 
-        console.log("[MeuApp] schedule_volunteers joined query:", { count: svData?.length, error: svError?.message });
+        console.log("[MeuApp] schedule_volunteers query:", { count: svData?.length, error: svError?.message });
 
         if (svData && svData.length > 0) {
-          // Filter to only schedules from ministries in the same church
           const { data: churchMinistries } = await supabase
             .from("ministries")
             .select("id")
@@ -278,7 +397,6 @@ export default function MeuApp() {
             .map((sv: any) => {
               const sched = Array.isArray(sv.schedule) ? sv.schedule[0] : sv.schedule;
               if (!sched) return null;
-              // Multi-tenant filter: only include if ministry belongs to user's church
               if (!churchMinistryIds.has(sched.ministry_id)) return null;
               return {
                 id: sv.id,
@@ -299,26 +417,32 @@ export default function MeuApp() {
           setSchedules(allSchedules);
           console.log("[MeuApp] Final schedules loaded:", allSchedules.length);
         } else {
-          console.log("[MeuApp] No schedule_volunteers found for member:", memberId);
           setSchedules([]);
         }
       } else {
         console.log("[MeuApp] No member_id resolved — cannot load schedules");
-        toast({
-          title: "Aviso",
-          description: "Seu perfil não está vinculado a um membro. Peça ao líder para vincular.",
-        });
         setSchedules([]);
       }
     } catch (error) {
       console.error("[MeuApp] Error fetching data:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os dados do app.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: "Não foi possível carregar os dados.", variant: "destructive" });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleConfirmSchedule = async (sv: MySchedule) => {
+    try {
+      const { error } = await supabase
+        .from("schedule_volunteers")
+        .update({ confirmed: true })
+        .eq("id", sv.id);
+      if (error) throw error;
+      setSchedules(prev => prev.map(s => s.id === sv.id ? { ...s, confirmed: true } : s));
+      toast({ title: "Confirmado!", description: `Presença confirmada para "${sv.schedule?.event_name}".` });
+    } catch (err: any) {
+      console.error("[MeuApp] Error confirming schedule:", err);
+      toast({ title: "Erro", description: "Não foi possível confirmar.", variant: "destructive" });
     }
   };
 
@@ -360,6 +484,7 @@ export default function MeuApp() {
               <TabsTrigger value="overview">Visão Geral</TabsTrigger>
               <TabsTrigger value="courses">Cursos</TabsTrigger>
               <TabsTrigger value="schedules">Escalas</TabsTrigger>
+              <TabsTrigger value="contribuicao">Contribuição</TabsTrigger>
               <TabsTrigger value="events">Eventos</TabsTrigger>
               <TabsTrigger value="prayer">Oração</TabsTrigger>
               <TabsTrigger value="profile">Perfil</TabsTrigger>
@@ -424,7 +549,7 @@ export default function MeuApp() {
                   </CardContent>
                 </Card>
 
-                {/* Events */}
+                {/* Upcoming Events */}
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg flex items-center gap-2">
@@ -436,19 +561,19 @@ export default function MeuApp() {
                       <p className="text-center text-muted-foreground py-4">Nenhum evento próximo.</p>
                     ) : (
                       <div className="space-y-3">
-                        {events.map((event) => (
-                          <div key={event.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                            <div className="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-background">
-                              <span className="text-xs font-bold text-primary">{new Date(event.event_date + "T12:00:00").getDate()}</span>
-                              <span className="text-[10px] text-muted-foreground uppercase">{new Date(event.event_date + "T12:00:00").toLocaleDateString("pt-BR", { month: "short" })}</span>
+                        {events.slice(0, 4).map((evt) => (
+                          <div key={evt.id} className="p-3 rounded-lg bg-muted/50">
+                            <h4 className="font-medium text-sm">{evt.title}</h4>
+                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                              <CalendarIcon className="w-3 h-3" />
+                              {new Date(evt.event_date + "T12:00:00").toLocaleDateString("pt-BR")}
+                              {evt.event_time && <span>• {evt.event_time}</span>}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">{event.title}</p>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                {event.event_time && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{event.event_time}</span>}
-                                {event.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{event.location}</span>}
+                            {evt.location && (
+                              <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                                <MapPin className="w-3 h-3" />{evt.location}
                               </div>
-                            </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -456,88 +581,67 @@ export default function MeuApp() {
                   </CardContent>
                 </Card>
               </div>
-
-              {/* Quick Actions */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Button variant="outline" className="h-20 flex-col gap-2">
-                  <Heart className="w-6 h-6 text-secondary" /><span className="text-sm">Pedido de Oração</span>
-                </Button>
-                <Button variant="outline" className="h-20 flex-col gap-2">
-                  <MessageSquare className="w-6 h-6 text-info" /><span className="text-sm">Testemunho</span>
-                </Button>
-                <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => {}}>
-                  <GraduationCap className="w-6 h-6 text-success" /><span className="text-sm">Meus Cursos</span>
-                </Button>
-                <Button variant="outline" className="h-20 flex-col gap-2">
-                  <CalendarIcon className="w-6 h-6 text-primary" /><span className="text-sm">Inscrições</span>
-                </Button>
-              </div>
             </TabsContent>
 
-            {/* Courses Tab */}
             <TabsContent value="courses" className="mt-6">
               <CoursesTab />
             </TabsContent>
 
-            {/* Schedules Tab */}
             <TabsContent value="schedules" className="mt-6">
-              <SchedulesView schedules={schedules} />
+              <SchedulesView schedules={schedules} onConfirm={handleConfirmSchedule} />
             </TabsContent>
 
-            {/* Events Tab */}
-            <TabsContent value="events" className="mt-6">
-              <Card>
-                <CardHeader><CardTitle>Próximos Eventos</CardTitle></CardHeader>
-                <CardContent>
-                  {events.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">Nenhum evento agendado.</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {events.map((event) => (
-                        <div key={event.id} className="flex items-center gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors">
-                          <div className="flex flex-col items-center justify-center w-16 h-16 rounded-xl bg-primary/10">
-                            <span className="text-2xl font-bold text-primary">{new Date(event.event_date + "T12:00:00").getDate()}</span>
-                            <span className="text-xs text-muted-foreground uppercase">{new Date(event.event_date + "T12:00:00").toLocaleDateString("pt-BR", { month: "short" })}</span>
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold">{event.title}</h4>
-                            <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mt-1">
-                              {event.event_time && <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{event.event_time}</span>}
-                              {event.location && <span className="flex items-center gap-1"><MapPin className="w-4 h-4" />{event.location}</span>}
-                            </div>
-                          </div>
+            <TabsContent value="contribuicao" className="mt-6">
+              <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
+                <DollarSign className="w-5 h-5 text-primary" /> Contribuição
+              </h3>
+              {profile?.church_id ? (
+                <ContribuicaoView churchId={profile.church_id} />
+              ) : (
+                <p className="text-muted-foreground">Igreja não identificada.</p>
+              )}
+            </TabsContent>
+
+            <TabsContent value="events" className="space-y-6 mt-6">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <CalendarIcon className="w-5 h-5 text-primary" /> Eventos
+              </h3>
+              {events.length === 0 ? (
+                <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Nenhum evento próximo.</p></CardContent></Card>
+              ) : (
+                <div className="space-y-3">
+                  {events.map((evt) => (
+                    <Card key={evt.id}>
+                      <CardContent className="p-4">
+                        <h4 className="font-semibold">{evt.title}</h4>
+                        <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                          <CalendarIcon className="w-4 h-4" />
+                          {new Date(evt.event_date + "T12:00:00").toLocaleDateString("pt-BR")}
+                          {evt.event_time && <span>• {evt.event_time}</span>}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                        {evt.location && (
+                          <div className="flex items-center gap-1 mt-1 text-sm text-muted-foreground">
+                            <MapPin className="w-4 h-4" />{evt.location}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="prayer" className="space-y-6 mt-6">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-primary" /> Pedidos de Oração
+              </h3>
+              <Card>
+                <CardContent className="py-8">
+                  <p className="text-center text-muted-foreground">Em breve você poderá enviar e acompanhar pedidos de oração.</p>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {/* Prayer Tab */}
-            <TabsContent value="prayer" className="mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Heart className="w-5 h-5 text-secondary" />Meus Pedidos</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Button className="w-full mb-4 gradient-accent text-secondary-foreground"><Plus className="w-4 h-4 mr-2" />Novo Pedido de Oração</Button>
-                    <p className="text-center text-muted-foreground py-8">Você ainda não tem pedidos cadastrados.</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5 text-secondary" />Pedidos da Comunidade</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-center text-muted-foreground py-8">Nenhum pedido público no momento.</p>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Profile Tab */}
             <TabsContent value="profile" className="mt-6">
               <ProfileEditTab />
             </TabsContent>

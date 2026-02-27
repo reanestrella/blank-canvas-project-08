@@ -20,6 +20,7 @@ import Ensino from "./pages/Ensino";
 import Financeiro from "./pages/Financeiro";
 import Eventos from "./pages/Eventos";
 import MeuApp from "./pages/MeuApp";
+import Contribuicao from "./pages/Contribuicao";
 import Perfil from "./pages/Perfil";
 import Configuracoes from "./pages/Configuracoes";
 import Consolidacao from "./pages/Consolidacao";
@@ -67,6 +68,7 @@ const App = () => (
               {/* Always accessible to any authenticated user */}
               <Route path="/app" element={<Dashboard />} />
               <Route path="/meu-app" element={<MeuApp />} />
+              <Route path="/contribuicao" element={<Contribuicao />} />
               <Route path="/perfil" element={<Perfil />} />
 
               {/* Role-protected routes */}
