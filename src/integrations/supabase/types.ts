@@ -760,24 +760,45 @@ export type Database = {
       }
       church_settings: {
         Row: {
+          bank_account: string | null
+          bank_account_type: string | null
+          bank_agency: string | null
+          bank_name: string | null
           cell_offering_account_id: string | null
           church_id: string
           created_at: string
           id: string
+          pix_holder_name: string | null
+          pix_key: string | null
+          pix_key_type: string | null
           updated_at: string
         }
         Insert: {
+          bank_account?: string | null
+          bank_account_type?: string | null
+          bank_agency?: string | null
+          bank_name?: string | null
           cell_offering_account_id?: string | null
           church_id: string
           created_at?: string
           id?: string
+          pix_holder_name?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
           updated_at?: string
         }
         Update: {
+          bank_account?: string | null
+          bank_account_type?: string | null
+          bank_agency?: string | null
+          bank_name?: string | null
           cell_offering_account_id?: string | null
           church_id?: string
           created_at?: string
           id?: string
+          pix_holder_name?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
           updated_at?: string
         }
         Relationships: [
