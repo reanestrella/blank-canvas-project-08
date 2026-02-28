@@ -57,6 +57,13 @@ interface MySchedule {
   } | null;
 }
 
+interface CoVolunteer {
+  id: string;
+  confirmed: boolean | null;
+  role: string | null;
+  member: { full_name: string } | null;
+}
+
 interface ContribuicaoData {
   pix_key: string | null;
   pix_key_type: string | null;
@@ -70,6 +77,9 @@ interface ContribuicaoData {
 function SchedulesView({ schedules, onConfirm }: { schedules: MySchedule[]; onConfirm: (sv: MySchedule) => void }) {
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [expandedSchedule, setExpandedSchedule] = useState<string | null>(null);
+  const [coVolunteers, setCoVolunteers] = useState<Record<string, CoVolunteer[]>>({});
+  const [loadingVols, setLoadingVols] = useState<string | null>(null);
 
   const scheduleDates = useMemo(() => {
     const dates: Date[] = [];
@@ -90,6 +100,28 @@ function SchedulesView({ schedules, onConfirm }: { schedules: MySchedule[]; onCo
   }, [schedules, selectedDate]);
 
   const displaySchedules = viewMode === "calendar" ? filteredSchedules : schedules;
+
+  const loadCoVolunteers = async (scheduleId: string) => {
+    if (expandedSchedule === scheduleId) {
+      setExpandedSchedule(null);
+      return;
+    }
+    setExpandedSchedule(scheduleId);
+    if (coVolunteers[scheduleId]) return; // already cached
+
+    setLoadingVols(scheduleId);
+    try {
+      const { data } = await supabase
+        .from("schedule_volunteers")
+        .select("id, confirmed, role, member:members(full_name)")
+        .eq("schedule_id", scheduleId);
+      setCoVolunteers(prev => ({ ...prev, [scheduleId]: (data || []) as any }));
+    } catch (err) {
+      console.error("[MeuApp] Error loading co-volunteers:", err);
+    } finally {
+      setLoadingVols(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -150,33 +182,78 @@ function SchedulesView({ schedules, onConfirm }: { schedules: MySchedule[]; onCo
           {displaySchedules.map((s) => {
             const eventDate = s.schedule ? new Date(s.schedule.event_date + "T12:00:00") : null;
             const isPast = eventDate ? eventDate < new Date(new Date().setHours(0,0,0,0)) : false;
+            const isExpanded = expandedSchedule === s.schedule_id;
+            const vols = coVolunteers[s.schedule_id];
+
             return (
               <Card key={s.id} className={isPast ? "opacity-60" : ""}>
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-primary/10 flex-shrink-0">
-                    <span className="text-xl font-bold text-primary">{eventDate?.getDate() || "?"}</span>
-                    <span className="text-[10px] text-muted-foreground uppercase">
-                      {eventDate ? format(eventDate, "MMM", { locale: ptBR }) : ""}
-                    </span>
+                <CardContent className="p-4">
+                  <div
+                    className="flex items-center gap-4 cursor-pointer"
+                    onClick={() => s.schedule_id && loadCoVolunteers(s.schedule_id)}
+                  >
+                    <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-primary/10 flex-shrink-0">
+                      <span className="text-xl font-bold text-primary">{eventDate?.getDate() || "?"}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase">
+                        {eventDate ? format(eventDate, "MMM", { locale: ptBR }) : ""}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-sm">{s.schedule?.event_name || "Evento"}</h4>
+                      <p className="text-xs text-muted-foreground">{s.schedule?.ministry?.name || "Ministério"}{s.role ? ` • ${s.role}` : ""}</p>
+                      {s.schedule?.notes && <p className="text-xs text-muted-foreground mt-1 truncate">{s.schedule.notes}</p>}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {s.confirmed ? (
+                        <Badge variant="default" className="bg-emerald-600">
+                          <Check className="w-3 h-3 mr-1" />Confirmado
+                        </Badge>
+                      ) : !isPast ? (
+                        <Button size="sm" onClick={(e) => { e.stopPropagation(); onConfirm(s); }}>
+                          <Check className="w-3 h-3 mr-1" />Confirmar
+                        </Button>
+                      ) : (
+                        <Badge variant="secondary">Pendente</Badge>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-sm">{s.schedule?.event_name || "Evento"}</h4>
-                    <p className="text-xs text-muted-foreground">{s.schedule?.ministry?.name || "Ministério"}{s.role ? ` • ${s.role}` : ""}</p>
-                    {s.schedule?.notes && <p className="text-xs text-muted-foreground mt-1 truncate">{s.schedule.notes}</p>}
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {s.confirmed ? (
-                      <Badge variant="default" className="bg-emerald-600">
-                        <Check className="w-3 h-3 mr-1" />Confirmado
-                      </Badge>
-                    ) : !isPast ? (
-                      <Button size="sm" onClick={() => onConfirm(s)}>
-                        <Check className="w-3 h-3 mr-1" />Confirmar
-                      </Button>
-                    ) : (
-                      <Badge variant="secondary">Pendente</Badge>
-                    )}
-                  </div>
+
+                  {/* Co-volunteers panel */}
+                  {isExpanded && (
+                    <div className="mt-4 pt-3 border-t">
+                      <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                        <Users className="w-3 h-3" /> Escalados do dia
+                      </p>
+                      {loadingVols === s.schedule_id ? (
+                        <div className="flex justify-center py-2"><Loader2 className="w-4 h-4 animate-spin" /></div>
+                      ) : vols && vols.length > 0 ? (
+                        <div className="space-y-1.5">
+                          {vols.map((v) => (
+                            <div key={v.id} className="flex items-center gap-2 text-sm p-1.5 rounded-md bg-muted/50">
+                              <Avatar className="w-6 h-6">
+                                <AvatarFallback className="text-[10px]">
+                                  {(v.member?.full_name || "?").split(" ").map(n => n[0]).join("").slice(0, 2)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="flex-1 text-xs font-medium truncate">{v.member?.full_name || "Membro"}</span>
+                              {v.role && <span className="text-[10px] text-muted-foreground">{v.role}</span>}
+                              {v.confirmed ? (
+                                <Badge variant="outline" className="text-[10px] py-0 h-5 text-emerald-600 border-emerald-200">
+                                  <Check className="w-2.5 h-2.5 mr-0.5" />OK
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px] py-0 h-5 text-amber-600 border-amber-200">
+                                  Pendente
+                                </Badge>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic">Nenhum voluntário escalado.</p>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );

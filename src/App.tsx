@@ -98,7 +98,7 @@ const App = () => (
                 </RequireAnyRole>
               } />
               <Route path="/eventos" element={
-                <RequireAnyRole allowedRoles={["pastor", "secretario", "lider_ministerio"]}>
+                <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
                   <Eventos />
                 </RequireAnyRole>
               } />

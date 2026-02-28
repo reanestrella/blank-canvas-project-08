@@ -69,8 +69,8 @@ export default function Eventos() {
   };
 
   // Filter upcoming events
-  const upcomingEvents = events.filter(e => new Date(e.event_date) >= new Date());
-  const pastEvents = events.filter(e => new Date(e.event_date) < new Date());
+  const upcomingEvents = events.filter(e => new Date(e.event_date + "T12:00:00") >= new Date());
+  const pastEvents = events.filter(e => new Date(e.event_date + "T12:00:00") < new Date());
 
   return (
     <AppLayout>
@@ -142,15 +142,15 @@ export default function Eventos() {
                     <div className="flex gap-4">
                       <div className="flex flex-col items-center justify-center min-w-[60px] p-3 rounded-xl bg-primary/5">
                         <span className="text-xs text-muted-foreground uppercase">
-                          {new Date(event.event_date).toLocaleDateString("pt-BR", {
+                          {new Date(event.event_date + "T12:00:00").toLocaleDateString("pt-BR", {
                             month: "short",
                           })}
                         </span>
                         <span className="text-2xl font-bold text-primary">
-                          {new Date(event.event_date).getDate()}
+                          {new Date(event.event_date + "T12:00:00").getDate()}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(event.event_date).toLocaleDateString("pt-BR", {
+                          {new Date(event.event_date + "T12:00:00").toLocaleDateString("pt-BR", {
                             weekday: "short",
                           })}
                         </span>

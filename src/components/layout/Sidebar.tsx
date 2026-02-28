@@ -26,7 +26,7 @@ const allMenuItems: MenuItem[] = [
   { icon: Handshake, label: "Consolidação", path: "/consolidacao", allowedRoles: ["pastor", "consolidacao"] },
   { icon: GraduationCap, label: "Ensino", path: "/ensino", allowedRoles: ["pastor", "secretario"] },
   { icon: DollarSign, label: "Financeiro", path: "/financeiro", allowedRoles: ["pastor", "tesoureiro"] },
-  { icon: Calendar, label: "Eventos", path: "/eventos", allowedRoles: ["pastor", "secretario", "lider_ministerio"] },
+  { icon: Calendar, label: "Eventos", path: "/eventos", allowedRoles: ["pastor", "secretario"] },
   { icon: BookOpen, label: "Discipulados", path: "/discipulados", allowedRoles: ["pastor", "secretario"] },
   { icon: Home, label: "Visitas", path: "/visitas", allowedRoles: ["pastor", "secretario"] },
   { icon: Armchair, label: "Gabinete", path: "/gabinete", allowedRoles: ["pastor", "secretario"] },
