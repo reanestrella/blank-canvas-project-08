@@ -131,10 +131,10 @@ export function ScheduleModal({
   };
 
   const upcomingSchedules = schedules.filter(
-    (s) => new Date(s.event_date) >= new Date(new Date().toDateString())
+    (s) => new Date(s.event_date + "T12:00:00") >= new Date(new Date().toDateString())
   );
   const pastSchedules = schedules.filter(
-    (s) => new Date(s.event_date) < new Date(new Date().toDateString())
+    (s) => new Date(s.event_date + "T12:00:00") < new Date(new Date().toDateString())
   );
 
   return (
@@ -194,7 +194,7 @@ export function ScheduleModal({
                             <div>
                               <p className="font-medium text-sm">{schedule.event_name}</p>
                               <p className="text-xs text-muted-foreground">
-                                {format(new Date(schedule.event_date), "dd 'de' MMMM, yyyy", {
+                                {format(new Date(schedule.event_date + "T12:00:00"), "dd 'de' MMMM, yyyy", {
                                   locale: ptBR,
                                 })}
                               </p>
@@ -235,7 +235,7 @@ export function ScheduleModal({
                         >
                           <p className="font-medium text-sm">{schedule.event_name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {format(new Date(schedule.event_date), "dd/MM/yyyy", {
+                            {format(new Date(schedule.event_date + "T12:00:00"), "dd/MM/yyyy", {
                               locale: ptBR,
                             })}
                           </p>
