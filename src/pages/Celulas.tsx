@@ -250,10 +250,20 @@ export default function Celulas() {
 
   // Register offering as financial transaction
   const registerOfferingTransaction = async (cellId: string, amount: number, reportDate: string) => {
-    if (!churchId || !offeringAccountId || offeringAccountId === "none" || amount <= 0) return;
+    if (!churchId || amount <= 0) return;
+
+    // Validate account is configured
+    if (!offeringAccountId || offeringAccountId === "none") {
+      toast({ title: "Conta não configurada", description: "Defina uma conta para ofertas de célula antes de registrar.", variant: "destructive" });
+      return;
+    }
+
     const cellName = cells.find(c => c.id === cellId)?.name || "Célula";
+    const accountName = accounts.find(a => a.id === offeringAccountId)?.name || offeringAccountId;
+
     try {
-      console.log("[Celulas] Registering offering transaction:", { cellId, amount, accountId: offeringAccountId });
+      console.log("[Celulas] Registering offering:", { cellId, amount, accountId: offeringAccountId, accountName });
+
       const { data: txResult, error: txError } = await supabase.from("financial_transactions").insert([{
         church_id: churchId,
         type: "receita",
@@ -263,13 +273,22 @@ export default function Celulas() {
         account_id: offeringAccountId,
         created_by: user?.id,
       }]).select("id, account_id").single();
-      
+
       if (txError) {
-        console.error("[Celulas] Error inserting offering transaction:", txError);
-        toast({ title: "Erro", description: "Oferta não foi registrada na conta: " + txError.message, variant: "destructive" });
+        console.error("[Celulas] Error inserting offering:", txError);
+        toast({ title: "Erro", description: "Oferta não registrada: " + txError.message, variant: "destructive" });
       } else {
-        console.log("[Celulas] Offering registered OK — id:", txResult?.id, "account_id:", txResult?.account_id);
-        toast({ title: "Oferta registrada", description: `R$ ${amount.toFixed(2)} → ${cellName} (account: ${txResult?.account_id})` });
+        // PROOF: verify the saved account_id matches
+        const savedAccountId = txResult?.account_id;
+        const savedAccountName = accounts.find(a => a.id === savedAccountId)?.name || savedAccountId;
+        console.log("[Celulas] ✅ Offering saved — id:", txResult?.id, "account_id:", savedAccountId, "account:", savedAccountName);
+
+        if (savedAccountId !== offeringAccountId) {
+          console.error("[Celulas] ⚠️ MISMATCH! Sent:", offeringAccountId, "Saved:", savedAccountId);
+          toast({ title: "⚠️ Atenção", description: `Conta divergente! Enviado: ${accountName}, Gravado: ${savedAccountName}`, variant: "destructive" });
+        } else {
+          toast({ title: "✅ Oferta registrada", description: `R$ ${amount.toFixed(2)} → Conta: ${savedAccountName}` });
+        }
       }
     } catch (err) {
       console.error("[Celulas] Error registering offering:", err);

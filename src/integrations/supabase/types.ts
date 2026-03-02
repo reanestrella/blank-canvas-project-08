@@ -1926,6 +1926,100 @@ export type Database = {
           },
         ]
       }
+      ministry_role_members: {
+        Row: {
+          church_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          member_id: string
+          ministry_role_id: string
+        }
+        Insert: {
+          church_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          member_id: string
+          ministry_role_id: string
+        }
+        Update: {
+          church_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          member_id?: string
+          ministry_role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ministry_role_members_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ministry_role_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ministry_role_members_ministry_role_id_fkey"
+            columns: ["ministry_role_id"]
+            isOneToOne: false
+            referencedRelation: "ministry_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ministry_roles: {
+        Row: {
+          church_id: string
+          created_at: string
+          icon: string | null
+          id: string
+          ministry_id: string
+          name: string
+          sort_order: number | null
+        }
+        Insert: {
+          church_id: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          ministry_id: string
+          name: string
+          sort_order?: number | null
+        }
+        Update: {
+          church_id?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          ministry_id?: string
+          name?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ministry_roles_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ministry_roles_ministry_id_fkey"
+            columns: ["ministry_id"]
+            isOneToOne: false
+            referencedRelation: "ministries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ministry_schedules: {
         Row: {
           created_at: string
