@@ -5,30 +5,16 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +23,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Check, Loader2, Plus, Trash2, UserPlus, X } from "lucide-react";
 import { useMinistrySchedules, useScheduleVolunteers } from "@/hooks/useMinistrySchedules";
 import { useMinistryVolunteers } from "@/hooks/useMinistryVolunteers";
+import { useMinistryRoles } from "@/hooks/useMinistryRoles";
+import { useAuth } from "@/contexts/AuthContext";
+import { useMembers } from "@/hooks/useMembers";
 
 const scheduleSchema = z.object({
   event_name: z.string().min(2, "Nome do evento é obrigatório"),
@@ -53,24 +42,23 @@ interface ScheduleModalProps {
   ministryName: string;
 }
 
-export function ScheduleModal({
-  open,
-  onOpenChange,
-  ministryId,
-  ministryName,
-}: ScheduleModalProps) {
+export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: ScheduleModalProps) {
   const [activeTab, setActiveTab] = useState("list");
   const [selectedSchedule, setSelectedSchedule] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedVolunteer, setSelectedVolunteer] = useState("");
   const [volunteerRole, setVolunteerRole] = useState("");
 
-  const { schedules, isLoading, createSchedule, deleteSchedule } = useMinistrySchedules(
-    open ? ministryId : undefined
+  const { profile } = useAuth();
+  const churchId = profile?.church_id;
+
+  const { schedules, isLoading, createSchedule, deleteSchedule } = useMinistrySchedules(open ? ministryId : undefined);
+  const { volunteers: ministryVolunteers } = useMinistryVolunteers(open ? ministryId : undefined);
+  const { roles: ministryRoles, roleMembers } = useMinistryRoles(
+    open ? ministryId : undefined,
+    open ? churchId || undefined : undefined
   );
-  const { volunteers: ministryVolunteers } = useMinistryVolunteers(
-    open ? ministryId : undefined
-  );
+  const { members } = useMembers(churchId || undefined);
   const {
     volunteers: scheduleVolunteers,
     isLoading: loadingScheduleVol,
@@ -81,11 +69,7 @@ export function ScheduleModal({
 
   const form = useForm<ScheduleFormData>({
     resolver: zodResolver(scheduleSchema),
-    defaultValues: {
-      event_name: "",
-      event_date: "",
-      notes: "",
-    },
+    defaultValues: { event_name: "", event_date: "", notes: "" },
   });
 
   useEffect(() => {
@@ -101,7 +85,7 @@ export function ScheduleModal({
     const result = await createSchedule({
       event_name: data.event_name,
       event_date: data.event_date,
-      notes: data.notes,
+      notes: data.notes || undefined,
     });
     if (!result.error) {
       form.reset();
@@ -121,13 +105,15 @@ export function ScheduleModal({
     (mv) => !scheduleVolunteers.some((sv) => sv.member_id === mv.member_id)
   );
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .substring(0, 2)
-      .toUpperCase();
+  const getInitials = (name: string) =>
+    name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase();
+
+  // Get member's roles in this ministry
+  const getMemberMinistryRoles = (memberId: string) => {
+    const memberRoleIds = roleMembers
+      .filter(rm => rm.member_id === memberId)
+      .map(rm => rm.ministry_role_id);
+    return ministryRoles.filter(r => memberRoleIds.includes(r.id));
   };
 
   const upcomingSchedules = schedules.filter(
@@ -162,13 +148,8 @@ export function ScheduleModal({
               <div className="flex flex-col items-center justify-center p-8 text-center">
                 <Calendar className="w-10 h-10 text-muted-foreground mb-2" />
                 <p className="text-muted-foreground">Nenhuma escala cadastrada</p>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => setActiveTab("new")}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Criar primeira escala
+                <Button variant="outline" className="mt-4" onClick={() => setActiveTab("new")}>
+                  <Plus className="w-4 h-4 mr-2" />Criar primeira escala
                 </Button>
               </div>
             ) : (
@@ -177,67 +158,71 @@ export function ScheduleModal({
                 <div className="w-1/2 overflow-y-auto space-y-2 pr-2">
                   {upcomingSchedules.length > 0 && (
                     <>
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Próximas
-                      </p>
-                      {upcomingSchedules.map((schedule) => (
-                        <div
-                          key={schedule.id}
-                          onClick={() => setSelectedSchedule(schedule.id)}
-                          className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                            selectedSchedule === schedule.id
-                              ? "border-primary bg-primary/5"
-                              : "hover:bg-muted/50"
-                          }`}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-medium text-sm">{schedule.event_name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {format(new Date(schedule.event_date + "T12:00:00"), "dd 'de' MMMM, yyyy", {
-                                  locale: ptBR,
-                                })}
-                              </p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Próximas</p>
+                      {upcomingSchedules.map((schedule) => {
+                        const volCount = schedule.volunteers?.length || 0;
+                        const confirmedCount = schedule.volunteers?.filter(v => v.confirmed).length || 0;
+                        return (
+                          <div
+                            key={schedule.id}
+                            onClick={() => setSelectedSchedule(schedule.id)}
+                            className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                              selectedSchedule === schedule.id ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                            }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-medium text-sm">{schedule.event_name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(schedule.event_date + "T12:00:00"), "dd 'de' MMMM, yyyy", { locale: ptBR })}
+                                </p>
+                                {volCount > 0 && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {confirmedCount}/{volCount} confirmados
+                                  </p>
+                                )}
+                              </div>
+                              <Button
+                                variant="ghost" size="icon"
+                                className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                                onClick={(e) => { e.stopPropagation(); deleteSchedule(schedule.id); if (selectedSchedule === schedule.id) setSelectedSchedule(null); }}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-destructive hover:bg-destructive/10"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteSchedule(schedule.id);
-                                if (selectedSchedule === schedule.id) {
-                                  setSelectedSchedule(null);
-                                }
-                              }}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
+                            {/* Show assigned volunteers with roles */}
+                            {schedule.volunteers && schedule.volunteers.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {schedule.volunteers.slice(0, 4).map(v => (
+                                  <Badge key={v.id} variant="outline" className="text-[10px] py-0 h-5">
+                                    {v.member?.full_name?.split(" ")[0] || "?"}
+                                    {v.role ? ` (${v.role})` : ""}
+                                  </Badge>
+                                ))}
+                                {schedule.volunteers.length > 4 && (
+                                  <Badge variant="outline" className="text-[10px] py-0 h-5">+{schedule.volunteers.length - 4}</Badge>
+                                )}
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </>
                   )}
                   {pastSchedules.length > 0 && (
                     <>
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mt-4">
-                        Anteriores
-                      </p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mt-4">Anteriores</p>
                       {pastSchedules.slice(0, 5).map((schedule) => (
                         <div
                           key={schedule.id}
                           onClick={() => setSelectedSchedule(schedule.id)}
                           className={`p-3 rounded-lg border cursor-pointer transition-colors opacity-60 ${
-                            selectedSchedule === schedule.id
-                              ? "border-primary bg-primary/5"
-                              : "hover:bg-muted/50"
+                            selectedSchedule === schedule.id ? "border-primary bg-primary/5" : "hover:bg-muted/50"
                           }`}
                         >
                           <p className="font-medium text-sm">{schedule.event_name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {format(new Date(schedule.event_date + "T12:00:00"), "dd/MM/yyyy", {
-                              locale: ptBR,
-                            })}
+                            {format(new Date(schedule.event_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}
                           </p>
                         </div>
                       ))}
@@ -252,41 +237,68 @@ export function ScheduleModal({
                       <div>
                         <p className="text-sm font-medium mb-2">Escalar voluntário</p>
                         <div className="flex gap-2 mb-2">
-                          <Select
-                            value={selectedVolunteer}
-                            onValueChange={setSelectedVolunteer}
-                          >
+                          <Select value={selectedVolunteer} onValueChange={setSelectedVolunteer}>
                             <SelectTrigger className="flex-1">
                               <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
                             <SelectContent>
                               {availableForSchedule.length === 0 ? (
-                                <div className="p-2 text-xs text-muted-foreground text-center">
-                                  Todos os voluntários já foram escalados
-                                </div>
+                                <div className="p-2 text-xs text-muted-foreground text-center">Todos já escalados</div>
                               ) : (
-                                availableForSchedule.map((v) => (
-                                  <SelectItem key={v.id} value={v.member_id}>
-                                    {v.member?.full_name || "Voluntário"}
-                                  </SelectItem>
-                                ))
+                                availableForSchedule.map((v) => {
+                                  const memberRoles = getMemberMinistryRoles(v.member_id);
+                                  return (
+                                    <SelectItem key={v.id} value={v.member_id}>
+                                      {v.member?.full_name || "Voluntário"}
+                                      {memberRoles.length > 0 && ` (${memberRoles.map(r => `${r.icon} ${r.name}`).join(", ")})`}
+                                    </SelectItem>
+                                  );
+                                })
                               )}
                             </SelectContent>
                           </Select>
-                          <Button
-                            size="icon"
-                            onClick={handleAddVolunteer}
-                            disabled={!selectedVolunteer}
-                          >
+                          <Button size="icon" onClick={handleAddVolunteer} disabled={!selectedVolunteer}>
                             <UserPlus className="w-4 h-4" />
                           </Button>
                         </div>
-                        <Input
-                          placeholder="Função (opcional)"
-                          value={volunteerRole}
-                          onChange={(e) => setVolunteerRole(e.target.value)}
-                          className="text-sm"
-                        />
+                        {/* Role selector: show ministry roles if person has multiple */}
+                        {selectedVolunteer && (() => {
+                          const memberRoles = getMemberMinistryRoles(selectedVolunteer);
+                          if (memberRoles.length > 1) {
+                            return (
+                              <Select value={volunteerRole} onValueChange={setVolunteerRole}>
+                                <SelectTrigger className="text-sm">
+                                  <SelectValue placeholder="Escolha a função para esta escala" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {memberRoles.map(r => (
+                                    <SelectItem key={r.id} value={`${r.icon} ${r.name}`}>
+                                      {r.icon} {r.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            );
+                          } else if (memberRoles.length === 1) {
+                            // Auto-fill the role
+                            if (!volunteerRole) {
+                              setTimeout(() => setVolunteerRole(`${memberRoles[0].icon} ${memberRoles[0].name}`), 0);
+                            }
+                            return (
+                              <p className="text-xs text-muted-foreground">
+                                Função: {memberRoles[0].icon} {memberRoles[0].name}
+                              </p>
+                            );
+                          }
+                          return (
+                            <Input
+                              placeholder="Função (opcional)"
+                              value={volunteerRole}
+                              onChange={(e) => setVolunteerRole(e.target.value)}
+                              className="text-sm"
+                            />
+                          );
+                        })()}
                       </div>
 
                       <div className="space-y-2">
@@ -302,55 +314,32 @@ export function ScheduleModal({
                         {loadingScheduleVol ? (
                           <Loader2 className="w-4 h-4 animate-spin mx-auto" />
                         ) : scheduleVolunteers.length === 0 ? (
-                          <p className="text-sm text-muted-foreground text-center py-4">
-                            Nenhum voluntário escalado
-                          </p>
+                          <p className="text-sm text-muted-foreground text-center py-4">Nenhum voluntário escalado</p>
                         ) : (
                           scheduleVolunteers.map((sv) => (
-                            <div
-                              key={sv.id}
-                              className="flex items-center justify-between p-2 rounded-lg border bg-card"
-                            >
+                            <div key={sv.id} className="flex items-center justify-between p-2 rounded-lg border bg-card">
                               <div className="flex items-center gap-2">
                                 <Checkbox
                                   checked={sv.confirmed || false}
-                                  onCheckedChange={(checked) =>
-                                    toggleConfirmation(sv.id, !!checked)
-                                  }
+                                  onCheckedChange={(checked) => toggleConfirmation(sv.id, !!checked)}
                                 />
                                 <Avatar className="h-7 w-7">
-                                  <AvatarFallback className="text-xs">
-                                    {getInitials(sv.member?.full_name || "?")}
-                                  </AvatarFallback>
+                                  <AvatarFallback className="text-xs">{getInitials(sv.member?.full_name || "?")}</AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <p className="text-sm font-medium">
-                                    {sv.member?.full_name}
-                                  </p>
-                                  {sv.role && (
-                                    <p className="text-xs text-muted-foreground">
-                                      {sv.role}
-                                    </p>
-                                  )}
+                                  <p className="text-sm font-medium">{sv.member?.full_name}</p>
+                                  {sv.role && <p className="text-xs text-muted-foreground">{sv.role}</p>}
                                 </div>
                               </div>
                               <div className="flex items-center gap-1">
                                 {sv.confirmed ? (
                                   <Badge variant="outline" className="text-xs text-emerald-600 dark:text-emerald-400">
-                                    <Check className="w-3 h-3 mr-1" />
-                                    Confirmado
+                                    <Check className="w-3 h-3 mr-1" />Confirmado
                                   </Badge>
                                 ) : (
-                                  <Badge variant="outline" className="text-xs text-amber-600 dark:text-amber-400">
-                                    Pendente
-                                  </Badge>
+                                  <Badge variant="outline" className="text-xs text-amber-600 dark:text-amber-400">Pendente</Badge>
                                 )}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 text-destructive hover:bg-destructive/10"
-                                  onClick={() => removeVolunteer(sv.id)}
-                                >
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive/10" onClick={() => removeVolunteer(sv.id)}>
                                   <X className="w-3 h-3" />
                                 </Button>
                               </div>
@@ -362,9 +351,7 @@ export function ScheduleModal({
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full text-center">
                       <Calendar className="w-8 h-8 text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        Selecione uma escala para gerenciar
-                      </p>
+                      <p className="text-sm text-muted-foreground">Selecione uma escala para gerenciar</p>
                     </div>
                   )}
                 </div>
@@ -375,61 +362,31 @@ export function ScheduleModal({
           <TabsContent value="new" className="mt-4">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="event_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome do Evento *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Culto de Domingo" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="event_date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Data *</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Observações</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Informações adicionais sobre a escala"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
+                <FormField control={form.control} name="event_name" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome do Evento *</FormLabel>
+                    <FormControl><Input placeholder="Ex: Culto de Domingo" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="event_date" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data *</FormLabel>
+                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="notes" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Observações</FormLabel>
+                    <FormControl><Textarea placeholder="Informações adicionais sobre a escala" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
                 <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setActiveTab("list")}
-                  >
-                    Cancelar
-                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setActiveTab("list")}>Cancelar</Button>
                   <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
                     Criar Escala
                   </Button>
                 </DialogFooter>

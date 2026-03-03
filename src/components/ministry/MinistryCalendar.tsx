@@ -60,15 +60,9 @@ const getMinistryColor = (name: string) => {
 };
 
 const getInitials = (name: string): string => {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  return name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
 };
 
-/** Safe date parser for DATE (YYYY-MM-DD) columns — avoids timezone shift */
 const parseDate = (d: string) => new Date(d + "T12:00:00");
 
 function ScheduleCard({ schedule, ministryName }: { schedule: Schedule; ministryName: string }) {
@@ -170,7 +164,6 @@ export function MinistryCalendar({ open, onOpenChange, schedules, ministryNames 
   const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
   const firstDayOfMonth = startOfMonth(currentMonth).getDay();
 
-  // Group agenda by date
   const agendaGroups = useMemo(() => {
     const groups: Record<string, Schedule[]> = {};
     monthSchedules.forEach(s => {
@@ -182,7 +175,7 @@ export function MinistryCalendar({ open, onOpenChange, schedules, ministryNames 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5" />
@@ -215,9 +208,9 @@ export function MinistryCalendar({ open, onOpenChange, schedules, ministryNames 
         </div>
 
         {viewMode === "month" ? (
-          <div className="flex gap-4 flex-1 overflow-hidden">
+          <div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
             {/* Calendar Grid */}
-            <div className="flex-1 overflow-y-auto">
+            <ScrollArea className="flex-1">
               <div className="grid grid-cols-7 gap-1 mb-2">
                 {weekDays.map((day) => (
                   <div key={day} className="text-center text-xs font-medium text-muted-foreground py-2">{day}</div>
@@ -262,17 +255,17 @@ export function MinistryCalendar({ open, onOpenChange, schedules, ministryNames 
                   );
                 })}
               </div>
-            </div>
+            </ScrollArea>
 
             {/* Selected Day Details */}
-            <div className="w-64 border-l pl-4 hidden sm:block">
+            <div className="w-64 border-l pl-4 hidden sm:flex flex-col min-h-0">
               {selectedDate ? (
-                <div className="space-y-4">
-                  <div>
+                <div className="flex flex-col min-h-0 flex-1">
+                  <div className="mb-3">
                     <h4 className="font-semibold text-sm">{format(selectedDate, "d 'de' MMMM", { locale: ptBR })}</h4>
                     <p className="text-xs text-muted-foreground capitalize">{format(selectedDate, "EEEE", { locale: ptBR })}</p>
                   </div>
-                  <ScrollArea className="h-[400px]">
+                  <ScrollArea className="flex-1">
                     {selectedDaySchedules.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-8 text-center">
                         <Calendar className="w-8 h-8 text-muted-foreground mb-2" />
@@ -300,15 +293,15 @@ export function MinistryCalendar({ open, onOpenChange, schedules, ministryNames 
             </div>
           </div>
         ) : (
-          /* Agenda View */
-          <ScrollArea className="flex-1">
+          /* Agenda View - FIXED: proper scroll container */
+          <ScrollArea className="flex-1 min-h-0" style={{ maxHeight: "calc(90vh - 220px)" }}>
             {agendaGroups.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Calendar className="w-10 h-10 text-muted-foreground mb-2" />
                 <p className="text-muted-foreground">Nenhuma escala neste mês</p>
               </div>
             ) : (
-              <div className="space-y-6 pr-4">
+              <div className="space-y-6 pr-4 pb-4">
                 {agendaGroups.map(([date, daySchedules]) => (
                   <div key={date}>
                     <div className="flex items-center gap-3 mb-3 sticky top-0 bg-background py-1 z-10">
