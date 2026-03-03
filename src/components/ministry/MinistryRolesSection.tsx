@@ -3,24 +3,48 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, UserPlus, X, Loader2 } from "lucide-react";
+import { Plus, Trash2, UserPlus, X, Loader2, Search } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMinistryRoles } from "@/hooks/useMinistryRoles";
 import type { Member } from "@/hooks/useMembers";
 
-const EMOJI_OPTIONS = [
-  "🎹", "🎸", "🥁", "🎤", "🎵", "🎼", "🎧",
-  "👧", "🍼", "🧒", "👶",
-  "🧹", "🤝", "🎛️", "📷", "💻", "📱",
-  "🙏", "📖", "✝️", "❤️", "🕊️",
-  "🎨", "🏃", "🍽️", "🚗", "🔧",
-  "👤", "⭐", "🎯", "💡",
-];
+const EMOJI_CATEGORIES: Record<string, string[]> = {
+  "🎵 Música": [
+    "🎹", "🎸", "🥁", "🎤", "🎵", "🎼", "🎧", "🎺", "🎷", "🎻",
+    "🪕", "🪗", "🪘", "🔔", "🎶", "🎙️", "📻", "🎚️", "🎛️", "🪇",
+  ],
+  "👶 Crianças": [
+    "👧", "🍼", "🧒", "👶", "🎒", "🧸", "🎠", "🎡", "🖍️", "📚",
+    "🎈", "🧩", "🎪", "🎨", "🏫", "✏️", "📏", "🎓", "👦", "👧",
+  ],
+  "🤝 Serviço": [
+    "🧹", "🤝", "📷", "💻", "📱", "🔧", "🚗", "🏠", "🍽️", "☕",
+    "🛠️", "🪣", "🧽", "🧤", "👷", "🔑", "📦", "🎪", "🚚", "🏗️",
+  ],
+  "✝️ Espiritual": [
+    "🙏", "📖", "✝️", "❤️", "🕊️", "⛪", "🔥", "💧", "🌿", "✨",
+    "👑", "🕯️", "📜", "🫶", "💒", "🌟", "☀️", "🌈", "💎", "🪔",
+  ],
+  "🎨 Mídia/Arte": [
+    "🎨", "📸", "🎬", "📹", "🖥️", "📡", "🎞️", "🖼️", "✍️", "🖊️",
+    "📐", "🎭", "💡", "📊", "📋", "🗂️", "🗓️", "📌", "📝", "🔍",
+  ],
+  "🏃 Atividades": [
+    "🏃", "⚽", "🏀", "🎯", "🏋️", "🤸", "🚴", "🏕️", "🎣", "🥾",
+    "🧗", "🏊", "🏆", "🥇", "🤾", "🎳", "🛹", "🎤", "🤹", "🎱",
+  ],
+  "👤 Geral": [
+    "👤", "⭐", "🎯", "💡", "🌍", "🌱", "🛡️", "⚡", "🎗️", "🏅",
+    "🧑‍🏫", "🧑‍⚕️", "🧑‍🍳", "🧑‍🔬", "🧑‍🎨", "🧑‍✈️", "🧑‍🚒", "🦸", "🤵", "👰",
+  ],
+};
 
 interface MinistryRolesSectionProps {
   ministryId: string;
@@ -30,12 +54,13 @@ interface MinistryRolesSectionProps {
 }
 
 export function MinistryRolesSection({ ministryId, churchId, members, canEdit }: MinistryRolesSectionProps) {
-  const { roles, roleMembers, isLoading, createRole, updateRole, deleteRole, addMember, removeMember } = useMinistryRoles(ministryId, churchId);
+  const { roles, roleMembers, isLoading, createRole, deleteRole, addMember, removeMember } = useMinistryRoles(ministryId, churchId);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [newIcon, setNewIcon] = useState("👤");
   const [addingToRoleId, setAddingToRoleId] = useState<string | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState("");
+  const [emojiSearch, setEmojiSearch] = useState("");
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -128,9 +153,9 @@ export function MinistryRolesSection({ ministryId, churchId, members, canEdit }:
         </div>
       )}
 
-      {/* Create Role Dialog */}
+      {/* Create Role Dialog with expanded emoji picker */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Nova Função</DialogTitle>
           </DialogHeader>
@@ -140,19 +165,32 @@ export function MinistryRolesSection({ ministryId, churchId, members, canEdit }:
               <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Ex: Teclado, Recepção..." />
             </div>
             <div>
-              <label className="text-sm font-medium">Ícone</label>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {EMOJI_OPTIONS.map(emoji => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    className={`text-xl p-1.5 rounded-lg border-2 transition-colors ${newIcon === emoji ? "border-primary bg-primary/10" : "border-transparent hover:border-muted"}`}
-                    onClick={() => setNewIcon(emoji)}
-                  >
-                    {emoji}
-                  </button>
+              <label className="text-sm font-medium mb-1 block">Ícone: <span className="text-2xl ml-1">{newIcon}</span></label>
+              <Tabs defaultValue={Object.keys(EMOJI_CATEGORIES)[0]} className="w-full">
+                <TabsList className="w-full flex-wrap h-auto gap-0.5 p-1">
+                  {Object.keys(EMOJI_CATEGORIES).map(cat => (
+                    <TabsTrigger key={cat} value={cat} className="text-xs px-2 py-1">
+                      {cat.split(" ")[0]}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {Object.entries(EMOJI_CATEGORIES).map(([cat, emojis]) => (
+                  <TabsContent key={cat} value={cat} className="mt-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {emojis.map(emoji => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          className={`text-xl p-1.5 rounded-lg border-2 transition-colors ${newIcon === emoji ? "border-primary bg-primary/10" : "border-transparent hover:border-muted"}`}
+                          onClick={() => setNewIcon(emoji)}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </TabsContent>
                 ))}
-              </div>
+              </Tabs>
             </div>
           </div>
           <DialogFooter>

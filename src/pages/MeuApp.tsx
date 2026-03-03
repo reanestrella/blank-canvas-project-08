@@ -200,7 +200,12 @@ function SchedulesView({ schedules, onConfirm }: { schedules: MySchedule[]; onCo
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-sm">{s.schedule?.event_name || "Evento"}</h4>
-                      <p className="text-xs text-muted-foreground">{s.schedule?.ministry?.name || "Ministério"}{s.role ? ` • ${s.role}` : ""}</p>
+                      <p className="text-xs text-muted-foreground">{s.schedule?.ministry?.name || "Ministério"}</p>
+                      {s.role && (
+                        <Badge variant="secondary" className="text-[10px] py-0 h-4 mt-1">
+                          {s.role}
+                        </Badge>
+                      )}
                       {s.schedule?.notes && <p className="text-xs text-muted-foreground mt-1 truncate">{s.schedule.notes}</p>}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -235,8 +240,14 @@ function SchedulesView({ schedules, onConfirm }: { schedules: MySchedule[]; onCo
                                   {(v.member?.full_name || "?").split(" ").map(n => n[0]).join("").slice(0, 2)}
                                 </AvatarFallback>
                               </Avatar>
-                              <span className="flex-1 text-xs font-medium truncate">{v.member?.full_name || "Membro"}</span>
-                              {v.role && <span className="text-[10px] text-muted-foreground">{v.role}</span>}
+                              <div className="flex-1 min-w-0">
+                                <span className="text-xs font-medium truncate block">{v.member?.full_name || "Membro"}</span>
+                                {v.role && (
+                                  <Badge variant="secondary" className="text-[10px] py-0 h-4 mt-0.5">
+                                    {v.role}
+                                  </Badge>
+                                )}
+                              </div>
                               {v.confirmed ? (
                                 <Badge variant="outline" className="text-[10px] py-0 h-5 text-emerald-600 border-emerald-200">
                                   <Check className="w-2.5 h-2.5 mr-0.5" />OK
