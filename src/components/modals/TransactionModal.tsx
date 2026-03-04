@@ -80,6 +80,7 @@ export function TransactionModal({
       transaction_date: new Date().toISOString().split("T")[0],
       category_id: "",
       member_id: "",
+      account_id: accounts.length === 1 ? accounts[0].id : "",
       payment_method: "",
       reference_number: "",
       notes: "",
