@@ -35,6 +35,7 @@ import {
   Heart,
 } from "lucide-react";
 import { useFinancial, CreateTransactionData } from "@/hooks/useFinancial";
+import { useFinancialAccounts } from "@/hooks/useFinancialAccounts";
 import { useTithers } from "@/hooks/useTithers";
 import { TransactionModal } from "@/components/modals/TransactionModal";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
