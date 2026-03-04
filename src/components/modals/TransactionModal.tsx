@@ -40,6 +40,7 @@ const transactionSchema = z.object({
   transaction_date: z.string().min(1, "Data é obrigatória"),
   category_id: z.string().optional().or(z.literal("")),
   member_id: z.string().optional().or(z.literal("")),
+  account_id: z.string().min(1, "Selecione uma conta"),
   payment_method: z.string().optional().or(z.literal("")),
   reference_number: z.string().optional().or(z.literal("")),
   notes: z.string().max(500).optional().or(z.literal("")),
