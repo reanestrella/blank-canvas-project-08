@@ -37,6 +37,7 @@ export interface CreateTransactionData {
   payment_method?: string;
   reference_number?: string;
   notes?: string;
+  account_id?: string;
 }
 
 export function useFinancial(churchId?: string) {

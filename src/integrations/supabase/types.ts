@@ -2635,6 +2635,163 @@ export type Database = {
           },
         ]
       }
+      worship_set_songs: {
+        Row: {
+          church_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          order_index: number
+          played_key_override: string | null
+          song_id: string
+          worship_set_id: string
+        }
+        Insert: {
+          church_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_index?: number
+          played_key_override?: string | null
+          song_id: string
+          worship_set_id: string
+        }
+        Update: {
+          church_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_index?: number
+          played_key_override?: string | null
+          song_id?: string
+          worship_set_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worship_set_songs_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worship_set_songs_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "worship_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worship_set_songs_worship_set_id_fkey"
+            columns: ["worship_set_id"]
+            isOneToOne: false
+            referencedRelation: "worship_sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worship_sets: {
+        Row: {
+          church_id: string
+          created_at: string
+          created_by_member_id: string | null
+          date: string
+          id: string
+          ministry_id: string
+          title: string
+        }
+        Insert: {
+          church_id: string
+          created_at?: string
+          created_by_member_id?: string | null
+          date: string
+          id?: string
+          ministry_id: string
+          title: string
+        }
+        Update: {
+          church_id?: string
+          created_at?: string
+          created_by_member_id?: string | null
+          date?: string
+          id?: string
+          ministry_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worship_sets_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worship_sets_created_by_member_id_fkey"
+            columns: ["created_by_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worship_sets_ministry_id_fkey"
+            columns: ["ministry_id"]
+            isOneToOne: false
+            referencedRelation: "ministries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worship_songs: {
+        Row: {
+          artist: string | null
+          audio_url: string | null
+          bpm: number | null
+          chord_url: string | null
+          church_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          key_signature: string | null
+          tags: string[] | null
+          title: string
+        }
+        Insert: {
+          artist?: string | null
+          audio_url?: string | null
+          bpm?: number | null
+          chord_url?: string | null
+          church_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key_signature?: string | null
+          tags?: string[] | null
+          title: string
+        }
+        Update: {
+          artist?: string | null
+          audio_url?: string | null
+          bpm?: number | null
+          chord_url?: string | null
+          church_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key_signature?: string | null
+          tags?: string[] | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worship_songs_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

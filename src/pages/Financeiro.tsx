@@ -35,6 +35,7 @@ import {
   Heart,
 } from "lucide-react";
 import { useFinancial, CreateTransactionData } from "@/hooks/useFinancial";
+import { useFinancialAccounts } from "@/hooks/useFinancialAccounts";
 import { useTithers } from "@/hooks/useTithers";
 import { TransactionModal } from "@/components/modals/TransactionModal";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
@@ -65,6 +66,8 @@ export default function Financeiro() {
     updateTransaction,
     deleteTransaction,
   } = useFinancial(churchId || undefined);
+
+  const { accounts } = useFinancialAccounts(churchId || undefined);
 
   const {
     tithers,
@@ -459,6 +462,7 @@ export default function Financeiro() {
         onOpenChange={handleCloseModal}
         transaction={editingTransaction}
         categories={categories}
+        accounts={accounts}
         defaultType={defaultTransactionType}
         churchId={churchId || ""}
         onSubmit={editingTransaction ? handleUpdateTransaction : handleCreateTransaction}

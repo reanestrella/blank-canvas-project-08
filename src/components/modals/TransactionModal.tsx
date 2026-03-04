@@ -31,6 +31,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
 import type { FinancialTransaction, FinancialCategory, CreateTransactionData } from "@/hooks/useFinancial";
+import type { FinancialAccount } from "@/hooks/useFinancialAccounts";
 
 const transactionSchema = z.object({
   type: z.enum(["receita", "despesa"]),
@@ -39,6 +40,7 @@ const transactionSchema = z.object({
   transaction_date: z.string().min(1, "Data é obrigatória"),
   category_id: z.string().optional().or(z.literal("")),
   member_id: z.string().optional().or(z.literal("")),
+  account_id: z.string().min(1, "Selecione uma conta"),
   payment_method: z.string().optional().or(z.literal("")),
   reference_number: z.string().optional().or(z.literal("")),
   notes: z.string().max(500).optional().or(z.literal("")),
@@ -51,6 +53,7 @@ interface TransactionModalProps {
   onOpenChange: (open: boolean) => void;
   transaction?: FinancialTransaction;
   categories: FinancialCategory[];
+  accounts: FinancialAccount[];
   defaultType?: "receita" | "despesa";
   churchId: string;
   onSubmit: (data: CreateTransactionData) => Promise<{ data: FinancialTransaction | null; error: any }>;
@@ -61,6 +64,7 @@ export function TransactionModal({
   onOpenChange,
   transaction,
   categories,
+  accounts,
   defaultType = "receita",
   churchId,
   onSubmit,
@@ -76,6 +80,7 @@ export function TransactionModal({
       transaction_date: new Date().toISOString().split("T")[0],
       category_id: "",
       member_id: "",
+      account_id: accounts.length === 1 ? accounts[0].id : "",
       payment_method: "",
       reference_number: "",
       notes: "",
@@ -93,6 +98,7 @@ export function TransactionModal({
           transaction_date: transaction.transaction_date || new Date().toISOString().split("T")[0],
           category_id: transaction.category_id || "",
           member_id: transaction.member_id || "",
+          account_id: (transaction as any).account_id || (accounts.length === 1 ? accounts[0].id : ""),
           payment_method: transaction.payment_method || "",
           reference_number: transaction.reference_number || "",
           notes: transaction.notes || "",
@@ -105,6 +111,7 @@ export function TransactionModal({
           transaction_date: new Date().toISOString().split("T")[0],
           category_id: "",
           member_id: "",
+          account_id: accounts.length === 1 ? accounts[0].id : "",
           payment_method: "",
           reference_number: "",
           notes: "",
@@ -126,6 +133,7 @@ export function TransactionModal({
         transaction_date: data.transaction_date,
         category_id: data.category_id || undefined,
         member_id: data.member_id || undefined,
+        account_id: data.account_id || undefined,
         payment_method: data.payment_method || undefined,
         reference_number: data.reference_number || undefined,
         notes: data.notes || undefined,
@@ -224,6 +232,31 @@ export function TransactionModal({
                   <FormControl>
                     <Input placeholder="Ex: Dízimo, Oferta, Energia..." {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="account_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Conta *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a conta destino" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {accounts.map((acc) => (
+                        <SelectItem key={acc.id} value={acc.id}>
+                          {acc.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

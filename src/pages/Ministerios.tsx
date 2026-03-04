@@ -20,6 +20,9 @@ import { VolunteersModal } from "@/components/modals/VolunteersModal";
 import { ScheduleModal } from "@/components/modals/ScheduleModal";
 import { MinistryCalendar } from "@/components/ministry/MinistryCalendar";
 import { MinistryRolesSection } from "@/components/ministry/MinistryRolesSection";
+import { WorshipRepertoire } from "@/components/worship/WorshipRepertoire";
+import { WorshipSetlist } from "@/components/worship/WorshipSetlist";
+import { WorshipDashboard } from "@/components/worship/WorshipDashboard";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Ministry } from "@/hooks/useMinistries";
 
@@ -141,46 +144,75 @@ export default function Ministerios() {
         </div>
 
         {/* Content */}
-        {selectedMinistry ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" onClick={() => setSelectedMinistry(null)}>← Voltar</Button>
-              <h2 className="text-xl font-semibold">{selectedMinistry.name}</h2>
+        {selectedMinistry ? (() => {
+          const isWorshipMinistry = selectedMinistry.name.toLowerCase().includes("louvor") || selectedMinistry.name.toLowerCase().includes("worship") || selectedMinistry.name.toLowerCase().includes("music");
+          const canEditMinistry = canCreateMinistry || (isLeaderOnly && selectedMinistry.leader_id === memberId);
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" onClick={() => setSelectedMinistry(null)}>← Voltar</Button>
+                <h2 className="text-xl font-semibold">{selectedMinistry.name}</h2>
+              </div>
+              <Tabs defaultValue="roles">
+                <TabsList className="flex-wrap h-auto gap-1">
+                  <TabsTrigger value="roles">Funções</TabsTrigger>
+                  <TabsTrigger value="schedule">Escalas</TabsTrigger>
+                  <TabsTrigger value="volunteers">Voluntários</TabsTrigger>
+                  {isWorshipMinistry && (
+                    <>
+                      <TabsTrigger value="repertoire">🎵 Repertório</TabsTrigger>
+                      <TabsTrigger value="setlist">📋 Setlists</TabsTrigger>
+                      <TabsTrigger value="dashboard">📊 Dashboard</TabsTrigger>
+                    </>
+                  )}
+                </TabsList>
+                <TabsContent value="roles" className="mt-4">
+                  <MinistryRolesSection
+                    ministryId={selectedMinistry.id}
+                    churchId={churchId!}
+                    members={members}
+                    canEdit={canEditMinistry}
+                  />
+                </TabsContent>
+                <TabsContent value="schedule" className="mt-4">
+                  <ScheduleModal
+                    open={true}
+                    onOpenChange={() => setSelectedMinistry(null)}
+                    ministryId={selectedMinistry.id}
+                    ministryName={selectedMinistry.name}
+                  />
+                </TabsContent>
+                <TabsContent value="volunteers" className="mt-4">
+                  <VolunteersModal
+                    open={true}
+                    onOpenChange={() => setSelectedMinistry(null)}
+                    ministryId={selectedMinistry.id}
+                    ministryName={selectedMinistry.name}
+                    members={members}
+                  />
+                </TabsContent>
+                {isWorshipMinistry && (
+                  <>
+                    <TabsContent value="repertoire" className="mt-4">
+                      <WorshipRepertoire churchId={churchId!} canEdit={canEditMinistry} />
+                    </TabsContent>
+                    <TabsContent value="setlist" className="mt-4">
+                      <WorshipSetlist
+                        churchId={churchId!}
+                        ministryId={selectedMinistry.id}
+                        canEdit={canEditMinistry}
+                        memberId={memberId || undefined}
+                      />
+                    </TabsContent>
+                    <TabsContent value="dashboard" className="mt-4">
+                      <WorshipDashboard churchId={churchId!} />
+                    </TabsContent>
+                  </>
+                )}
+              </Tabs>
             </div>
-            <Tabs defaultValue="roles">
-              <TabsList>
-                <TabsTrigger value="roles">Funções</TabsTrigger>
-                <TabsTrigger value="schedule">Escalas</TabsTrigger>
-                <TabsTrigger value="volunteers">Voluntários</TabsTrigger>
-              </TabsList>
-              <TabsContent value="roles" className="mt-4">
-                <MinistryRolesSection
-                  ministryId={selectedMinistry.id}
-                  churchId={churchId!}
-                  members={members}
-                  canEdit={canCreateMinistry || (isLeaderOnly && selectedMinistry.leader_id === memberId)}
-                />
-              </TabsContent>
-              <TabsContent value="schedule" className="mt-4">
-                <ScheduleModal
-                  open={true}
-                  onOpenChange={() => setSelectedMinistry(null)}
-                  ministryId={selectedMinistry.id}
-                  ministryName={selectedMinistry.name}
-                />
-              </TabsContent>
-              <TabsContent value="volunteers" className="mt-4">
-                <VolunteersModal
-                  open={true}
-                  onOpenChange={() => setSelectedMinistry(null)}
-                  ministryId={selectedMinistry.id}
-                  ministryName={selectedMinistry.name}
-                  members={members}
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
-        ) : (
+          );
+        })() : (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">
               {isLeaderOnly ? "Meus Ministérios" : "Todos os Ministérios"}
