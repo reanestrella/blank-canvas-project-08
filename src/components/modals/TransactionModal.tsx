@@ -64,6 +64,7 @@ export function TransactionModal({
   onOpenChange,
   transaction,
   categories,
+  accounts,
   defaultType = "receita",
   churchId,
   onSubmit,
