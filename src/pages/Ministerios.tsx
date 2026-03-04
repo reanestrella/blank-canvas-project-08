@@ -212,8 +212,7 @@ export default function Ministerios() {
               </Tabs>
             </div>
           );
-        })()
-        ) : (
+        })() : (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">
               {isLeaderOnly ? "Meus Ministérios" : "Todos os Ministérios"}
