@@ -53,6 +53,7 @@ interface TransactionModalProps {
   onOpenChange: (open: boolean) => void;
   transaction?: FinancialTransaction;
   categories: FinancialCategory[];
+  accounts: FinancialAccount[];
   defaultType?: "receita" | "despesa";
   churchId: string;
   onSubmit: (data: CreateTransactionData) => Promise<{ data: FinancialTransaction | null; error: any }>;
