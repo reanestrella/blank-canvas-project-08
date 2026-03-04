@@ -133,6 +133,7 @@ export function TransactionModal({
         transaction_date: data.transaction_date,
         category_id: data.category_id || undefined,
         member_id: data.member_id || undefined,
+        account_id: data.account_id || undefined,
         payment_method: data.payment_method || undefined,
         reference_number: data.reference_number || undefined,
         notes: data.notes || undefined,
