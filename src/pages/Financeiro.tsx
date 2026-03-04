@@ -67,6 +67,8 @@ export default function Financeiro() {
     deleteTransaction,
   } = useFinancial(churchId || undefined);
 
+  const { accounts } = useFinancialAccounts(churchId || undefined);
+
   const {
     tithers,
     months,
