@@ -462,6 +462,7 @@ export default function Financeiro() {
         onOpenChange={handleCloseModal}
         transaction={editingTransaction}
         categories={categories}
+        accounts={accounts}
         defaultType={defaultTransactionType}
         churchId={churchId || ""}
         onSubmit={editingTransaction ? handleUpdateTransaction : handleCreateTransaction}

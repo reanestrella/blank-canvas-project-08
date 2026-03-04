@@ -20,6 +20,9 @@ import { VolunteersModal } from "@/components/modals/VolunteersModal";
 import { ScheduleModal } from "@/components/modals/ScheduleModal";
 import { MinistryCalendar } from "@/components/ministry/MinistryCalendar";
 import { MinistryRolesSection } from "@/components/ministry/MinistryRolesSection";
+import { WorshipRepertoire } from "@/components/worship/WorshipRepertoire";
+import { WorshipSetlist } from "@/components/worship/WorshipSetlist";
+import { WorshipDashboard } from "@/components/worship/WorshipDashboard";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Ministry } from "@/hooks/useMinistries";
 
