@@ -111,13 +111,28 @@ function SchedulesView({ schedules, onConfirm }: { schedules: MySchedule[]; onCo
 
     setLoadingVols(scheduleId);
     try {
+      // Load volunteers
       const { data } = await supabase
         .from("schedule_volunteers")
         .select("id, confirmed, role, member:members(full_name)")
         .eq("schedule_id", scheduleId);
-      setCoVolunteers(prev => ({ ...prev, [scheduleId]: (data || []) as any }));
+      
+      // Load songs for this schedule
+      const { data: songsData } = await supabase
+        .from("schedule_songs" as any)
+        .select("id, order_index, song:worship_songs(title, key_signature, artist, chord_url, audio_url)")
+        .eq("schedule_id", scheduleId)
+        .order("order_index");
+      
+      setCoVolunteers(prev => ({
+        ...prev,
+        [scheduleId]: {
+          volunteers: (data || []) as any,
+          songs: (songsData || []) as any,
+        } as any,
+      }));
     } catch (err) {
-      console.error("[MeuApp] Error loading co-volunteers:", err);
+      console.error("[MeuApp] Error loading schedule details:", err);
     } finally {
       setLoadingVols(null);
     }
