@@ -417,6 +417,70 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
                             </div>
                           ))
                         )}
+
+                        {/* Songs section for worship ministries */}
+                        {isWorshipMinistry && (
+                          <div className="space-y-2 pt-2 border-t">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                              <Music className="w-3 h-3" /> Louvores do dia ({scheduleSongs.length})
+                            </p>
+                            <div className="flex gap-2">
+                              <Select value={selectedSongId} onValueChange={setSelectedSongId}>
+                                <SelectTrigger className="flex-1 text-sm">
+                                  <SelectValue placeholder="Adicionar louvor..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {allSongs
+                                    .filter(s => !scheduleSongs.some(ss => ss.song_id === s.id))
+                                    .map(s => (
+                                      <SelectItem key={s.id} value={s.id}>
+                                        {s.title} {s.key_signature ? `(${s.key_signature})` : ""} {s.artist ? `— ${s.artist}` : ""}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                              <Button size="icon" onClick={handleAddSong} disabled={!selectedSongId}>
+                                <Plus className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            {loadingSongs ? (
+                              <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                            ) : scheduleSongs.length === 0 ? (
+                              <p className="text-xs text-muted-foreground italic text-center py-2">Nenhum louvor definido</p>
+                            ) : (
+                              scheduleSongs.map((ss, idx) => (
+                                <div key={ss.id} className="flex items-center justify-between p-2 rounded-lg border bg-card">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground w-5">{idx + 1}.</span>
+                                    <div>
+                                      <p className="text-sm font-medium">{ss.song?.title || "?"}</p>
+                                      <div className="flex items-center gap-1">
+                                        {ss.song?.key_signature && (
+                                          <Badge variant="secondary" className="text-[10px] py-0 h-4">{ss.song.key_signature}</Badge>
+                                        )}
+                                        {ss.song?.artist && (
+                                          <span className="text-[10px] text-muted-foreground">{ss.song.artist}</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    {ss.song?.chord_url && (
+                                      <Button variant="ghost" size="icon" className="h-6 w-6" asChild>
+                                        <a href={ss.song.chord_url} target="_blank" rel="noopener noreferrer" title="Abrir cifra">
+                                          <ExternalLink className="w-3 h-3" />
+                                        </a>
+                                      </Button>
+                                    )}
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleRemoveSong(ss.id)}>
+                                      <X className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ) : (
