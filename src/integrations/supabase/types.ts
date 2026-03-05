@@ -2436,6 +2436,55 @@ export type Database = {
           },
         ]
       }
+      schedule_songs: {
+        Row: {
+          church_id: string
+          created_at: string
+          id: string
+          order_index: number
+          schedule_id: string
+          song_id: string
+        }
+        Insert: {
+          church_id: string
+          created_at?: string
+          id?: string
+          order_index?: number
+          schedule_id: string
+          song_id: string
+        }
+        Update: {
+          church_id?: string
+          created_at?: string
+          id?: string
+          order_index?: number
+          schedule_id?: string
+          song_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_songs_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_songs_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "ministry_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_songs_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "worship_songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schedule_volunteers: {
         Row: {
           confirmed: boolean | null
