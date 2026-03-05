@@ -111,13 +111,28 @@ function SchedulesView({ schedules, onConfirm }: { schedules: MySchedule[]; onCo
 
     setLoadingVols(scheduleId);
     try {
+      // Load volunteers
       const { data } = await supabase
         .from("schedule_volunteers")
         .select("id, confirmed, role, member:members(full_name)")
         .eq("schedule_id", scheduleId);
-      setCoVolunteers(prev => ({ ...prev, [scheduleId]: (data || []) as any }));
+      
+      // Load songs for this schedule
+      const { data: songsData } = await supabase
+        .from("schedule_songs" as any)
+        .select("id, order_index, song:worship_songs(title, key_signature, artist, chord_url, audio_url)")
+        .eq("schedule_id", scheduleId)
+        .order("order_index");
+      
+      setCoVolunteers(prev => ({
+        ...prev,
+        [scheduleId]: {
+          volunteers: (data || []) as any,
+          songs: (songsData || []) as any,
+        } as any,
+      }));
     } catch (err) {
-      console.error("[MeuApp] Error loading co-volunteers:", err);
+      console.error("[MeuApp] Error loading schedule details:", err);
     } finally {
       setLoadingVols(null);
     }
@@ -225,43 +240,80 @@ function SchedulesView({ schedules, onConfirm }: { schedules: MySchedule[]; onCo
 
                   {/* Co-volunteers panel */}
                   {isExpanded && (
-                    <div className="mt-4 pt-3 border-t">
-                      <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                        <Users className="w-3 h-3" /> Escalados do dia
-                      </p>
-                      {loadingVols === s.schedule_id ? (
-                        <div className="flex justify-center py-2"><Loader2 className="w-4 h-4 animate-spin" /></div>
-                      ) : vols && vols.length > 0 ? (
-                        <div className="space-y-1.5">
-                          {vols.map((v) => (
-                            <div key={v.id} className="flex items-center gap-2 text-sm p-1.5 rounded-md bg-muted/50">
-                              <Avatar className="w-6 h-6">
-                                <AvatarFallback className="text-[10px]">
-                                  {(v.member?.full_name || "?").split(" ").map(n => n[0]).join("").slice(0, 2)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <span className="text-xs font-medium truncate block">{v.member?.full_name || "Membro"}</span>
-                                {v.role && (
-                                  <Badge variant="secondary" className="text-[10px] py-0 h-4 mt-0.5">
-                                    {v.role}
+                    <div className="mt-4 pt-3 border-t space-y-4">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                          <Users className="w-3 h-3" /> Escalados do dia
+                        </p>
+                        {loadingVols === s.schedule_id ? (
+                          <div className="flex justify-center py-2"><Loader2 className="w-4 h-4 animate-spin" /></div>
+                        ) : (vols as any)?.volunteers && (vols as any).volunteers.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {((vols as any).volunteers as CoVolunteer[]).map((v) => (
+                              <div key={v.id} className="flex items-center gap-2 text-sm p-1.5 rounded-md bg-muted/50">
+                                <Avatar className="w-6 h-6">
+                                  <AvatarFallback className="text-[10px]">
+                                    {(v.member?.full_name || "?").split(" ").map(n => n[0]).join("").slice(0, 2)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-xs font-medium truncate block">{v.member?.full_name || "Membro"}</span>
+                                  {v.role && (
+                                    <Badge variant="secondary" className="text-[10px] py-0 h-4 mt-0.5">
+                                      {v.role}
+                                    </Badge>
+                                  )}
+                                </div>
+                                {v.confirmed ? (
+                                  <Badge variant="outline" className="text-[10px] py-0 h-5 text-emerald-600 border-emerald-200">
+                                    <Check className="w-2.5 h-2.5 mr-0.5" />OK
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-[10px] py-0 h-5 text-amber-600 border-amber-200">
+                                    Pendente
                                   </Badge>
                                 )}
                               </div>
-                              {v.confirmed ? (
-                                <Badge variant="outline" className="text-[10px] py-0 h-5 text-emerald-600 border-emerald-200">
-                                  <Check className="w-2.5 h-2.5 mr-0.5" />OK
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-[10px] py-0 h-5 text-amber-600 border-amber-200">
-                                  Pendente
-                                </Badge>
-                              )}
-                            </div>
-                          ))}
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground italic">Nenhum voluntário escalado.</p>
+                        )}
+                      </div>
+
+                      {/* Songs section */}
+                      {(vols as any)?.songs && (vols as any).songs.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                            🎵 Louvores do dia
+                          </p>
+                          <div className="space-y-1.5">
+                            {((vols as any).songs as any[]).map((ss: any, idx: number) => (
+                              <div key={ss.id} className="flex items-center gap-2 text-sm p-1.5 rounded-md bg-muted/50">
+                                <span className="text-xs text-muted-foreground w-4">{idx + 1}.</span>
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-xs font-medium truncate block">{ss.song?.title || "?"}</span>
+                                  <div className="flex items-center gap-1">
+                                    {ss.song?.key_signature && (
+                                      <Badge variant="secondary" className="text-[10px] py-0 h-4">{ss.song.key_signature}</Badge>
+                                    )}
+                                    {ss.song?.artist && (
+                                      <span className="text-[10px] text-muted-foreground">{ss.song.artist}</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex gap-1">
+                                  {ss.song?.chord_url && (
+                                    <a href={ss.song.chord_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary underline">Cifra</a>
+                                  )}
+                                  {ss.song?.audio_url && (
+                                    <a href={ss.song.audio_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary underline">Áudio</a>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground italic">Nenhum voluntário escalado.</p>
                       )}
                     </div>
                   )}

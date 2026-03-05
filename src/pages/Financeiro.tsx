@@ -311,6 +311,7 @@ export default function Financeiro() {
                       <TableRow>
                         <TableHead>Data</TableHead>
                         <TableHead>Descrição</TableHead>
+                        <TableHead>Conta</TableHead>
                         <TableHead>Tipo</TableHead>
                         <TableHead className="text-right">Valor</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
@@ -323,6 +324,9 @@ export default function Financeiro() {
                             {new Date(tx.transaction_date).toLocaleDateString("pt-BR")}
                           </TableCell>
                           <TableCell className="font-medium">{tx.description}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {tx.account_id ? (accounts.find(a => a.id === tx.account_id)?.name || "—") : "—"}
+                          </TableCell>
                           <TableCell>
                             <Badge
                               variant="secondary"

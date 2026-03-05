@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -20,12 +20,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Check, Loader2, Plus, Trash2, UserPlus, X } from "lucide-react";
+import { Calendar, Check, Loader2, Plus, Trash2, UserPlus, X, Music, ExternalLink } from "lucide-react";
 import { useMinistrySchedules, useScheduleVolunteers } from "@/hooks/useMinistrySchedules";
 import { useMinistryVolunteers } from "@/hooks/useMinistryVolunteers";
 import { useMinistryRoles } from "@/hooks/useMinistryRoles";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMembers } from "@/hooks/useMembers";
+import { useWorshipSongs, WorshipSong } from "@/hooks/useWorshipSongs";
+import { supabase } from "@/integrations/supabase/client";
 
 const scheduleSchema = z.object({
   event_name: z.string().min(2, "Nome do evento é obrigatório"),
@@ -48,9 +50,14 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedVolunteer, setSelectedVolunteer] = useState("");
   const [volunteerRole, setVolunteerRole] = useState("");
+  const [selectedSongId, setSelectedSongId] = useState("");
+  const [scheduleSongs, setScheduleSongs] = useState<Array<{ id: string; song_id: string; order_index: number; song?: WorshipSong }>>([]);
+  const [loadingSongs, setLoadingSongs] = useState(false);
 
   const { profile } = useAuth();
   const churchId = profile?.church_id;
+
+  const isWorshipMinistry = /louvor|worship|music/i.test(ministryName);
 
   const { schedules, isLoading, createSchedule, deleteSchedule } = useMinistrySchedules(open ? ministryId : undefined);
   const { volunteers: ministryVolunteers } = useMinistryVolunteers(open ? ministryId : undefined);
@@ -59,6 +66,7 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
     open ? churchId || undefined : undefined
   );
   const { members } = useMembers(churchId || undefined);
+  const { songs: allSongs } = useWorshipSongs(isWorshipMinistry && open ? churchId || undefined : undefined);
   const {
     volunteers: scheduleVolunteers,
     isLoading: loadingScheduleVol,
@@ -66,6 +74,69 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
     removeVolunteer,
     toggleConfirmation,
   } = useScheduleVolunteers(selectedSchedule || undefined);
+
+  // Load schedule songs when a schedule is selected
+  const loadScheduleSongs = useCallback(async (scheduleId: string) => {
+    if (!churchId) return;
+    setLoadingSongs(true);
+    try {
+      const { data, error } = await supabase
+        .from("schedule_songs" as any)
+        .select("id, song_id, order_index")
+        .eq("schedule_id", scheduleId)
+        .eq("church_id", churchId)
+        .order("order_index");
+      if (error) throw error;
+      const withSongs = ((data as any[]) || []).map((ss: any) => ({
+        ...ss,
+        song: allSongs.find(s => s.id === ss.song_id),
+      }));
+      setScheduleSongs(withSongs);
+    } catch (err) {
+      console.error("Error loading schedule songs:", err);
+    } finally {
+      setLoadingSongs(false);
+    }
+  }, [churchId, allSongs]);
+
+  useEffect(() => {
+    if (selectedSchedule && isWorshipMinistry) {
+      loadScheduleSongs(selectedSchedule);
+    } else {
+      setScheduleSongs([]);
+    }
+  }, [selectedSchedule, isWorshipMinistry, loadScheduleSongs]);
+
+  const handleAddSong = async () => {
+    if (!selectedSongId || !selectedSchedule || !churchId) return;
+    try {
+      const { data, error } = await supabase
+        .from("schedule_songs" as any)
+        .insert([{
+          church_id: churchId,
+          schedule_id: selectedSchedule,
+          song_id: selectedSongId,
+          order_index: scheduleSongs.length,
+        }] as any)
+        .select("id, song_id, order_index")
+        .single();
+      if (error) throw error;
+      const song = allSongs.find(s => s.id === selectedSongId);
+      setScheduleSongs(prev => [...prev, { ...(data as any), song }]);
+      setSelectedSongId("");
+    } catch (err: any) {
+      console.error("Error adding song:", err);
+    }
+  };
+
+  const handleRemoveSong = async (id: string) => {
+    try {
+      await supabase.from("schedule_songs" as any).delete().eq("id", id);
+      setScheduleSongs(prev => prev.filter(s => s.id !== id));
+    } catch (err) {
+      console.error("Error removing song:", err);
+    }
+  };
 
   const form = useForm<ScheduleFormData>({
     resolver: zodResolver(scheduleSchema),
@@ -345,6 +416,70 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
                               </div>
                             </div>
                           ))
+                        )}
+
+                        {/* Songs section for worship ministries */}
+                        {isWorshipMinistry && (
+                          <div className="space-y-2 pt-2 border-t">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                              <Music className="w-3 h-3" /> Louvores do dia ({scheduleSongs.length})
+                            </p>
+                            <div className="flex gap-2">
+                              <Select value={selectedSongId} onValueChange={setSelectedSongId}>
+                                <SelectTrigger className="flex-1 text-sm">
+                                  <SelectValue placeholder="Adicionar louvor..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {allSongs
+                                    .filter(s => !scheduleSongs.some(ss => ss.song_id === s.id))
+                                    .map(s => (
+                                      <SelectItem key={s.id} value={s.id}>
+                                        {s.title} {s.key_signature ? `(${s.key_signature})` : ""} {s.artist ? `— ${s.artist}` : ""}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                              <Button size="icon" onClick={handleAddSong} disabled={!selectedSongId}>
+                                <Plus className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            {loadingSongs ? (
+                              <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                            ) : scheduleSongs.length === 0 ? (
+                              <p className="text-xs text-muted-foreground italic text-center py-2">Nenhum louvor definido</p>
+                            ) : (
+                              scheduleSongs.map((ss, idx) => (
+                                <div key={ss.id} className="flex items-center justify-between p-2 rounded-lg border bg-card">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground w-5">{idx + 1}.</span>
+                                    <div>
+                                      <p className="text-sm font-medium">{ss.song?.title || "?"}</p>
+                                      <div className="flex items-center gap-1">
+                                        {ss.song?.key_signature && (
+                                          <Badge variant="secondary" className="text-[10px] py-0 h-4">{ss.song.key_signature}</Badge>
+                                        )}
+                                        {ss.song?.artist && (
+                                          <span className="text-[10px] text-muted-foreground">{ss.song.artist}</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    {ss.song?.chord_url && (
+                                      <Button variant="ghost" size="icon" className="h-6 w-6" asChild>
+                                        <a href={ss.song.chord_url} target="_blank" rel="noopener noreferrer" title="Abrir cifra">
+                                          <ExternalLink className="w-3 h-3" />
+                                        </a>
+                                      </Button>
+                                    )}
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleRemoveSong(ss.id)}>
+                                      <X className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>

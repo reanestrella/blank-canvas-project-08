@@ -6,6 +6,7 @@ export interface FinancialTransaction {
   id: string;
   church_id: string;
   category_id: string | null;
+  account_id: string | null;
   type: "receita" | "despesa";
   amount: number;
   description: string;
@@ -96,20 +97,36 @@ export function useFinancial(churchId?: string) {
 
   const createTransaction = async (data: CreateTransactionData & { church_id: string }) => {
     try {
+      console.log("[Financial] INSERT payload:", { ...data });
+      
       const { data: newTransaction, error } = await supabase
         .from("financial_transactions")
         .insert([data])
-        .select()
+        .select("*")
         .single();
       
       if (error) throw error;
       
-      setTransactions((prev) => [newTransaction as FinancialTransaction, ...prev]);
+      const saved = newTransaction as FinancialTransaction;
+      console.log("[Financial] ✅ INSERT returned — id:", saved.id, "account_id:", saved.account_id);
+      
+      // Proof: fetch account name from DB
+      let accountName = "N/A";
+      if (saved.account_id) {
+        const { data: accData } = await supabase
+          .from("financial_accounts")
+          .select("name")
+          .eq("id", saved.account_id)
+          .single();
+        accountName = accData?.name || saved.account_id;
+      }
+      
+      setTransactions((prev) => [saved, ...prev]);
       toast({
-        title: "Sucesso",
-        description: `${data.type === "receita" ? "Receita" : "Despesa"} registrada com sucesso!`,
+        title: "✅ Lançamento salvo",
+        description: `${data.type === "receita" ? "Receita" : "Despesa"} registrada na conta: ${accountName}`,
       });
-      return { data: newTransaction as FinancialTransaction, error: null };
+      return { data: saved, error: null };
     } catch (error: any) {
       console.error("Error creating transaction:", error);
       toast({
