@@ -6,6 +6,7 @@ export interface FinancialTransaction {
   id: string;
   church_id: string;
   category_id: string | null;
+  account_id: string | null;
   type: "receita" | "despesa";
   amount: number;
   description: string;
