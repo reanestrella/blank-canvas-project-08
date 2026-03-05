@@ -293,15 +293,15 @@ export function MinistryCalendar({ open, onOpenChange, schedules, ministryNames 
             </div>
           </div>
         ) : (
-          /* Agenda View - FIXED: proper scroll container */
-          <ScrollArea className="flex-1 min-h-0" style={{ maxHeight: "calc(90vh - 220px)" }}>
+          /* Agenda View - native scroll for reliable behavior */
+          <div className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: "calc(90vh - 220px)" }}>
             {agendaGroups.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Calendar className="w-10 h-10 text-muted-foreground mb-2" />
                 <p className="text-muted-foreground">Nenhuma escala neste mês</p>
               </div>
             ) : (
-              <div className="space-y-6 pr-4 pb-4">
+              <div className="space-y-6 pr-4 pb-8">
                 {agendaGroups.map(([date, daySchedules]) => (
                   <div key={date}>
                     <div className="flex items-center gap-3 mb-3 sticky top-0 bg-background py-1 z-10">
@@ -331,7 +331,7 @@ export function MinistryCalendar({ open, onOpenChange, schedules, ministryNames 
                 ))}
               </div>
             )}
-          </ScrollArea>
+          </div>
         )}
       </DialogContent>
     </Dialog>

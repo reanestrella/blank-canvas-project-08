@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -20,12 +20,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Check, Loader2, Plus, Trash2, UserPlus, X } from "lucide-react";
+import { Calendar, Check, Loader2, Plus, Trash2, UserPlus, X, Music, ExternalLink } from "lucide-react";
 import { useMinistrySchedules, useScheduleVolunteers } from "@/hooks/useMinistrySchedules";
 import { useMinistryVolunteers } from "@/hooks/useMinistryVolunteers";
 import { useMinistryRoles } from "@/hooks/useMinistryRoles";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMembers } from "@/hooks/useMembers";
+import { useWorshipSongs, WorshipSong } from "@/hooks/useWorshipSongs";
+import { supabase } from "@/integrations/supabase/client";
 
 const scheduleSchema = z.object({
   event_name: z.string().min(2, "Nome do evento é obrigatório"),
