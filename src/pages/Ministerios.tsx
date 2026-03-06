@@ -214,6 +214,15 @@ export default function Ministerios() {
                     </TabsContent>
                   </>
                 )}
+                {isKidsMinistry && (
+                  <TabsContent value="kids-studies" className="mt-4">
+                    <KidsStudiesSection
+                      churchId={churchId!}
+                      canEdit={canEditMinistry}
+                      memberId={memberId || undefined}
+                    />
+                  </TabsContent>
+                )}
               </Tabs>
             </div>
           );
