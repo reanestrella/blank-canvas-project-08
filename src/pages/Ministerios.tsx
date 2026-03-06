@@ -23,6 +23,7 @@ import { MinistryRolesSection } from "@/components/ministry/MinistryRolesSection
 import { WorshipRepertoire } from "@/components/worship/WorshipRepertoire";
 import { WorshipSetlist } from "@/components/worship/WorshipSetlist";
 import { WorshipDashboard } from "@/components/worship/WorshipDashboard";
+import { KidsStudiesSection } from "@/components/ministry/KidsStudiesSection";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Ministry } from "@/hooks/useMinistries";
 
@@ -146,6 +147,7 @@ export default function Ministerios() {
         {/* Content */}
         {selectedMinistry ? (() => {
           const isWorshipMinistry = selectedMinistry.name.toLowerCase().includes("louvor") || selectedMinistry.name.toLowerCase().includes("worship") || selectedMinistry.name.toLowerCase().includes("music");
+          const isKidsMinistry = selectedMinistry.name.toLowerCase().includes("kids") || selectedMinistry.name.toLowerCase().includes("infantil") || selectedMinistry.name.toLowerCase().includes("criança") || selectedMinistry.name.toLowerCase().includes("crianças");
           const canEditMinistry = canCreateMinistry || (isLeaderOnly && selectedMinistry.leader_id === memberId);
           return (
             <div className="space-y-4">
@@ -158,12 +160,15 @@ export default function Ministerios() {
                   <TabsTrigger value="roles">Funções</TabsTrigger>
                   <TabsTrigger value="schedule">Escalas</TabsTrigger>
                   <TabsTrigger value="volunteers">Voluntários</TabsTrigger>
-                  {isWorshipMinistry && (
+                   {isWorshipMinistry && (
                     <>
                       <TabsTrigger value="repertoire">🎵 Repertório</TabsTrigger>
                       <TabsTrigger value="setlist">📋 Setlists</TabsTrigger>
                       <TabsTrigger value="dashboard">📊 Dashboard</TabsTrigger>
                     </>
+                  )}
+                  {isKidsMinistry && (
+                    <TabsTrigger value="kids-studies">📚 Estudos</TabsTrigger>
                   )}
                 </TabsList>
                 <TabsContent value="roles" className="mt-4">
@@ -208,6 +213,15 @@ export default function Ministerios() {
                       <WorshipDashboard churchId={churchId!} />
                     </TabsContent>
                   </>
+                )}
+                {isKidsMinistry && (
+                  <TabsContent value="kids-studies" className="mt-4">
+                    <KidsStudiesSection
+                      churchId={churchId!}
+                      canEdit={canEditMinistry}
+                      memberId={memberId || undefined}
+                    />
+                  </TabsContent>
                 )}
               </Tabs>
             </div>
