@@ -147,6 +147,7 @@ export default function Ministerios() {
         {/* Content */}
         {selectedMinistry ? (() => {
           const isWorshipMinistry = selectedMinistry.name.toLowerCase().includes("louvor") || selectedMinistry.name.toLowerCase().includes("worship") || selectedMinistry.name.toLowerCase().includes("music");
+          const isKidsMinistry = selectedMinistry.name.toLowerCase().includes("kids") || selectedMinistry.name.toLowerCase().includes("infantil") || selectedMinistry.name.toLowerCase().includes("criança") || selectedMinistry.name.toLowerCase().includes("crianças");
           const canEditMinistry = canCreateMinistry || (isLeaderOnly && selectedMinistry.leader_id === memberId);
           return (
             <div className="space-y-4">
