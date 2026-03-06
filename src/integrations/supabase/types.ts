@@ -1724,6 +1724,63 @@ export type Database = {
           },
         ]
       }
+      kids_studies: {
+        Row: {
+          age_group: string | null
+          church_id: string
+          created_at: string
+          created_by_member_id: string | null
+          description: string | null
+          file_url: string | null
+          id: string
+          study_date: string | null
+          suggestions: Json | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          age_group?: string | null
+          church_id: string
+          created_at?: string
+          created_by_member_id?: string | null
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          study_date?: string | null
+          suggestions?: Json | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          age_group?: string | null
+          church_id?: string
+          created_at?: string
+          created_by_member_id?: string | null
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          study_date?: string | null
+          suggestions?: Json | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kids_studies_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kids_studies_created_by_member_id_fkey"
+            columns: ["created_by_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       member_alerts: {
         Row: {
           alert_type: string
