@@ -23,6 +23,7 @@ import { MinistryRolesSection } from "@/components/ministry/MinistryRolesSection
 import { WorshipRepertoire } from "@/components/worship/WorshipRepertoire";
 import { WorshipSetlist } from "@/components/worship/WorshipSetlist";
 import { WorshipDashboard } from "@/components/worship/WorshipDashboard";
+import { KidsStudiesSection } from "@/components/ministry/KidsStudiesSection";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Ministry } from "@/hooks/useMinistries";
 
