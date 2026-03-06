@@ -160,12 +160,15 @@ export default function Ministerios() {
                   <TabsTrigger value="roles">Funções</TabsTrigger>
                   <TabsTrigger value="schedule">Escalas</TabsTrigger>
                   <TabsTrigger value="volunteers">Voluntários</TabsTrigger>
-                  {isWorshipMinistry && (
+                   {isWorshipMinistry && (
                     <>
                       <TabsTrigger value="repertoire">🎵 Repertório</TabsTrigger>
                       <TabsTrigger value="setlist">📋 Setlists</TabsTrigger>
                       <TabsTrigger value="dashboard">📊 Dashboard</TabsTrigger>
                     </>
+                  )}
+                  {isKidsMinistry && (
+                    <TabsTrigger value="kids-studies">📚 Estudos</TabsTrigger>
                   )}
                 </TabsList>
                 <TabsContent value="roles" className="mt-4">
