@@ -177,6 +177,10 @@ export default function Secretaria() {
               selectedId={selectedCongregation}
               onSelect={setSelectedCongregation}
             />
+            <Button variant="outline" onClick={() => setImportModalOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Importar
+            </Button>
             <Button 
               className="gradient-accent text-secondary-foreground shadow-lg hover:shadow-xl transition-all"
               onClick={() => {
