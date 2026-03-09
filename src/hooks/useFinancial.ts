@@ -75,6 +75,50 @@ export function useFinancial(churchId?: string) {
     }
   };
 
+  const seedDefaultCategories = async () => {
+    if (!churchId) return;
+    const defaults = [
+      // receita
+      { name: "Dízimos", type: "receita" },
+      { name: "Ofertas", type: "receita" },
+      { name: "Ofertas de Célula", type: "receita" },
+      { name: "Campanhas", type: "receita" },
+      { name: "Eventos", type: "receita" },
+      { name: "Doações", type: "receita" },
+      { name: "Contribuições", type: "receita" },
+      { name: "Vendas", type: "receita" },
+      { name: "Inscrições", type: "receita" },
+      { name: "Aluguel recebido", type: "receita" },
+      { name: "Rendimentos", type: "receita" },
+      { name: "Entrada extraordinária", type: "receita" },
+      { name: "Outros (Receita)", type: "receita" },
+      // despesa
+      { name: "Água", type: "despesa" },
+      { name: "Energia", type: "despesa" },
+      { name: "Internet", type: "despesa" },
+      { name: "Aluguel", type: "despesa" },
+      { name: "Manutenção", type: "despesa" },
+      { name: "Limpeza", type: "despesa" },
+      { name: "Material de escritório", type: "despesa" },
+      { name: "Material infantil", type: "despesa" },
+      { name: "Sonorização", type: "despesa" },
+      { name: "Mídia", type: "despesa" },
+      { name: "Instrumentos", type: "despesa" },
+      { name: "Ajuda social", type: "despesa" },
+      { name: "Missões", type: "despesa" },
+      { name: "Eventos (Despesa)", type: "despesa" },
+      { name: "Transporte", type: "despesa" },
+      { name: "Alimentação", type: "despesa" },
+      { name: "Salários / ajuda de custo", type: "despesa" },
+      { name: "Impostos / taxas", type: "despesa" },
+      { name: "Reforma / construção", type: "despesa" },
+      { name: "Compras gerais", type: "despesa" },
+      { name: "Outros (Despesa)", type: "despesa" },
+    ];
+    const rows = defaults.map((d) => ({ ...d, church_id: churchId, is_active: true }));
+    await supabase.from("financial_categories").insert(rows);
+  };
+
   const fetchCategories = async () => {
     if (!churchId) {
       setCategories([]);
@@ -89,6 +133,21 @@ export function useFinancial(churchId?: string) {
         .order("name");
       
       if (error) throw error;
+
+      // Seed defaults if church has no categories
+      if (!data || data.length === 0) {
+        await seedDefaultCategories();
+        // Re-fetch after seeding
+        const { data: seeded } = await supabase
+          .from("financial_categories")
+          .select("*")
+          .eq("is_active", true)
+          .eq("church_id", churchId)
+          .order("name");
+        setCategories((seeded as FinancialCategory[]) || []);
+        return;
+      }
+
       setCategories((data as FinancialCategory[]) || []);
     } catch (error: any) {
       console.error("Error fetching categories:", error);

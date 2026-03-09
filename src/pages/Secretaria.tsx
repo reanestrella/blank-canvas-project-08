@@ -27,22 +27,12 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Search,
-  Plus,
-  Filter,
-  MoreHorizontal,
-  Users,
-  UserPlus,
-  Heart,
-  Droplets,
-  Download,
-  Loader2,
-  Eye,
-  UserCheck,
-  Baby,
+  Search, Plus, Filter, MoreHorizontal, Users, UserPlus, Heart,
+  Droplets, Download, Loader2, Eye, UserCheck, Baby, Upload,
 } from "lucide-react";
 import { useMembers, CreateMemberData } from "@/hooks/useMembers";
 import { MemberModal } from "@/components/modals/MemberModal";
+import { MemberImportModal } from "@/components/secretaria/MemberImportModal";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 import { CongregationSelector } from "@/components/layout/CongregationSelector";
 import { useCongregations } from "@/hooks/useCongregations";
@@ -67,6 +57,7 @@ const networkConfig = {
 export default function Secretaria() {
   const [searchTerm, setSearchTerm] = useState("");
   const [memberModalOpen, setMemberModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | undefined>();
   const [deletingMember, setDeletingMember] = useState<Member | null>(null);
   const [activeTab, setActiveTab] = useState("todos");
@@ -75,7 +66,7 @@ export default function Secretaria() {
   const { profile } = useAuth();
   const churchId = profile?.church_id;
   const { congregations, selectedCongregation, setSelectedCongregation } = useCongregations(churchId || undefined);
-  const { members, isLoading, createMember, updateMember, deleteMember } = useMembers(churchId || undefined);
+  const { members, isLoading, createMember, updateMember, deleteMember, fetchMembers } = useMembers(churchId || undefined);
 
   // Filter members by tab, search, and network
   const filteredMembers = useMemo(() => {
@@ -175,6 +166,10 @@ export default function Secretaria() {
               selectedId={selectedCongregation}
               onSelect={setSelectedCongregation}
             />
+            <Button variant="outline" onClick={() => setImportModalOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Importar
+            </Button>
             <Button 
               className="gradient-accent text-secondary-foreground shadow-lg hover:shadow-xl transition-all"
               onClick={() => {
@@ -441,6 +436,17 @@ export default function Secretaria() {
         description={`Tem certeza que deseja remover ${deletingMember?.full_name}? Esta ação não pode ser desfeita.`}
         onConfirm={() => deleteMember(deletingMember!.id)}
       />
+
+      {/* Import Modal */}
+      {churchId && (
+        <MemberImportModal
+          open={importModalOpen}
+          onOpenChange={setImportModalOpen}
+          churchId={churchId}
+          existingMembers={members.map(m => ({ full_name: m.full_name, email: m.email, phone: m.phone }))}
+          onImportDone={fetchMembers}
+        />
+      )}
     </AppLayout>
   );
 }
