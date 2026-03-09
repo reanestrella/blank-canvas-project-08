@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { useMembers, CreateMemberData } from "@/hooks/useMembers";
 import { MemberModal } from "@/components/modals/MemberModal";
+import { MemberImportModal } from "@/components/secretaria/MemberImportModal";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 import { CongregationSelector } from "@/components/layout/CongregationSelector";
 import { useCongregations } from "@/hooks/useCongregations";

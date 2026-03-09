@@ -1,38 +1,18 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  TrendingUp,
-  TrendingDown,
-  Plus,
-  Download,
-  Filter,
-  ArrowUpRight,
-  ArrowDownRight,
-  PiggyBank,
-  Target,
-  Calendar,
-  Loader2,
-  MoreHorizontal,
-  Users,
-  Heart,
+  TrendingUp, TrendingDown, Plus, Download, ArrowUpRight, ArrowDownRight,
+  PiggyBank, Target, Loader2, MoreHorizontal, Users, Heart,
 } from "lucide-react";
 import { useFinancial, CreateTransactionData } from "@/hooks/useFinancial";
 import { useFinancialAccounts } from "@/hooks/useFinancialAccounts";
@@ -42,6 +22,8 @@ import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 import { TithersTable } from "@/components/financial/TithersTable";
 import { TithersChart } from "@/components/financial/TithersChart";
 import { FinancialAccountsTab, FinancialCampaignsTab } from "@/components/financial/FinancialAccountsCampaigns";
+import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
+import { ExtratoTab } from "@/components/financial/ExtratoTab";
 import { useAuth } from "@/contexts/AuthContext";
 import type { FinancialTransaction } from "@/hooks/useFinancial";
 
@@ -52,6 +34,13 @@ export default function Financeiro() {
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | undefined>();
   const [deletingTransaction, setDeletingTransaction] = useState<FinancialTransaction | null>(null);
 
+  // Period filters
+  const now = new Date();
+  const [periodMode, setPeriodMode] = useState<PeriodMode>("month");
+  const [filterMonth, setFilterMonth] = useState(now.getMonth());
+  const [filterYear, setFilterYear] = useState(now.getFullYear());
+  const [accountFilter, setAccountFilter] = useState("all");
+
   const { profile } = useAuth();
   const churchId = profile?.church_id;
 
@@ -59,9 +48,6 @@ export default function Financeiro() {
     transactions,
     categories,
     isLoading,
-    totalIncome,
-    totalExpense,
-    balance,
     createTransaction,
     updateTransaction,
     deleteTransaction,
@@ -70,43 +56,71 @@ export default function Financeiro() {
   const { accounts } = useFinancialAccounts(churchId || undefined);
 
   const {
-    tithers,
-    months,
-    monthlyTotals,
-    stats: titherStats,
-    isLoading: loadingTithers,
+    tithers, months, monthlyTotals,
+    stats: titherStats, isLoading: loadingTithers,
   } = useTithers(churchId || undefined);
+
+  // Filter transactions by period + account
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((tx) => {
+      // Account filter
+      if (accountFilter !== "all" && tx.account_id !== accountFilter) return false;
+
+      if (periodMode === "all") return true;
+
+      const d = new Date(tx.transaction_date);
+      if (periodMode === "year") return d.getFullYear() === filterYear;
+
+      // month
+      return d.getFullYear() === filterYear && d.getMonth() === filterMonth;
+    });
+  }, [transactions, periodMode, filterMonth, filterYear, accountFilter]);
+
+  // Totals from filtered
+  const totalIncome = filteredTransactions
+    .filter((t) => t.type === "receita")
+    .reduce((s, t) => s + Number(t.amount), 0);
+
+  const totalExpense = filteredTransactions
+    .filter((t) => t.type === "despesa")
+    .reduce((s, t) => s + Number(t.amount), 0);
+
+  const balance = totalIncome - totalExpense;
+
+  const periodLabel = periodMode === "month"
+    ? `${["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"][filterMonth]}/${filterYear}`
+    : periodMode === "year" ? String(filterYear) : "Total";
 
   const stats = [
     {
-      title: "Saldo Atual",
+      title: "Saldo",
       value: `R$ ${balance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-      change: balance >= 0 ? "Positivo" : "Negativo",
+      change: periodLabel,
       changeType: balance >= 0 ? "positive" : "negative",
       icon: PiggyBank,
       color: "bg-primary/10 text-primary",
     },
     {
-      title: "Entradas (Total)",
+      title: "Entradas",
       value: `R$ ${totalIncome.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
       change: "Receitas",
-      changeType: "positive",
+      changeType: "positive" as const,
       icon: TrendingUp,
       color: "bg-success/10 text-success",
     },
     {
-      title: "Saídas (Total)",
+      title: "Saídas",
       value: `R$ ${totalExpense.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
       change: "Despesas",
-      changeType: "negative",
+      changeType: "negative" as const,
       icon: TrendingDown,
       color: "bg-destructive/10 text-destructive",
     },
     {
       title: "Transações",
-      value: transactions.length.toString(),
-      change: "Total",
-      changeType: "neutral",
+      value: filteredTransactions.length.toString(),
+      change: periodLabel,
+      changeType: "neutral" as const,
       icon: Target,
       color: "bg-secondary/10 text-secondary",
     },
@@ -126,9 +140,7 @@ export default function Financeiro() {
 
   const handleCloseModal = (open: boolean) => {
     setTransactionModalOpen(open);
-    if (!open) {
-      setEditingTransaction(undefined);
-    }
+    if (!open) setEditingTransaction(undefined);
   };
 
   const handleCreateTransaction = async (data: CreateTransactionData) => {
@@ -153,18 +165,11 @@ export default function Financeiro() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Relatório
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => handleOpenNewTransaction("despesa")}
-            >
+            <Button variant="outline" onClick={() => handleOpenNewTransaction("despesa")}>
               <ArrowDownRight className="w-4 h-4 mr-2" />
               Nova Despesa
             </Button>
-            <Button 
+            <Button
               className="gradient-accent text-secondary-foreground shadow-lg hover:shadow-xl transition-all"
               onClick={() => handleOpenNewTransaction("receita")}
             >
@@ -173,6 +178,19 @@ export default function Financeiro() {
             </Button>
           </div>
         </div>
+
+        {/* Period Filters */}
+        <FinancialFilters
+          mode={periodMode}
+          month={filterMonth}
+          year={filterYear}
+          onModeChange={setPeriodMode}
+          onMonthChange={setFilterMonth}
+          onYearChange={setFilterYear}
+          accountFilter={accountFilter}
+          accounts={accounts}
+          onAccountFilterChange={setAccountFilter}
+        />
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -183,7 +201,7 @@ export default function Financeiro() {
                   <p className="text-sm text-muted-foreground">{stat.title}</p>
                   <p className="text-2xl font-bold mt-1">{stat.value}</p>
                   <p className={`text-xs mt-1 ${
-                    stat.changeType === "positive" ? "text-success" : 
+                    stat.changeType === "positive" ? "text-success" :
                     stat.changeType === "negative" ? "text-destructive" : "text-muted-foreground"
                   }`}>{stat.change}</p>
                 </div>
@@ -200,6 +218,7 @@ export default function Financeiro() {
           <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="transactions">Movimentações</TabsTrigger>
+            <TabsTrigger value="extrato">Extrato</TabsTrigger>
             <TabsTrigger value="tithers">Dizimistas</TabsTrigger>
             <TabsTrigger value="accounts">Contas</TabsTrigger>
             <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
@@ -218,12 +237,12 @@ export default function Financeiro() {
                   <div className="flex items-center justify-center p-8">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                   </div>
-                ) : transactions.length === 0 ? (
+                ) : filteredTransactions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center p-8 text-center">
                     <PiggyBank className="w-12 h-12 text-muted-foreground mb-4" />
                     <h3 className="text-lg font-medium">Nenhuma transação</h3>
                     <p className="text-muted-foreground mb-4">
-                      Comece registrando sua primeira transação.
+                      Nenhuma movimentação neste período.
                     </p>
                     <div className="flex gap-2">
                       <Button variant="outline" onClick={() => handleOpenNewTransaction("despesa")}>
@@ -236,19 +255,17 @@ export default function Financeiro() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {transactions.slice(0, 5).map((tx) => (
+                    {filteredTransactions.slice(0, 5).map((tx) => (
                       <div
                         key={tx.id}
                         className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
                       >
                         <div className="flex items-center gap-3">
-                          <div
-                            className={`p-2 rounded-lg ${
-                              tx.type === "receita"
-                                ? "bg-success/10 text-success"
-                                : "bg-destructive/10 text-destructive"
-                            }`}
-                          >
+                          <div className={`p-2 rounded-lg ${
+                            tx.type === "receita"
+                              ? "bg-success/10 text-success"
+                              : "bg-destructive/10 text-destructive"
+                          }`}>
                             {tx.type === "receita" ? (
                               <ArrowUpRight className="w-4 h-4" />
                             ) : (
@@ -262,11 +279,9 @@ export default function Financeiro() {
                             </p>
                           </div>
                         </div>
-                        <span
-                          className={`font-semibold ${
-                            tx.type === "receita" ? "text-success" : "text-destructive"
-                          }`}
-                        >
+                        <span className={`font-semibold ${
+                          tx.type === "receita" ? "text-success" : "text-destructive"
+                        }`}>
                           {tx.type === "receita" ? "+" : "-"}R$ {Number(tx.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                         </span>
                       </div>
@@ -280,30 +295,22 @@ export default function Financeiro() {
           <TabsContent value="transactions" className="mt-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg">Todas as Movimentações</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">
-                    <Filter className="w-4 h-4 mr-2" />
-                    Filtrar
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Download className="w-4 h-4 mr-2" />
-                    Exportar
-                  </Button>
-                </div>
+                <CardTitle className="text-lg">Movimentações ({filteredTransactions.length})</CardTitle>
+                <Button variant="outline" size="sm">
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar
+                </Button>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
                   <div className="flex items-center justify-center p-8">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                   </div>
-                ) : transactions.length === 0 ? (
+                ) : filteredTransactions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center p-8 text-center">
                     <PiggyBank className="w-12 h-12 text-muted-foreground mb-4" />
                     <h3 className="text-lg font-medium">Nenhuma transação</h3>
-                    <p className="text-muted-foreground">
-                      Registre sua primeira transação para começar.
-                    </p>
+                    <p className="text-muted-foreground">Nenhuma movimentação neste período.</p>
                   </div>
                 ) : (
                   <Table>
@@ -318,7 +325,7 @@ export default function Financeiro() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {transactions.map((tx) => (
+                      {filteredTransactions.map((tx) => (
                         <TableRow key={tx.id}>
                           <TableCell>
                             {new Date(tx.transaction_date).toLocaleDateString("pt-BR")}
@@ -339,11 +346,9 @@ export default function Financeiro() {
                               {tx.type === "receita" ? "Entrada" : "Saída"}
                             </Badge>
                           </TableCell>
-                          <TableCell
-                            className={`text-right font-semibold ${
-                              tx.type === "receita" ? "text-success" : "text-destructive"
-                            }`}
-                          >
+                          <TableCell className={`text-right font-semibold ${
+                            tx.type === "receita" ? "text-success" : "text-destructive"
+                          }`}>
                             {tx.type === "receita" ? "+" : "-"}R$ {Number(tx.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                           </TableCell>
                           <TableCell>
@@ -357,7 +362,7 @@ export default function Financeiro() {
                                 <DropdownMenuItem onClick={() => handleOpenEditTransaction(tx)}>
                                   Editar
                                 </DropdownMenuItem>
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   className="text-destructive"
                                   onClick={() => setDeletingTransaction(tx)}
                                 >
@@ -375,9 +380,21 @@ export default function Financeiro() {
             </Card>
           </TabsContent>
 
+          {/* Extrato Tab */}
+          <TabsContent value="extrato" className="mt-6">
+            <ExtratoTab
+              transactions={filteredTransactions}
+              allTransactions={transactions}
+              categories={categories}
+              accounts={accounts}
+              year={filterYear}
+              month={filterMonth}
+              mode={periodMode}
+            />
+          </TabsContent>
+
           {/* Tithers Tab */}
           <TabsContent value="tithers" className="space-y-6 mt-6">
-            {/* Tithers Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="stat-card">
                 <div className="flex items-start justify-between">
@@ -439,28 +456,22 @@ export default function Financeiro() {
               </div>
             ) : (
               <>
-                {/* Chart */}
                 <TithersChart data={monthlyTotals} />
-
-                {/* Table */}
                 <TithersTable tithers={tithers} months={months} />
               </>
             )}
           </TabsContent>
 
-          {/* Accounts Tab */}
           <TabsContent value="accounts" className="mt-6">
             {churchId && <FinancialAccountsTab churchId={churchId} />}
           </TabsContent>
 
-          {/* Campaigns Tab */}
           <TabsContent value="campaigns" className="mt-6">
             {churchId && <FinancialCampaignsTab churchId={churchId} />}
           </TabsContent>
         </Tabs>
       </div>
 
-      {/* Transaction Modal */}
       <TransactionModal
         open={transactionModalOpen}
         onOpenChange={handleCloseModal}
@@ -472,7 +483,6 @@ export default function Financeiro() {
         onSubmit={editingTransaction ? handleUpdateTransaction : handleCreateTransaction}
       />
 
-      {/* Delete Confirmation */}
       <DeleteConfirmModal
         open={!!deletingTransaction}
         onOpenChange={(open) => !open && setDeletingTransaction(null)}
