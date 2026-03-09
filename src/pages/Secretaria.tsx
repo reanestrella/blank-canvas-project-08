@@ -436,6 +436,17 @@ export default function Secretaria() {
         description={`Tem certeza que deseja remover ${deletingMember?.full_name}? Esta ação não pode ser desfeita.`}
         onConfirm={() => deleteMember(deletingMember!.id)}
       />
+
+      {/* Import Modal */}
+      {churchId && (
+        <MemberImportModal
+          open={importModalOpen}
+          onOpenChange={setImportModalOpen}
+          churchId={churchId}
+          existingMembers={members.map(m => ({ full_name: m.full_name, email: m.email, phone: m.phone }))}
+          onImportDone={fetchMembers}
+        />
+      )}
     </AppLayout>
   );
 }
