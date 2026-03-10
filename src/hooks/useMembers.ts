@@ -99,6 +99,22 @@ export function useMembers(churchId?: string) {
       if (error) throw error;
       
       setMembers((prev) => [...prev, newMember as Member]);
+
+      // Auto-create consolidation record for visitantes and novo_convertido
+      const status = data.spiritual_status || "visitante";
+      if (status === "visitante" || status === "novo_convertido") {
+        try {
+          await supabase.from("consolidation_records").insert([{
+            church_id: data.church_id,
+            member_id: (newMember as Member).id,
+            status: "contato",
+            contact_date: new Date().toISOString().split("T")[0],
+          }]);
+        } catch (e) {
+          console.warn("Auto-consolidation failed:", e);
+        }
+      }
+
       toast({
         title: "Sucesso",
         description: "Membro cadastrado com sucesso!",
