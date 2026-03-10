@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Users, Heart, Grid3X3, TrendingUp, Eye, Loader2, DollarSign } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Users, Heart, Grid3X3, TrendingUp, Eye, Loader2, DollarSign, ChevronDown, ChevronUp, Sparkles, Brain } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { SpiritualFunnel } from "@/components/dashboard/SpiritualFunnel";
@@ -19,7 +19,9 @@ import { useCongregations } from "@/hooks/useCongregations";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // Dashboard for Pastor/Admin - full view
 function PastorDashboard() {
@@ -27,6 +29,7 @@ function PastorDashboard() {
   const churchId = profile?.church_id;
   const { congregations, selectedCongregation, setSelectedCongregation } = useCongregations(churchId || undefined);
   const { stats, isLoading } = useDashboardStats(selectedCongregation);
+  const [aiOpen, setAiOpen] = useState(false);
 
   const statCards = [
     { title: "Total de Membros", value: stats.totalMembers.toString(), change: "Ativos na igreja", changeType: "positive" as const, icon: Users, iconColor: "bg-primary/10 text-primary" },
@@ -57,8 +60,23 @@ function PastorDashboard() {
 
       {stats.recentAlerts.length > 0 && <AlertsCard alerts={stats.recentAlerts} />}
 
-      <AiAlertsCard />
-      <AiReportCard />
+      {/* AI Section - Collapsible */}
+      <Collapsible open={aiOpen} onOpenChange={setAiOpen}>
+        <CollapsibleTrigger asChild>
+          <Button variant="outline" className="w-full flex items-center justify-between gap-2 py-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Inteligência Artificial</span>
+              <Badge variant="secondary" className="text-xs">IA</Badge>
+            </div>
+            {aiOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-4 mt-4">
+          <AiAlertsCard />
+          <AiReportCard />
+        </CollapsibleContent>
+      </Collapsible>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
