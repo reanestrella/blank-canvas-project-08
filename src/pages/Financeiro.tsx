@@ -497,6 +497,17 @@ export default function Financeiro() {
         description={`Tem certeza que deseja excluir "${deletingTransaction?.description}"? Esta ação não pode ser desfeita.`}
         onConfirm={() => deleteTransaction(deletingTransaction!.id)}
       />
+
+      {churchId && (
+        <FinancialImportModal
+          open={importModalOpen}
+          onOpenChange={setImportModalOpen}
+          churchId={churchId}
+          categories={categories}
+          accounts={accounts}
+          onImportDone={fetchTransactions}
+        />
+      )}
     </AppLayout>
   );
 }
