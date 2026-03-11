@@ -18,6 +18,7 @@ interface CertificateGeneratorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   members: Member[];
+  churchId: string;
 }
 
 type CertType = "apresentacao_crianca" | "batismo" | "diaconal";
