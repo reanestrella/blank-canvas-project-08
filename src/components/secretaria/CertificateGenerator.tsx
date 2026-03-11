@@ -35,7 +35,7 @@ const certDescriptions: Record<CertType, string> = {
   diaconal: "Certificamos que o(a) irmão(ã) abaixo foi consagrado(a) ao ministério diaconal nesta igreja, conforme as Escrituras Sagradas.",
 };
 
-export function CertificateGenerator({ open, onOpenChange, members }: CertificateGeneratorProps) {
+export function CertificateGenerator({ open, onOpenChange, members, churchId }: CertificateGeneratorProps) {
   const { church } = useAuth();
   const [certType, setCertType] = useState<CertType>("batismo");
   const [selectedMemberId, setSelectedMemberId] = useState("");
