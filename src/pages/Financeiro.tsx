@@ -34,6 +34,7 @@ export default function Financeiro() {
   const [defaultTransactionType, setDefaultTransactionType] = useState<"receita" | "despesa">("receita");
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | undefined>();
   const [deletingTransaction, setDeletingTransaction] = useState<FinancialTransaction | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   // Period filters
   const now = new Date();
