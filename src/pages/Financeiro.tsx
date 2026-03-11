@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   TrendingUp, TrendingDown, Plus, Download, ArrowUpRight, ArrowDownRight,
-  PiggyBank, Target, Loader2, MoreHorizontal, Users, Heart,
+  PiggyBank, Target, Loader2, MoreHorizontal, Users, Heart, Upload,
 } from "lucide-react";
 import { useFinancial, CreateTransactionData } from "@/hooks/useFinancial";
 import { useFinancialAccounts } from "@/hooks/useFinancialAccounts";
@@ -24,6 +24,7 @@ import { TithersChart } from "@/components/financial/TithersChart";
 import { FinancialAccountsTab, FinancialCampaignsTab } from "@/components/financial/FinancialAccountsCampaigns";
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
 import { ExtratoTab } from "@/components/financial/ExtratoTab";
+import { FinancialImportModal } from "@/components/financial/FinancialImportModal";
 import { useAuth } from "@/contexts/AuthContext";
 import type { FinancialTransaction } from "@/hooks/useFinancial";
 
