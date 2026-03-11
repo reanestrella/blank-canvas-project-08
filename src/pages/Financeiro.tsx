@@ -167,6 +167,10 @@ export default function Financeiro() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setImportModalOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Importar
+            </Button>
             <Button variant="outline" onClick={() => handleOpenNewTransaction("despesa")}>
               <ArrowDownRight className="w-4 h-4 mr-2" />
               Nova Despesa
