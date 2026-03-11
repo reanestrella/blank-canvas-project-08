@@ -453,6 +453,16 @@ export default function Secretaria() {
           onImportDone={fetchMembers}
         />
       )}
+
+      {/* Certificate Generator */}
+      {churchId && (
+        <CertificateGenerator
+          open={certificateModalOpen}
+          onOpenChange={setCertificateModalOpen}
+          members={members}
+          churchId={churchId}
+        />
+      )}
     </AppLayout>
   );
 }
