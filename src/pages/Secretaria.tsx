@@ -59,6 +59,7 @@ export default function Secretaria() {
   const [searchTerm, setSearchTerm] = useState("");
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [certificateModalOpen, setCertificateModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | undefined>();
   const [deletingMember, setDeletingMember] = useState<Member | null>(null);
   const [activeTab, setActiveTab] = useState("todos");
