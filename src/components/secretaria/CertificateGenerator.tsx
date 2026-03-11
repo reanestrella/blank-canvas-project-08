@@ -163,10 +163,10 @@ export function CertificateGenerator({ open, onOpenChange, members, churchId }: 
           <div>
             <Label>Membro (selecione ou digite)</Label>
             <MemberAutocomplete
-              members={members.map((m) => ({ id: m.id, full_name: m.full_name }))}
-              value={selectedMemberId}
+              churchId={churchId}
+              value={selectedMemberId || undefined}
               onChange={(id) => {
-                setSelectedMemberId(id);
+                setSelectedMemberId(id || "");
                 setCustomName("");
               }}
               placeholder="Buscar membro..."
