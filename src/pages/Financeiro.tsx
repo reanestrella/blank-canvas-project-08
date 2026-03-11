@@ -50,6 +50,7 @@ export default function Financeiro() {
     transactions,
     categories,
     isLoading,
+    fetchTransactions,
     createTransaction,
     updateTransaction,
     deleteTransaction,
