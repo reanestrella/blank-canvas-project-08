@@ -1,4 +1,4 @@
-import { Bell, Search, User, Menu } from "lucide-react";
+import { Bell, Search, User, Menu, CheckCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -22,6 +23,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   const navigate = useNavigate();
   const { profile, church, signOut, roles, user } = useAuth();
   const displayName = profile?.full_name || user?.email || "Usuário";
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(profile?.church_id);
 
   const getInitials = (name: string) => {
     return name
@@ -44,6 +46,17 @@ export function Header({ onMenuClick }: HeaderProps) {
   const handleSignOut = async () => {
     await signOut();
     navigate("/login");
+  };
+
+  const formatTimeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "Agora";
+    if (mins < 60) return `Há ${mins} min`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `Há ${hrs}h`;
+    const days = Math.floor(hrs / 24);
+    return `Há ${days}d`;
   };
 
   return (
@@ -77,29 +90,46 @@ export function Header({ onMenuClick }: HeaderProps) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="w-5 h-5" />
-                <Badge className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs bg-secondary text-secondary-foreground">
-                  3
-                </Badge>
+                {unreadCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs bg-secondary text-secondary-foreground">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </Badge>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel>Notificações</DropdownMenuLabel>
+              <div className="flex items-center justify-between px-3 py-2">
+                <DropdownMenuLabel className="p-0">Notificações</DropdownMenuLabel>
+                {unreadCount > 0 && (
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={markAllAsRead}>
+                    <CheckCheck className="w-3 h-3 mr-1" />
+                    Marcar todas
+                  </Button>
+                )}
+              </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-                <span className="font-medium">Novo membro cadastrado</span>
-                <span className="text-sm text-muted-foreground">Maria Silva foi adicionada</span>
-                <span className="text-xs text-muted-foreground">Há 5 minutos</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-                <span className="font-medium">Relatório de célula</span>
-                <span className="text-sm text-muted-foreground">Célula Vida Nova enviou relatório</span>
-                <span className="text-xs text-muted-foreground">Há 1 hora</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-                <span className="font-medium">Evento confirmado</span>
-                <span className="text-sm text-muted-foreground">15 pessoas confirmaram presença</span>
-                <span className="text-xs text-muted-foreground">Há 2 horas</span>
-              </DropdownMenuItem>
+              {notifications.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  Nenhuma notificação
+                </div>
+              ) : (
+                notifications.slice(0, 8).map((n) => (
+                  <DropdownMenuItem
+                    key={n.id}
+                    className={`flex flex-col items-start gap-1 p-3 cursor-pointer ${!n.is_read ? "bg-primary/5" : ""}`}
+                    onClick={() => markAsRead(n.id)}
+                  >
+                    <div className="flex items-center gap-2 w-full">
+                      <span className="font-medium text-sm flex-1">{n.member_name}</span>
+                      {!n.is_read && <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />}
+                    </div>
+                    <span className="text-sm text-muted-foreground line-clamp-2">
+                      {n.message || n.alert_type}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{formatTimeAgo(n.created_at)}</span>
+                  </DropdownMenuItem>
+                ))
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 

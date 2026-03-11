@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   TrendingUp, TrendingDown, Plus, Download, ArrowUpRight, ArrowDownRight,
-  PiggyBank, Target, Loader2, MoreHorizontal, Users, Heart,
+  PiggyBank, Target, Loader2, MoreHorizontal, Users, Heart, Upload,
 } from "lucide-react";
 import { useFinancial, CreateTransactionData } from "@/hooks/useFinancial";
 import { useFinancialAccounts } from "@/hooks/useFinancialAccounts";
@@ -24,6 +24,7 @@ import { TithersChart } from "@/components/financial/TithersChart";
 import { FinancialAccountsTab, FinancialCampaignsTab } from "@/components/financial/FinancialAccountsCampaigns";
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
 import { ExtratoTab } from "@/components/financial/ExtratoTab";
+import { FinancialImportModal } from "@/components/financial/FinancialImportModal";
 import { useAuth } from "@/contexts/AuthContext";
 import type { FinancialTransaction } from "@/hooks/useFinancial";
 
@@ -33,6 +34,7 @@ export default function Financeiro() {
   const [defaultTransactionType, setDefaultTransactionType] = useState<"receita" | "despesa">("receita");
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | undefined>();
   const [deletingTransaction, setDeletingTransaction] = useState<FinancialTransaction | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   // Period filters
   const now = new Date();
@@ -48,6 +50,7 @@ export default function Financeiro() {
     transactions,
     categories,
     isLoading,
+    fetchTransactions,
     createTransaction,
     updateTransaction,
     deleteTransaction,
@@ -165,6 +168,10 @@ export default function Financeiro() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setImportModalOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Importar
+            </Button>
             <Button variant="outline" onClick={() => handleOpenNewTransaction("despesa")}>
               <ArrowDownRight className="w-4 h-4 mr-2" />
               Nova Despesa
@@ -490,6 +497,17 @@ export default function Financeiro() {
         description={`Tem certeza que deseja excluir "${deletingTransaction?.description}"? Esta ação não pode ser desfeita.`}
         onConfirm={() => deleteTransaction(deletingTransaction!.id)}
       />
+
+      {churchId && (
+        <FinancialImportModal
+          open={importModalOpen}
+          onOpenChange={setImportModalOpen}
+          churchId={churchId}
+          categories={categories}
+          accounts={accounts}
+          onImportDone={fetchTransactions}
+        />
+      )}
     </AppLayout>
   );
 }
