@@ -28,11 +28,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Search, Plus, Filter, MoreHorizontal, Users, UserPlus, Heart,
-  Droplets, Download, Loader2, Eye, UserCheck, Baby, Upload,
+  Droplets, Download, Loader2, Eye, UserCheck, Baby, Upload, FileText,
 } from "lucide-react";
 import { useMembers, CreateMemberData } from "@/hooks/useMembers";
 import { MemberModal } from "@/components/modals/MemberModal";
 import { MemberImportModal } from "@/components/secretaria/MemberImportModal";
+import { CertificateGenerator } from "@/components/secretaria/CertificateGenerator";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 import { CongregationSelector } from "@/components/layout/CongregationSelector";
 import { useCongregations } from "@/hooks/useCongregations";
