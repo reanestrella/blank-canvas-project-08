@@ -166,10 +166,6 @@ export default function Secretaria() {
               selectedId={selectedCongregation}
               onSelect={setSelectedCongregation}
             />
-            <Button variant="outline" onClick={() => setCertificateModalOpen(true)}>
-              <FileText className="w-4 h-4 mr-2" />
-              Certificados
-            </Button>
             <Button variant="outline" onClick={() => setImportModalOpen(true)}>
               <Upload className="w-4 h-4 mr-2" />
               Importar
