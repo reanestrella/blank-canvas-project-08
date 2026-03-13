@@ -28,7 +28,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Search, Plus, Filter, MoreHorizontal, Users, UserPlus, Heart,
-  Droplets, Download, Loader2, Eye, UserCheck, Baby, Upload, FileText,
+  Droplets, Download, Loader2, Eye, UserCheck, Baby, Upload,
 } from "lucide-react";
 import { useMembers, CreateMemberData } from "@/hooks/useMembers";
 import { MemberModal } from "@/components/modals/MemberModal";
