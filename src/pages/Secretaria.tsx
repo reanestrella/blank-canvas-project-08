@@ -33,7 +33,6 @@ import {
 import { useMembers, CreateMemberData } from "@/hooks/useMembers";
 import { MemberModal } from "@/components/modals/MemberModal";
 import { MemberImportModal } from "@/components/secretaria/MemberImportModal";
-import { CertificateGenerator } from "@/components/secretaria/CertificateGenerator";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 import { CongregationSelector } from "@/components/layout/CongregationSelector";
 import { useCongregations } from "@/hooks/useCongregations";
