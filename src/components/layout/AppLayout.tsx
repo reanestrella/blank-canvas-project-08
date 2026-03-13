@@ -16,6 +16,7 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, isLoading, hasNoChurch } = useAuth();
+  useChurchBranding();
 
   if (isLoading) {
     return (

@@ -79,13 +79,17 @@ export function Sidebar() {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center w-full")}>
-          <div className="w-10 h-10 rounded-xl gradient-accent flex items-center justify-center">
-            <Church className="w-6 h-6 text-primary" />
+          <div className="w-10 h-10 rounded-xl gradient-accent flex items-center justify-center overflow-hidden">
+            {church?.logo_url ? (
+              <img src={church.logo_url} alt={church.name} className="w-full h-full object-cover" />
+            ) : (
+              <Church className="w-6 h-6 text-primary" />
+            )}
           </div>
           {!collapsed && (
             <div className="flex flex-col">
               <span className="font-bold text-sidebar-foreground text-lg truncate max-w-[140px]">
-                {church?.name || "Igreja"}
+                {(church as any)?.ministry_name || church?.name || "Igreja"}
               </span>
               <span className="text-xs text-sidebar-foreground/60">Gestão Completa</span>
             </div>
