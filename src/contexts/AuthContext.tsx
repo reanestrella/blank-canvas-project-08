@@ -19,6 +19,12 @@ interface Church {
   id: string;
   name: string;
   logo_url?: string | null;
+  slug?: string | null;
+  primary_color?: string | null;
+  secondary_color?: string | null;
+  ministry_name?: string | null;
+  plan: string;
+  is_active: boolean;
 }
 
 interface UserRole {
@@ -184,7 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (profileData.church_id) {
           const { data: churchData } = await supabase
             .from("churches")
-            .select("id, name, logo_url")
+            .select("id, name, logo_url, slug, primary_color, secondary_color, ministry_name, plan, is_active")
             .eq("id", profileData.church_id)
             .single();
           
@@ -252,7 +258,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     const { data: churchData } = await supabase
       .from("churches")
-      .select("id, name, logo_url")
+      .select("id, name, logo_url, slug, primary_color, secondary_color, ministry_name, plan, is_active")
       .eq("id", currentChurchId)
       .single();
     

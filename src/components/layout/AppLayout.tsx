@@ -7,6 +7,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { useChurchBranding } from "@/hooks/useChurchBranding";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -15,6 +16,7 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, isLoading, hasNoChurch } = useAuth();
+  useChurchBranding();
 
   if (isLoading) {
     return (

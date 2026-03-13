@@ -79,13 +79,17 @@ export function Sidebar() {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center w-full")}>
-          <div className="w-10 h-10 rounded-xl gradient-accent flex items-center justify-center">
-            <Church className="w-6 h-6 text-primary" />
+          <div className="w-10 h-10 rounded-xl gradient-accent flex items-center justify-center overflow-hidden">
+            {church?.logo_url ? (
+              <img src={church.logo_url} alt={church.name} className="w-full h-full object-cover" />
+            ) : (
+              <Church className="w-6 h-6 text-primary" />
+            )}
           </div>
           {!collapsed && (
             <div className="flex flex-col">
               <span className="font-bold text-sidebar-foreground text-lg truncate max-w-[140px]">
-                {church?.name || "Igreja"}
+                {(church as any)?.ministry_name || church?.name || "Igreja"}
               </span>
               <span className="text-xs text-sidebar-foreground/60">Gestão Completa</span>
             </div>
@@ -105,9 +109,13 @@ export function Sidebar() {
         <div className="mx-4 mt-4 p-3 rounded-lg bg-sidebar-accent/50 border border-sidebar-border">
           <div className="flex items-center gap-2">
             <Crown className="w-4 h-4 text-secondary" />
-            <span className="text-sm font-medium text-sidebar-foreground">Plano Free</span>
+            <span className="text-sm font-medium text-sidebar-foreground capitalize">
+              Plano {(church as any)?.plan || "Free"}
+            </span>
           </div>
-          <p className="text-xs text-sidebar-foreground/60 mt-1">50 membros ativos</p>
+          <p className="text-xs text-sidebar-foreground/60 mt-1">
+            {(church as any)?.is_active === false ? "Igreja inativa" : "Igreja ativa"}
+          </p>
         </div>
       )}
 

@@ -11,11 +11,40 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Shield, Church, Bot, Calendar, AlertTriangle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Loader2, Shield, Church, Bot, Calendar, AlertTriangle,
+  Users, Building2, Palette, Power, Eye, Edit2, Save, X,
+} from "lucide-react";
 
-interface ChurchItem { id: string; name: string; plan: string; created_at: string; }
-interface ChurchFeatures { ai_enabled: boolean; ai_trial_enabled: boolean; ai_trial_end: string | null; }
-interface AiErrorLog { id: string; feature: string; error_message: string; provider_status: number | null; created_at: string; }
+interface ChurchItem {
+  id: string;
+  name: string;
+  slug: string | null;
+  plan: string;
+  is_active: boolean;
+  primary_color: string | null;
+  secondary_color: string | null;
+  ministry_name: string | null;
+  logo_url: string | null;
+  created_at: string;
+  member_count?: number;
+}
+
+interface ChurchFeatures {
+  ai_enabled: boolean;
+  ai_trial_enabled: boolean;
+  ai_trial_end: string | null;
+}
+
+interface AiErrorLog {
+  id: string;
+  feature: string;
+  error_message: string;
+  provider_status: number | null;
+  created_at: string;
+}
 
 export default function DevAdmin() {
   const { isSuperAdmin, isChecking } = useSuperAdmin();
@@ -31,17 +60,36 @@ export default function DevAdmin() {
   const [trialDays, setTrialDays] = useState(30);
   const [errorLogs, setErrorLogs] = useState<AiErrorLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
+  const [editingChurch, setEditingChurch] = useState<ChurchItem | null>(null);
 
   useEffect(() => {
     if (!isSuperAdmin) return;
-    const load = async () => {
-      const { data } = await supabase.from("churches").select("id, name, plan, created_at").order("name");
-      setChurches(data || []);
-      setLoading(false);
-    };
-    load();
+    loadChurches();
     loadErrorLogs();
   }, [isSuperAdmin]);
+
+  const loadChurches = async () => {
+    setLoading(true);
+    const { data: churchesData } = await supabase
+      .from("churches")
+      .select("id, name, slug, plan, is_active, primary_color, secondary_color, ministry_name, logo_url, created_at")
+      .order("name");
+
+    if (churchesData) {
+      // Fetch member counts
+      const enriched = await Promise.all(
+        (churchesData as any[]).map(async (c) => {
+          const { count } = await supabase
+            .from("members")
+            .select("id", { count: "exact", head: true })
+            .eq("church_id", c.id);
+          return { ...c, member_count: count || 0 } as ChurchItem;
+        })
+      );
+      setChurches(enriched);
+    }
+    setLoading(false);
+  };
 
   const loadErrorLogs = async () => {
     setLogsLoading(true);
@@ -63,7 +111,7 @@ export default function DevAdmin() {
       .maybeSingle();
     if (!data) {
       await supabase.from("church_features").insert({
-        church_id: churchId, ai_enabled: false, ai_trial_enabled: false, ai_trial_start: null, ai_trial_end: null,
+        church_id: churchId, ai_enabled: false, ai_trial_enabled: false,
       });
       data = { ai_enabled: false, ai_trial_enabled: false, ai_trial_end: null };
     }
@@ -76,7 +124,7 @@ export default function DevAdmin() {
     loadFeatures(selectedChurch);
   }, [selectedChurch]);
 
-  const handleSave = async () => {
+  const handleSaveFeatures = async () => {
     if (!selectedChurch || !features) return;
     setSaving(true);
     try {
@@ -88,7 +136,6 @@ export default function DevAdmin() {
       }, { onConflict: "church_id" });
       if (error) throw error;
       toast({ title: "Salvo", description: "Configurações de IA atualizadas." });
-      await loadFeatures(selectedChurch);
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
     } finally {
@@ -111,6 +158,45 @@ export default function DevAdmin() {
     }
   };
 
+  const toggleChurchActive = async (churchId: string, currentState: boolean) => {
+    const { error } = await supabase
+      .from("churches")
+      .update({ is_active: !currentState } as any)
+      .eq("id", churchId);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: currentState ? "Igreja desativada" : "Igreja ativada" });
+      loadChurches();
+    }
+  };
+
+  const saveChurchBranding = async () => {
+    if (!editingChurch) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("churches")
+        .update({
+          name: editingChurch.name,
+          ministry_name: editingChurch.ministry_name,
+          primary_color: editingChurch.primary_color,
+          secondary_color: editingChurch.secondary_color,
+          plan: editingChurch.plan,
+          logo_url: editingChurch.logo_url,
+        } as any)
+        .eq("id", editingChurch.id);
+      if (error) throw error;
+      toast({ title: "Salvo", description: "Dados da igreja atualizados." });
+      setEditingChurch(null);
+      loadChurches();
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (isChecking) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
@@ -119,6 +205,9 @@ export default function DevAdmin() {
     return <Navigate to="/app" replace />;
   }
 
+  const totalMembers = churches.reduce((sum, c) => sum + (c.member_count || 0), 0);
+  const activeChurches = churches.filter(c => c.is_active).length;
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -126,135 +215,327 @@ export default function DevAdmin() {
           <Shield className="w-6 h-6 text-primary" />
           <div>
             <h1 className="text-2xl font-bold">Painel Super Admin</h1>
-            <p className="text-muted-foreground">Gerenciamento de recursos por igreja</p>
+            <p className="text-muted-foreground">Gerenciamento multi-igreja da plataforma</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Church List */}
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Church className="w-5 h-5" />
-                Igrejas
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
-              ) : (
-                <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-                  {churches.map(c => (
-                    <button
-                      key={c.id}
-                      onClick={() => setSelectedChurch(c.id)}
-                      className={`w-full text-left p-3 rounded-lg border transition-colors ${selectedChurch === c.id ? "bg-primary/10 border-primary" : "hover:bg-muted/50"}`}
-                    >
-                      <p className="font-medium text-sm">{c.name}</p>
-                      <p className="text-xs text-muted-foreground">Plano: {c.plan}</p>
-                    </button>
-                  ))}
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <Building2 className="w-8 h-8 text-primary" />
+                <div>
+                  <p className="text-2xl font-bold">{churches.length}</p>
+                  <p className="text-sm text-muted-foreground">Igrejas</p>
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
-
-          {/* Features Panel */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Bot className="w-5 h-5" />
-                Recursos de IA
-              </CardTitle>
-              <CardDescription>
-                {selectedChurch ? churches.find(c => c.id === selectedChurch)?.name : "Selecione uma igreja"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {!selectedChurch ? (
-                <p className="text-muted-foreground text-center py-8">Selecione uma igreja para gerenciar</p>
-              ) : featuresLoading ? (
-                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
-              ) : features ? (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between p-4 rounded-lg border">
-                    <div>
-                      <p className="font-medium">IA Habilitada (permanente)</p>
-                      <p className="text-sm text-muted-foreground">Libera todos os recursos de IA para esta igreja</p>
-                    </div>
-                    <Switch checked={features.ai_enabled} onCheckedChange={(checked) => setFeatures({ ...features, ai_enabled: checked })} />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 rounded-lg border">
-                    <div>
-                      <p className="font-medium">Trial Ativo</p>
-                      <p className="text-sm text-muted-foreground">
-                        {features.ai_trial_enabled && features.ai_trial_end
-                          ? `Válido até: ${new Date(features.ai_trial_end).toLocaleDateString("pt-BR")}`
-                          : "Sem trial ativo"}
-                      </p>
-                    </div>
-                    <Switch checked={features.ai_trial_enabled} onCheckedChange={(checked) => setFeatures({ ...features, ai_trial_enabled: checked })} />
-                  </div>
-
-                  <div className="p-4 rounded-lg border border-dashed space-y-3">
-                    <p className="font-medium flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      Ativar Trial
-                    </p>
-                    <div className="flex items-end gap-3">
-                      <div className="space-y-1">
-                        <Label>Dias</Label>
-                        <Input type="number" value={trialDays} onChange={(e) => setTrialDays(Number(e.target.value))} className="w-24" min={1} max={365} />
-                      </div>
-                      <Button onClick={handleActivateTrial} disabled={saving} variant="outline">
-                        {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                        Ativar Trial
-                      </Button>
-                    </div>
-                  </div>
-
-                  <Button onClick={handleSave} disabled={saving} className="w-full">
-                    {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Salvar Alterações
-                  </Button>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <Power className="w-8 h-8 text-success" />
+                <div>
+                  <p className="text-2xl font-bold">{activeChurches}</p>
+                  <p className="text-sm text-muted-foreground">Ativas</p>
                 </div>
-              ) : null}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <Users className="w-8 h-8 text-secondary" />
+                <div>
+                  <p className="text-2xl font-bold">{totalMembers}</p>
+                  <p className="text-sm text-muted-foreground">Membros Total</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-8 h-8 text-destructive" />
+                <div>
+                  <p className="text-2xl font-bold">{errorLogs.length}</p>
+                  <p className="text-sm text-muted-foreground">Erros IA</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* AI Error Logs */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <AlertTriangle className="w-5 h-5 text-destructive" />
-              Logs da IA
-              <Button variant="ghost" size="sm" onClick={loadErrorLogs} disabled={logsLoading} className="ml-auto">
-                {logsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Atualizar"}
-              </Button>
-            </CardTitle>
-            <CardDescription>Últimos 20 erros registrados</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {errorLogs.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Nenhum erro registrado.</p>
-            ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {errorLogs.map(log => (
-                  <div key={log.id} className="p-3 rounded-lg border text-sm space-y-1">
-                    <div className="flex items-center gap-2 justify-between">
-                      <Badge variant="outline" className="text-xs">{log.feature}</Badge>
-                      {log.provider_status && <Badge variant="destructive" className="text-xs">HTTP {log.provider_status}</Badge>}
-                      <span className="text-xs text-muted-foreground ml-auto">{new Date(log.created_at).toLocaleString("pt-BR")}</span>
+        <Tabs defaultValue="churches" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="churches">Igrejas</TabsTrigger>
+            <TabsTrigger value="ai">Recursos de IA</TabsTrigger>
+            <TabsTrigger value="logs">Logs</TabsTrigger>
+          </TabsList>
+
+          {/* Churches Tab */}
+          <TabsContent value="churches" className="space-y-4">
+            {/* Edit Modal */}
+            {editingChurch && (
+              <Card className="border-primary">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Palette className="w-5 h-5" />
+                    Editar: {editingChurch.name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Nome da Igreja</Label>
+                      <Input value={editingChurch.name} onChange={e => setEditingChurch({ ...editingChurch, name: e.target.value })} />
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">{log.error_message}</p>
+                    <div className="space-y-2">
+                      <Label>Nome do Ministério (white-label)</Label>
+                      <Input value={editingChurch.ministry_name || ""} onChange={e => setEditingChurch({ ...editingChurch, ministry_name: e.target.value })} placeholder="Ex: Ministério Alcançando Vidas" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Cor Primária</Label>
+                      <div className="flex gap-2">
+                        <Input type="color" value={editingChurch.primary_color || "#1e3a5f"} onChange={e => setEditingChurch({ ...editingChurch, primary_color: e.target.value })} className="w-14 h-10 p-1" />
+                        <Input value={editingChurch.primary_color || "#1e3a5f"} onChange={e => setEditingChurch({ ...editingChurch, primary_color: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Cor Secundária</Label>
+                      <div className="flex gap-2">
+                        <Input type="color" value={editingChurch.secondary_color || "#d97706"} onChange={e => setEditingChurch({ ...editingChurch, secondary_color: e.target.value })} className="w-14 h-10 p-1" />
+                        <Input value={editingChurch.secondary_color || "#d97706"} onChange={e => setEditingChurch({ ...editingChurch, secondary_color: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>URL do Logo</Label>
+                      <Input value={editingChurch.logo_url || ""} onChange={e => setEditingChurch({ ...editingChurch, logo_url: e.target.value })} placeholder="https://..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Plano</Label>
+                      <Input value={editingChurch.plan} onChange={e => setEditingChurch({ ...editingChurch, plan: e.target.value })} />
+                    </div>
                   </div>
-                ))}
-              </div>
+                  <div className="flex gap-2">
+                    <Button onClick={saveChurchBranding} disabled={saving}>
+                      {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      <Save className="w-4 h-4 mr-2" />
+                      Salvar
+                    </Button>
+                    <Button variant="outline" onClick={() => setEditingChurch(null)}>
+                      <X className="w-4 h-4 mr-2" />
+                      Cancelar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Church className="w-5 h-5" />
+                  Todas as Igrejas
+                </CardTitle>
+                <CardDescription>{churches.length} igrejas cadastradas</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Igreja</TableHead>
+                          <TableHead>Slug</TableHead>
+                          <TableHead>Plano</TableHead>
+                          <TableHead>Membros</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Cores</TableHead>
+                          <TableHead>Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {churches.map(c => (
+                          <TableRow key={c.id} className={!c.is_active ? "opacity-50" : ""}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {c.logo_url ? (
+                                  <img src={c.logo_url} alt="" className="w-8 h-8 rounded object-cover" />
+                                ) : (
+                                  <div className="w-8 h-8 rounded bg-muted flex items-center justify-center">
+                                    <Church className="w-4 h-4 text-muted-foreground" />
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="font-medium text-sm">{c.name}</p>
+                                  {c.ministry_name && <p className="text-xs text-muted-foreground">{c.ministry_name}</p>}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell><code className="text-xs">{c.slug}</code></TableCell>
+                            <TableCell><Badge variant="outline">{c.plan}</Badge></TableCell>
+                            <TableCell>{c.member_count}</TableCell>
+                            <TableCell>
+                              <Badge variant={c.is_active ? "default" : "destructive"}>
+                                {c.is_active ? "Ativa" : "Inativa"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <div className="w-5 h-5 rounded border" style={{ backgroundColor: c.primary_color || "#1e3a5f" }} />
+                                <div className="w-5 h-5 rounded border" style={{ backgroundColor: c.secondary_color || "#d97706" }} />
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => setEditingChurch(c)} title="Editar">
+                                  <Edit2 className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost" size="icon"
+                                  onClick={() => toggleChurchActive(c.id, c.is_active)}
+                                  title={c.is_active ? "Desativar" : "Ativar"}
+                                >
+                                  <Power className={`w-4 h-4 ${c.is_active ? "text-success" : "text-destructive"}`} />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => { setSelectedChurch(c.id); /* switch tab manually */ }} title="Configurar IA">
+                                  <Bot className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* AI Tab */}
+          <TabsContent value="ai" className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <Card className="lg:col-span-1">
+                <CardHeader>
+                  <CardTitle className="text-lg">Selecionar Igreja</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                    {churches.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => setSelectedChurch(c.id)}
+                        className={`w-full text-left p-3 rounded-lg border transition-colors ${selectedChurch === c.id ? "bg-primary/10 border-primary" : "hover:bg-muted/50"}`}
+                      >
+                        <p className="font-medium text-sm">{c.name}</p>
+                        <p className="text-xs text-muted-foreground">Plano: {c.plan} · {c.member_count} membros</p>
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Bot className="w-5 h-5" />
+                    Recursos de IA
+                  </CardTitle>
+                  <CardDescription>
+                    {selectedChurch ? churches.find(c => c.id === selectedChurch)?.name : "Selecione uma igreja"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {!selectedChurch ? (
+                    <p className="text-muted-foreground text-center py-8">Selecione uma igreja</p>
+                  ) : featuresLoading ? (
+                    <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
+                  ) : features ? (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium">IA Habilitada (permanente)</p>
+                          <p className="text-sm text-muted-foreground">Libera todos os recursos de IA</p>
+                        </div>
+                        <Switch checked={features.ai_enabled} onCheckedChange={(checked) => setFeatures({ ...features, ai_enabled: checked })} />
+                      </div>
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium">Trial Ativo</p>
+                          <p className="text-sm text-muted-foreground">
+                            {features.ai_trial_enabled && features.ai_trial_end
+                              ? `Válido até: ${new Date(features.ai_trial_end).toLocaleDateString("pt-BR")}`
+                              : "Sem trial ativo"}
+                          </p>
+                        </div>
+                        <Switch checked={features.ai_trial_enabled} onCheckedChange={(checked) => setFeatures({ ...features, ai_trial_enabled: checked })} />
+                      </div>
+                      <div className="p-4 rounded-lg border border-dashed space-y-3">
+                        <p className="font-medium flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          Ativar Trial
+                        </p>
+                        <div className="flex items-end gap-3">
+                          <div className="space-y-1">
+                            <Label>Dias</Label>
+                            <Input type="number" value={trialDays} onChange={(e) => setTrialDays(Number(e.target.value))} className="w-24" min={1} max={365} />
+                          </div>
+                          <Button onClick={handleActivateTrial} disabled={saving} variant="outline">
+                            {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Ativar Trial
+                          </Button>
+                        </div>
+                      </div>
+                      <Button onClick={handleSaveFeatures} disabled={saving} className="w-full">
+                        {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        Salvar Alterações
+                      </Button>
+                    </div>
+                  ) : null}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Logs Tab */}
+          <TabsContent value="logs">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <AlertTriangle className="w-5 h-5 text-destructive" />
+                  Logs da IA
+                  <Button variant="ghost" size="sm" onClick={loadErrorLogs} disabled={logsLoading} className="ml-auto">
+                    {logsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Atualizar"}
+                  </Button>
+                </CardTitle>
+                <CardDescription>Últimos 20 erros registrados</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {errorLogs.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">Nenhum erro registrado.</p>
+                ) : (
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {errorLogs.map(log => (
+                      <div key={log.id} className="p-3 rounded-lg border text-sm space-y-1">
+                        <div className="flex items-center gap-2 justify-between">
+                          <Badge variant="outline" className="text-xs">{log.feature}</Badge>
+                          {log.provider_status && <Badge variant="destructive" className="text-xs">HTTP {log.provider_status}</Badge>}
+                          <span className="text-xs text-muted-foreground ml-auto">{new Date(log.created_at).toLocaleString("pt-BR")}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">{log.error_message}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );

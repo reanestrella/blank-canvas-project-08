@@ -826,11 +826,16 @@ export type Database = {
           created_at: string | null
           email: string | null
           id: string
+          is_active: boolean
           logo_url: string | null
           max_members: number | null
+          ministry_name: string | null
           name: string
           phone: string | null
           plan: string
+          primary_color: string | null
+          secondary_color: string | null
+          slug: string | null
           state: string | null
           updated_at: string
         }
@@ -841,11 +846,16 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           id?: string
+          is_active?: boolean
           logo_url?: string | null
           max_members?: number | null
+          ministry_name?: string | null
           name: string
           phone?: string | null
           plan?: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          slug?: string | null
           state?: string | null
           updated_at?: string
         }
@@ -856,11 +866,16 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           id?: string
+          is_active?: boolean
           logo_url?: string | null
           max_members?: number | null
+          ministry_name?: string | null
           name?: string
           phone?: string | null
           plan?: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          slug?: string | null
           state?: string | null
           updated_at?: string
         }
