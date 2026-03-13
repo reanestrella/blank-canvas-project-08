@@ -19,6 +19,12 @@ interface Church {
   id: string;
   name: string;
   logo_url?: string | null;
+  slug?: string | null;
+  primary_color?: string | null;
+  secondary_color?: string | null;
+  ministry_name?: string | null;
+  plan: string;
+  is_active: boolean;
 }
 
 interface UserRole {
