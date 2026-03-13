@@ -28,12 +28,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Search, Plus, Filter, MoreHorizontal, Users, UserPlus, Heart,
-  Droplets, Download, Loader2, Eye, UserCheck, Baby, Upload, FileText,
+  Droplets, Download, Loader2, Eye, UserCheck, Baby, Upload,
 } from "lucide-react";
 import { useMembers, CreateMemberData } from "@/hooks/useMembers";
 import { MemberModal } from "@/components/modals/MemberModal";
 import { MemberImportModal } from "@/components/secretaria/MemberImportModal";
-import { CertificateGenerator } from "@/components/secretaria/CertificateGenerator";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 import { CongregationSelector } from "@/components/layout/CongregationSelector";
 import { useCongregations } from "@/hooks/useCongregations";
@@ -59,7 +58,6 @@ export default function Secretaria() {
   const [searchTerm, setSearchTerm] = useState("");
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
-  const [certificateModalOpen, setCertificateModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | undefined>();
   const [deletingMember, setDeletingMember] = useState<Member | null>(null);
   const [activeTab, setActiveTab] = useState("todos");
@@ -168,10 +166,6 @@ export default function Secretaria() {
               selectedId={selectedCongregation}
               onSelect={setSelectedCongregation}
             />
-            <Button variant="outline" onClick={() => setCertificateModalOpen(true)}>
-              <FileText className="w-4 h-4 mr-2" />
-              Certificados
-            </Button>
             <Button variant="outline" onClick={() => setImportModalOpen(true)}>
               <Upload className="w-4 h-4 mr-2" />
               Importar
@@ -454,15 +448,6 @@ export default function Secretaria() {
         />
       )}
 
-      {/* Certificate Generator */}
-      {churchId && (
-        <CertificateGenerator
-          open={certificateModalOpen}
-          onOpenChange={setCertificateModalOpen}
-          members={members}
-          churchId={churchId}
-        />
-      )}
     </AppLayout>
   );
 }
