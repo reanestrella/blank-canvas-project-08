@@ -109,9 +109,13 @@ export function Sidebar() {
         <div className="mx-4 mt-4 p-3 rounded-lg bg-sidebar-accent/50 border border-sidebar-border">
           <div className="flex items-center gap-2">
             <Crown className="w-4 h-4 text-secondary" />
-            <span className="text-sm font-medium text-sidebar-foreground">Plano Free</span>
+            <span className="text-sm font-medium text-sidebar-foreground capitalize">
+              Plano {(church as any)?.plan || "Free"}
+            </span>
           </div>
-          <p className="text-xs text-sidebar-foreground/60 mt-1">50 membros ativos</p>
+          <p className="text-xs text-sidebar-foreground/60 mt-1">
+            {(church as any)?.is_active === false ? "Igreja inativa" : "Igreja ativa"}
+          </p>
         </div>
       )}
 
