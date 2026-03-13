@@ -190,7 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (profileData.church_id) {
           const { data: churchData } = await supabase
             .from("churches")
-            .select("id, name, logo_url")
+            .select("id, name, logo_url, slug, primary_color, secondary_color, ministry_name, plan, is_active")
             .eq("id", profileData.church_id)
             .single();
           
