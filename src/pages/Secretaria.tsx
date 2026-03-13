@@ -448,15 +448,6 @@ export default function Secretaria() {
         />
       )}
 
-      {/* Certificate Generator */}
-      {churchId && (
-        <CertificateGenerator
-          open={certificateModalOpen}
-          onOpenChange={setCertificateModalOpen}
-          members={members}
-          churchId={churchId}
-        />
-      )}
     </AppLayout>
   );
 }
