@@ -78,12 +78,17 @@ export default function Master() {
   const [deletingChurch, setDeletingChurch] = useState<ChurchItem | null>(null);
   const [showNewNetwork, setShowNewNetwork] = useState(false);
   const [newNetworkName, setNewNetworkName] = useState("");
+  // Network leader management
+  const [networkLeaders, setNetworkLeaders] = useState<any[]>([]);
+  const [showAddLeader, setShowAddLeader] = useState(false);
+  const [leaderForm, setLeaderForm] = useState({ email: "", network_id: "", role: "network_admin" });
 
   useEffect(() => {
     if (!isSuperAdmin) return;
     loadChurches();
     loadErrorLogs();
     loadNetworks();
+    loadNetworkLeaders();
   }, [isSuperAdmin]);
 
   const loadChurches = async () => {
@@ -111,6 +116,49 @@ export default function Master() {
   const loadNetworks = async () => {
     const { data } = await supabase.from("ministries_network").select("id, name, slug, is_active").order("name");
     setNetworks((data as NetworkItem[]) || []);
+  };
+
+  const loadNetworkLeaders = async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("user_id, email, full_name, ministry_network_id")
+      .not("ministry_network_id", "is", null);
+    setNetworkLeaders(data || []);
+  };
+
+  const handleAddLeader = async () => {
+    if (!leaderForm.email.trim() || !leaderForm.network_id) {
+      toast({ title: "Erro", description: "Preencha email e rede.", variant: "destructive" });
+      return;
+    }
+    try {
+      // Find user by email
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .ilike("email", leaderForm.email.trim())
+        .maybeSingle();
+      if (!profileData) throw new Error("Usuário não encontrado com esse email.");
+
+      // Update profile with network
+      await supabase.from("profiles").update({
+        ministry_network_id: leaderForm.network_id,
+      } as any).eq("user_id", (profileData as any).user_id);
+
+      // Add role
+      await supabase.from("user_roles").insert({
+        user_id: (profileData as any).user_id,
+        church_id: churches[0]?.id, // needs a church_id for the roles table
+        role: leaderForm.role,
+      } as any);
+
+      toast({ title: "Líder adicionado!", description: `${leaderForm.email} vinculado à rede.` });
+      setShowAddLeader(false);
+      setLeaderForm({ email: "", network_id: "", role: "network_admin" });
+      loadNetworkLeaders();
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    }
   };
 
   const loadErrorLogs = async () => {
@@ -480,9 +528,58 @@ export default function Master() {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
 
-          {/* AI Tab */}
+            {/* Network Leaders */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5" /> Líderes de Rede</CardTitle>
+                <Button onClick={() => setShowAddLeader(true)} size="sm"><Plus className="w-4 h-4 mr-2" /> Adicionar Líder</Button>
+              </CardHeader>
+              <CardContent>
+                {showAddLeader && (
+                  <div className="mb-4 p-4 border rounded-lg border-primary space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="space-y-1"><Label>Email do Usuário *</Label><Input value={leaderForm.email} onChange={e => setLeaderForm(f => ({ ...f, email: e.target.value }))} placeholder="email@exemplo.com" /></div>
+                      <div className="space-y-1">
+                        <Label>Rede *</Label>
+                        <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={leaderForm.network_id} onChange={e => setLeaderForm(f => ({ ...f, network_id: e.target.value }))}>
+                          <option value="">Selecione</option>
+                          {networks.map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Papel</Label>
+                        <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={leaderForm.role} onChange={e => setLeaderForm(f => ({ ...f, role: e.target.value }))}>
+                          <option value="network_admin">Admin da Rede</option>
+                          <option value="network_finance">Financeiro da Rede</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleAddLeader}><Plus className="w-4 h-4 mr-2" /> Vincular</Button>
+                      <Button size="sm" variant="outline" onClick={() => setShowAddLeader(false)}>Cancelar</Button>
+                    </div>
+                  </div>
+                )}
+                {networkLeaders.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">Nenhum líder de rede cadastrado.</p>
+                ) : (
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Email</TableHead><TableHead>Rede</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {networkLeaders.map((l: any) => (
+                        <TableRow key={l.user_id}>
+                          <TableCell className="font-medium">{l.full_name || "—"}</TableCell>
+                          <TableCell className="text-sm">{l.email}</TableCell>
+                          <TableCell><Badge variant="outline">{networks.find(n => n.id === l.ministry_network_id)?.name || "—"}</Badge></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
           <TabsContent value="ai" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="lg:col-span-1">

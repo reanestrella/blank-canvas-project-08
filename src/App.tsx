@@ -37,6 +37,7 @@ const Instalar = lazy(() => import("./pages/Instalar"));
 const Master = lazy(() => import("./pages/Master"));
 const Assistente = lazy(() => import("./pages/Assistente"));
 const NetworkDashboard = lazy(() => import("./pages/NetworkDashboard"));
+const GestaoApp = lazy(() => import("./pages/GestaoApp"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 function PageLoader() {
@@ -84,6 +85,11 @@ const App = () => (
 
                 {/* Network Dashboard */}
                 <Route path="/rede" element={<NetworkDashboard />} />
+                <Route path="/gestao-app" element={
+                  <RequireAnyRole allowedRoles={["pastor"]}>
+                    <GestaoApp />
+                  </RequireAnyRole>
+                } />
 
                 {/* Always accessible to any authenticated user */}
                 <Route path="/app" element={<Dashboard />} />
