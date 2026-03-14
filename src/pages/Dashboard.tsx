@@ -112,8 +112,8 @@ function SecretaryDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Membros" value={stats.totalMembers.toString()} change="Ativos" changeType="positive" icon={Users} iconColor="bg-primary/10 text-primary" />
         <StatCard title="Decididos" value={stats.totalDecididos.toString()} change="Novos convertidos" changeType="positive" icon={Heart} iconColor="bg-success/10 text-success" />
-        <StatCard title="Visitantes" value={stats.totalVisitantes.toString()} change="Em acompanhamento" changeType="neutral" icon={Eye} iconColor="bg-secondary/10 text-secondary" />
-        <StatCard title="Batizados" value={stats.totalBaptized.toString()} change="Total" changeType="positive" icon={TrendingUp} iconColor="bg-info/10 text-info" />
+        <StatCard title="Visitantes" value={stats.totalVisitantes.toString()} change="Cadastrados" changeType="neutral" icon={Eye} iconColor="bg-secondary/10 text-secondary" />
+        <StatCard title="Batizados" value={stats.totalBaptized.toString()} change="Total" changeType="positive" icon={Droplets} iconColor="bg-info/10 text-info" />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <BirthdayCard birthdaysThisMonth={stats.birthdaysThisMonth} birthdaysThisWeek={stats.birthdaysThisWeek} />
