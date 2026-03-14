@@ -23,7 +23,7 @@ export function useChurchBranding() {
     }
 
     // Apply dynamic colors if configured (expects hex like #1e3a5f)
-    if (c.primary_color && c.primary_color !== '#1e3a5f') {
+    if (c.primary_color) {
       const hsl = hexToHSL(c.primary_color);
       if (hsl) {
         root.style.setProperty("--primary", hsl);
