@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Loader2, Building2, Users, Grid3X3, TrendingUp, TrendingDown,
   PiggyBank, AlertTriangle, UserPlus, Network, ArrowLeft,
-  BarChart3,
+  BarChart3, DollarSign,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
