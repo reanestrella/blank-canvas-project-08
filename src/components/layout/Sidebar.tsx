@@ -3,8 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, Heart, GraduationCap, Grid3X3, DollarSign,
   Calendar, User, Settings, ChevronLeft, ChevronRight, Church, LogOut,
-  Crown, Handshake, BookOpen, Home, Armchair, Bell, Shield, Sparkles, Wallet,
-  Smartphone,
+  Crown, Handshake, BookOpen, Home, Armchair, Bell, Shield, Sparkles,
+  Smartphone, HeartHandshake,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
