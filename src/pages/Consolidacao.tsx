@@ -572,6 +572,44 @@ export default function Consolidacao() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Edit Modal */}
+        <Dialog open={!!editingRecord} onOpenChange={open => !open && setEditingRecord(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Consolidação - {editingRecord?.member?.full_name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Consolidador</Label>
+                <MemberAutocomplete
+                  churchId={churchId}
+                  value={editForm.consolidator_id || undefined}
+                  onChange={v => setEditForm(f => ({ ...f, consolidator_id: v || "" }))}
+                  placeholder="Quem vai acompanhar..."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Data Contato</Label>
+                  <Input type="date" value={editForm.contact_date} onChange={e => setEditForm(f => ({ ...f, contact_date: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Primeira Visita</Label>
+                  <Input type="date" value={editForm.first_visit_date} onChange={e => setEditForm(f => ({ ...f, first_visit_date: e.target.value }))} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Observações</Label>
+                <Textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} rows={3} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingRecord(null)}>Cancelar</Button>
+              <Button onClick={handleSaveEdit}>Salvar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
