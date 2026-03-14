@@ -139,6 +139,27 @@ export default function Consolidacao() {
     });
   };
 
+  const handleEditRecord = (record: ConsolidationRecord) => {
+    setEditingRecord(record);
+    setEditForm({
+      consolidator_id: record.consolidator_id || "",
+      notes: record.notes || "",
+      contact_date: record.contact_date || "",
+      first_visit_date: record.first_visit_date || "",
+      cell_integration_date: record.cell_integration_date || "",
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingRecord) return;
+    await updateRecord(editingRecord.id, {
+      consolidator_id: editForm.consolidator_id || undefined,
+      notes: editForm.notes || undefined,
+      contact_date: editForm.contact_date || undefined,
+    } as any);
+    setEditingRecord(null);
+  };
+
   if (!churchId) return null;
 
   const funnelSteps = [
