@@ -3029,6 +3029,7 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { p_token: string }; Returns: undefined }
+      delete_church_cascade: { Args: { p_church_id: string }; Returns: Json }
       enable_ai_trial: {
         Args: { p_church_id: string; p_trial_days?: number }
         Returns: undefined
@@ -3103,6 +3104,8 @@ export type Database = {
         | "lider_ministerio"
         | "consolidacao"
         | "membro"
+        | "network_admin"
+        | "network_finance"
       spiritual_status:
         | "visitante"
         | "novo_convertido"
@@ -3245,6 +3248,8 @@ export const Constants = {
         "lider_ministerio",
         "consolidacao",
         "membro",
+        "network_admin",
+        "network_finance",
       ],
       spiritual_status: [
         "visitante",
