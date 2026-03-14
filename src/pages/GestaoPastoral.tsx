@@ -653,6 +653,7 @@ export default function GestaoPastoral() {
             <TabsTrigger value="discipulado"><BookOpen className="w-4 h-4 mr-1" /> Discipulado</TabsTrigger>
             <TabsTrigger value="visitas"><Home className="w-4 h-4 mr-1" /> Visitas</TabsTrigger>
             <TabsTrigger value="gabinete"><HeartHandshake className="w-4 h-4 mr-1" /> Gabinete</TabsTrigger>
+            <TabsTrigger value="agenda"><Calendar className="w-4 h-4 mr-1" /> Agenda</TabsTrigger>
             <TabsTrigger value="esbocos"><FileText className="w-4 h-4 mr-1" /> Esboços</TabsTrigger>
             <TabsTrigger value="anotacoes"><StickyNote className="w-4 h-4 mr-1" /> Anotações</TabsTrigger>
           </TabsList>
@@ -665,6 +666,9 @@ export default function GestaoPastoral() {
           </TabsContent>
           <TabsContent value="gabinete" className="mt-6">
             <GabineteTab churchId={churchId} />
+          </TabsContent>
+          <TabsContent value="agenda" className="mt-6">
+            <AgendaTab churchId={churchId} />
           </TabsContent>
           <TabsContent value="esbocos" className="mt-6">
             <EsbocosTab churchId={churchId} />
