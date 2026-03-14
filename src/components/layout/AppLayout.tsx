@@ -5,6 +5,7 @@ import { NoChurchScreen } from "./NoChurchScreen";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useChurchBranding } from "@/hooks/useChurchBranding";
@@ -16,6 +17,7 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, isLoading, hasNoChurch } = useAuth();
+  const { isSuperAdmin } = useSuperAdmin();
   useChurchBranding();
 
   if (isLoading) {
@@ -30,7 +32,11 @@ export function AppLayout({ children }: AppLayoutProps) {
     return <Navigate to="/login" replace />;
   }
 
+  // Super admin without church can still access — redirect to master panel
   if (hasNoChurch) {
+    if (isSuperAdmin) {
+      return <Navigate to="/master" replace />;
+    }
     return <NoChurchScreen />;
   }
 

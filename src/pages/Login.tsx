@@ -97,6 +97,20 @@ export default function Login() {
       // Fetch profile to check church_id
       const userId = authData.user?.id;
       if (userId) {
+        // Check if super admin first
+        const { data: superAdminData } = await supabase
+          .from("system_admins")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("active", true)
+          .maybeSingle();
+
+        if (superAdminData) {
+          toast({ title: "Bem-vindo, Super Admin!" });
+          navigate("/master");
+          return;
+        }
+
         const { data: profile } = await supabase
           .from("profiles")
           .select("church_id")
@@ -106,12 +120,11 @@ export default function Login() {
         console.log("[Login] profile.church_id:", profile?.church_id);
 
         if (!profile?.church_id) {
-          // No church — send to registration/onboarding
           toast({
             title: "Bem-vindo!",
             description: "Você ainda não tem uma igreja vinculada.",
           });
-          navigate("/app"); // Will be caught by NoChurchScreen
+          navigate("/app");
           return;
         }
 
