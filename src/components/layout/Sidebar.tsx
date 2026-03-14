@@ -63,6 +63,7 @@ export function Sidebar() {
     const items = [...bottomItems];
     if (isSuperAdmin) {
       items.unshift({ icon: Shield, label: "Painel Master", path: "/master" });
+      items.unshift({ icon: Network, label: "Painel Rede", path: "/rede" });
     }
     if (isAdmin()) return items;
     return items.filter(item => {

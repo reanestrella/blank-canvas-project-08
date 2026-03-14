@@ -113,13 +113,6 @@ export default function NetworkDashboard() {
     }
   };
 
-  if (isChecking) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
-  }
-
-  if (!user) return <Navigate to="/login" replace />;
-  if (!hasAccess) return <Navigate to="/app" replace />;
-
   const totals = useMemo(() => ({
     churches: churches.length,
     members: churches.reduce((s, c) => s + c.member_count, 0),
@@ -133,7 +126,6 @@ export default function NetworkDashboard() {
   const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
   const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
-  // Alerts
   const alerts = useMemo(() => {
     const items: string[] = [];
     churches.forEach(c => {
@@ -143,6 +135,13 @@ export default function NetworkDashboard() {
     });
     return items;
   }, [churches]);
+
+  if (isChecking) {
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (!hasAccess) return <Navigate to="/app" replace />;
 
   return (
     <div className="min-h-screen bg-background">
