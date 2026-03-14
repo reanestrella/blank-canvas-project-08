@@ -30,7 +30,7 @@ import Gabinete from "./pages/Gabinete";
 import Lembretes from "./pages/Lembretes";
 import Cadastrar from "./pages/Cadastrar";
 import Instalar from "./pages/Instalar";
-import DevAdmin from "./pages/DevAdmin";
+import Master from "./pages/Master";
 import Assistente from "./pages/Assistente";
 import NotFound from "./pages/NotFound";
 import { queryClient } from "@/lib/queryClient";
@@ -65,6 +65,10 @@ const App = () => (
               <Route path="/cadastrar" element={<Cadastrar />} />
               <Route path="/instalar" element={<Instalar />} />
               
+              {/* Super Admin - standalone (no AppLayout) */}
+              <Route path="/master" element={<Master />} />
+              <Route path="/dev-admin" element={<Master />} />
+
               {/* Always accessible to any authenticated user */}
               <Route path="/app" element={<Dashboard />} />
               <Route path="/meu-app" element={<MeuApp />} />
@@ -137,7 +141,6 @@ const App = () => (
                   <Assistente />
                 </RequireAnyRole>
               } />
-              <Route path="/dev-admin" element={<DevAdmin />} />
               
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />

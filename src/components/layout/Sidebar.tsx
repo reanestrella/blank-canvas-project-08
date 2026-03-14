@@ -60,7 +60,7 @@ export function Sidebar() {
   const filteredBottomItems = useMemo(() => {
     const items = [...bottomItems];
     if (isSuperAdmin) {
-      items.unshift({ icon: Shield, label: "Super Admin", path: "/dev-admin" });
+      items.unshift({ icon: Shield, label: "Painel Master", path: "/master" });
     }
     if (isAdmin()) return items;
     return items.filter(item => {

@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -13,7 +13,11 @@ import {
 import {
   TrendingUp, TrendingDown, Plus, Download, ArrowUpRight, ArrowDownRight,
   PiggyBank, Target, Loader2, MoreHorizontal, Users, Heart, Upload,
+  QrCode, DollarSign, Save, Edit, Copy, Smartphone, Package,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFinancial, CreateTransactionData } from "@/hooks/useFinancial";
 import { useFinancialAccounts } from "@/hooks/useFinancialAccounts";
 import { useTithers } from "@/hooks/useTithers";
@@ -25,8 +29,147 @@ import { FinancialAccountsTab, FinancialCampaignsTab } from "@/components/financ
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
 import { ExtratoTab } from "@/components/financial/ExtratoTab";
 import { FinancialImportModal } from "@/components/financial/FinancialImportModal";
+import { PatrimonioTab } from "@/components/patrimonio/PatrimonioTab";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import type { FinancialTransaction } from "@/hooks/useFinancial";
+
+// Contribuição App settings inline component
+function ContribuicaoAppTab({ churchId }: { churchId: string }) {
+  const { toast } = useToast();
+  const [settings, setSettings] = useState({
+    pix_key: "", pix_key_type: "", pix_holder_name: "",
+    bank_name: "", bank_agency: "", bank_account: "", bank_account_type: "",
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      const { data } = await supabase
+        .from("church_settings" as any)
+        .select("pix_key, pix_key_type, pix_holder_name, bank_name, bank_agency, bank_account, bank_account_type")
+        .eq("church_id", churchId)
+        .maybeSingle();
+      if (data) {
+        setSettings({
+          pix_key: (data as any).pix_key || "",
+          pix_key_type: (data as any).pix_key_type || "",
+          pix_holder_name: (data as any).pix_holder_name || "",
+          bank_name: (data as any).bank_name || "",
+          bank_agency: (data as any).bank_agency || "",
+          bank_account: (data as any).bank_account || "",
+          bank_account_type: (data as any).bank_account_type || "",
+        });
+      }
+      setIsLoading(false);
+    };
+    load();
+  }, [churchId]);
+
+  const handleSave = async () => {
+    if (!settings.pix_key && !settings.bank_name) {
+      toast({ title: "Erro", description: "Preencha ao menos a chave Pix ou os dados bancários.", variant: "destructive" });
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from("church_settings" as any)
+        .upsert({ church_id: churchId, ...settings, updated_at: new Date().toISOString() } as any, { onConflict: "church_id" });
+      if (error) throw error;
+      toast({ title: "Salvo!", description: "Dados de contribuição atualizados. Membros verão no App." });
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+        <div className="flex items-center gap-2 text-sm">
+          <Smartphone className="w-4 h-4 text-primary" />
+          <span className="font-medium">Esses dados aparecem no App dos membros</span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">Ao alterar, as mudanças serão refletidas automaticamente na aba "Contribuição" do Meu App.</p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><QrCode className="w-5 h-5" /> Pix</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Tipo da Chave</Label>
+              <Select value={settings.pix_key_type} onValueChange={v => setSettings(s => ({ ...s, pix_key_type: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cpf">CPF</SelectItem>
+                  <SelectItem value="cnpj">CNPJ</SelectItem>
+                  <SelectItem value="email">E-mail</SelectItem>
+                  <SelectItem value="telefone">Telefone</SelectItem>
+                  <SelectItem value="aleatoria">Chave Aleatória</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Chave Pix</Label>
+              <Input value={settings.pix_key} onChange={e => setSettings(s => ({ ...s, pix_key: e.target.value }))} placeholder="Chave Pix" />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Nome do Favorecido</Label>
+              <Input value={settings.pix_holder_name} onChange={e => setSettings(s => ({ ...s, pix_holder_name: e.target.value }))} placeholder="Nome completo" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><DollarSign className="w-5 h-5" /> Dados Bancários</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Banco</Label>
+              <Input value={settings.bank_name} onChange={e => setSettings(s => ({ ...s, bank_name: e.target.value }))} placeholder="Ex: Banco do Brasil" />
+            </div>
+            <div className="space-y-2">
+              <Label>Agência</Label>
+              <Input value={settings.bank_agency} onChange={e => setSettings(s => ({ ...s, bank_agency: e.target.value }))} placeholder="0000" />
+            </div>
+            <div className="space-y-2">
+              <Label>Conta</Label>
+              <Input value={settings.bank_account} onChange={e => setSettings(s => ({ ...s, bank_account: e.target.value }))} placeholder="00000-0" />
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo de Conta</Label>
+              <Select value={settings.bank_account_type} onValueChange={v => setSettings(s => ({ ...s, bank_account_type: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="corrente">Conta Corrente</SelectItem>
+                  <SelectItem value="poupanca">Poupança</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button onClick={handleSave} disabled={isSaving}>
+        {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+        Salvar Dados de Contribuição
+      </Button>
+    </div>
+  );
+}
 
 export default function Financeiro() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -229,6 +372,11 @@ export default function Financeiro() {
             <TabsTrigger value="tithers">Dizimistas</TabsTrigger>
             <TabsTrigger value="accounts">Contas</TabsTrigger>
             <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
+            <TabsTrigger value="patrimonio">Patrimônio</TabsTrigger>
+            <TabsTrigger value="contribuicao-app">
+              <Smartphone className="w-4 h-4 mr-1" />
+              Contribuição App
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6 mt-6">
@@ -475,6 +623,14 @@ export default function Financeiro() {
 
           <TabsContent value="campaigns" className="mt-6">
             {churchId && <FinancialCampaignsTab churchId={churchId} />}
+          </TabsContent>
+
+          <TabsContent value="patrimonio" className="mt-6">
+            {churchId && <PatrimonioTab churchId={churchId} />}
+          </TabsContent>
+
+          <TabsContent value="contribuicao-app" className="mt-6">
+            {churchId && <ContribuicaoAppTab churchId={churchId} />}
           </TabsContent>
         </Tabs>
       </div>
