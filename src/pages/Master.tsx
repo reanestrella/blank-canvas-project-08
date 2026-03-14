@@ -132,25 +132,72 @@ export default function Master() {
       return;
     }
     try {
-      // Find user by email
-      const { data: profileData } = await supabase
+      const emailTrimmed = leaderForm.email.trim().toLowerCase();
+
+      // Try finding by profile email first
+      let { data: profileData } = await supabase
         .from("profiles")
-        .select("user_id")
-        .ilike("email", leaderForm.email.trim())
+        .select("user_id, church_id")
+        .ilike("email", emailTrimmed)
         .maybeSingle();
-      if (!profileData) throw new Error("Usuário não encontrado com esse email.");
+
+      // If not found, try via edge: search all profiles (email might be null in profile)
+      if (!profileData) {
+        // Try matching by looking up all profiles and checking
+        const { data: allProfiles } = await supabase
+          .from("profiles")
+          .select("user_id, email, church_id");
+        
+        if (allProfiles) {
+          profileData = allProfiles.find(
+            (p: any) => p.email?.toLowerCase() === emailTrimmed
+          ) as any;
+        }
+      }
+
+      if (!profileData) {
+        throw new Error(
+          "Usuário não encontrado. Verifique se o email está correto e se o usuário já se cadastrou na plataforma."
+        );
+      }
+
+      const userId = (profileData as any).user_id;
+      const userChurchId = (profileData as any).church_id;
 
       // Update profile with network
-      await supabase.from("profiles").update({
+      const { error: updateError } = await supabase.from("profiles").update({
         ministry_network_id: leaderForm.network_id,
-      } as any).eq("user_id", (profileData as any).user_id);
+      } as any).eq("user_id", userId);
 
-      // Add role
-      await supabase.from("user_roles").insert({
-        user_id: (profileData as any).user_id,
-        church_id: churches[0]?.id, // needs a church_id for the roles table
+      if (updateError) throw new Error("Erro ao vincular rede ao perfil: " + updateError.message);
+
+      // For the role, use the user's own church_id, or pick a church from the network
+      let roleChurchId = userChurchId;
+      if (!roleChurchId) {
+        // Find any church in this network
+        const { data: networkChurch } = await supabase
+          .from("churches")
+          .select("id")
+          .eq("ministry_network_id", leaderForm.network_id)
+          .limit(1)
+          .maybeSingle();
+        roleChurchId = networkChurch?.id || churches[0]?.id;
+      }
+
+      if (!roleChurchId) {
+        throw new Error("Nenhuma igreja encontrada para vincular o papel. Vincule pelo menos uma igreja à rede primeiro.");
+      }
+
+      // Add role (ignore conflict if already exists)
+      const { error: roleError } = await supabase.from("user_roles").insert({
+        user_id: userId,
+        church_id: roleChurchId,
         role: leaderForm.role,
       } as any);
+
+      if (roleError && !roleError.message.includes("duplicate")) {
+        throw new Error("Erro ao adicionar papel: " + roleError.message);
+      }
 
       toast({ title: "Líder adicionado!", description: `${leaderForm.email} vinculado à rede.` });
       setShowAddLeader(false);
