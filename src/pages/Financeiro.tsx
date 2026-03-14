@@ -238,10 +238,6 @@ export default function Financeiro() {
             <TabsTrigger value="accounts">Contas</TabsTrigger>
             <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
             <TabsTrigger value="patrimonio">Patrimônio</TabsTrigger>
-            <TabsTrigger value="contribuicao-app">
-              <Smartphone className="w-4 h-4 mr-1" />
-              Contribuição App
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6 mt-6">
