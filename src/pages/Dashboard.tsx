@@ -32,10 +32,11 @@ function PastorDashboard() {
   const [aiOpen, setAiOpen] = useState(false);
 
   const statCards = [
-    { title: "Membros", value: stats.totalMembers.toString(), change: "Membros + Congregados", changeType: "positive" as const, icon: Users, iconColor: "bg-primary/10 text-primary" },
+    { title: "Membros", value: stats.totalMembers.toString(), change: "Membros ativos", changeType: "positive" as const, icon: Users, iconColor: "bg-primary/10 text-primary" },
     { title: "Decididos", value: stats.totalDecididos.toString(), change: "Novos convertidos", changeType: "positive" as const, icon: Heart, iconColor: "bg-success/10 text-success" },
-    { title: "Visitantes", value: stats.totalVisitantes.toString(), change: "Em acompanhamento", changeType: "neutral" as const, icon: Eye, iconColor: "bg-secondary/10 text-secondary" },
-    { title: "Batizados", value: stats.totalBaptized.toString(), change: "Total batizados", changeType: "positive" as const, icon: TrendingUp, iconColor: "bg-info/10 text-info" },
+    { title: "Visitantes", value: stats.totalVisitantes.toString(), change: "Cadastrados", changeType: "neutral" as const, icon: Eye, iconColor: "bg-secondary/10 text-secondary" },
+    { title: "Em Consolidação", value: stats.totalConsolidacao.toString(), change: "Em acompanhamento", changeType: "positive" as const, icon: UserCheck, iconColor: "bg-accent/10 text-accent-foreground" },
+    { title: "Batizados", value: stats.totalBaptized.toString(), change: "Total batizados", changeType: "positive" as const, icon: Droplets, iconColor: "bg-info/10 text-info" },
   ];
 
   if (isLoading) {
