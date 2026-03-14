@@ -189,14 +189,21 @@ export default function Master() {
       }
 
       // Add role (ignore conflict if already exists)
+      const roleToAssign = leaderForm.role as string;
       const { error: roleError } = await supabase.from("user_roles").insert({
         user_id: userId,
         church_id: roleChurchId,
-        role: leaderForm.role,
+        role: roleToAssign,
       } as any);
 
-      if (roleError && !roleError.message.includes("duplicate")) {
-        throw new Error("Erro ao adicionar papel: " + roleError.message);
+      if (roleError) {
+        if (roleError.message.includes("duplicate") || roleError.code === "23505") {
+          // Already has this role - that's fine
+          console.log("[Master] Role already exists, skipping");
+        } else {
+          console.error("[Master] Role insert error:", roleError);
+          throw new Error("Erro ao adicionar papel: " + roleError.message);
+        }
       }
 
       toast({ title: "Líder adicionado!", description: `${emailTrimmed} vinculado à rede como ${userData.full_name || emailTrimmed}.` });
