@@ -102,7 +102,10 @@ export function useDashboardStats(congregationId?: string | null) {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
 
-    const totalMembers = members.filter(m => m.spiritual_status === "membro" || m.spiritual_status === "lider" || m.spiritual_status === "discipulador").length;
+    const totalMembers = members.filter(m => 
+      m.spiritual_status === "membro" || m.spiritual_status === "lider" || 
+      m.spiritual_status === "discipulador" || m.spiritual_status === "congregado"
+    ).length;
     const totalDecididos = members.filter(m => m.spiritual_status === "novo_convertido").length;
     const totalVisitantes = members.filter(m => m.spiritual_status === "visitante").length;
     const totalBaptized = members.filter(m => (m as any).baptism_date !== null).length;

@@ -33,7 +33,7 @@ export function useChurchBranding() {
       }
     }
 
-    if (c.secondary_color && c.secondary_color !== '#d97706') {
+    if (c.secondary_color) {
       const hsl = hexToHSL(c.secondary_color);
       if (hsl) {
         root.style.setProperty("--secondary", hsl);

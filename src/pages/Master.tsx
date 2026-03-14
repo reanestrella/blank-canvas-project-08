@@ -132,62 +132,45 @@ export default function Master() {
       return;
     }
     try {
-      const emailTrimmed = leaderForm.email.trim().toLowerCase();
+      const emailTrimmed = leaderForm.email.trim();
 
-      // Use Supabase Admin: lookup all profiles to find by email (case insensitive)
-      const { data: allProfiles } = await supabase
-        .from("profiles")
-        .select("user_id, email, church_id, full_name");
+      // Use the secure RPC that queries auth.users directly
+      const { data: foundUsers, error: rpcError } = await supabase
+        .rpc("find_user_by_email", { p_email: emailTrimmed });
 
-      let profileData: any = null;
-      if (allProfiles) {
-        profileData = allProfiles.find(
-          (p: any) => p.email && p.email.toLowerCase() === emailTrimmed
-        );
+      if (rpcError) {
+        console.error("[Master] RPC error:", rpcError);
+        throw new Error("Erro ao buscar usuário: " + rpcError.message);
       }
 
-      // If profile email doesn't match, try finding by user_id from auth email match
-      // We search members table as a fallback (some profiles have null email)
-      if (!profileData && allProfiles) {
-        // Try matching against members table email
-        const { data: memberMatch } = await supabase
-          .from("members")
-          .select("id, email")
-          .ilike("email", emailTrimmed)
-          .limit(1)
-          .maybeSingle();
-        
-        if (memberMatch) {
-          // Find profile linked to this member
-          profileData = allProfiles.find((p: any) => p.member_id === memberMatch.id);
-        }
-      }
+      const userData = foundUsers && foundUsers.length > 0 ? foundUsers[0] : null;
 
-      // Last resort: check if any profile has this email stored differently 
-      if (!profileData && allProfiles) {
-        // Some profiles may have email set during signup but stored with different casing
-        profileData = allProfiles.find(
-          (p: any) => p.full_name && p.email === null
-        );
-        // This won't work reliably, so just show the error
-        profileData = null;
-      }
-
-      if (!profileData) {
+      if (!userData) {
         throw new Error(
-          "Usuário não encontrado. Verifique se o email está correto e se o usuário já se cadastrou na plataforma. O email precisa ser exatamente o mesmo usado no cadastro."
+          `Usuário com email "${emailTrimmed}" não encontrado. O usuário precisa ter se cadastrado na plataforma primeiro.`
         );
       }
 
-      const userId = profileData.user_id;
-      const userChurchId = profileData.church_id;
+      const userId = userData.user_id;
+      const userChurchId = userData.church_id;
 
-      // Update profile with network
-      const { error: updateError } = await supabase.from("profiles").update({
-        ministry_network_id: leaderForm.network_id,
-      } as any).eq("user_id", userId);
-
-      if (updateError) throw new Error("Erro ao vincular rede ao perfil: " + updateError.message);
+      // Ensure profile exists (some auth users may not have profiles yet)
+      if (!userChurchId) {
+        // Profile may exist without church_id, or not exist at all - update/create
+        const { error: upsertError } = await supabase.from("profiles").upsert({
+          user_id: userId,
+          email: userData.email,
+          full_name: userData.full_name || emailTrimmed,
+          ministry_network_id: leaderForm.network_id,
+        } as any, { onConflict: "user_id" });
+        if (upsertError) console.warn("[Master] Profile upsert warning:", upsertError.message);
+      } else {
+        // Update existing profile with network link
+        const { error: updateError } = await supabase.from("profiles").update({
+          ministry_network_id: leaderForm.network_id,
+        } as any).eq("user_id", userId);
+        if (updateError) throw new Error("Erro ao vincular rede ao perfil: " + updateError.message);
+      }
 
       // For the role, use the user's own church_id, or pick a church from the network
       let roleChurchId = userChurchId;
@@ -198,7 +181,7 @@ export default function Master() {
           .eq("ministry_network_id", leaderForm.network_id)
           .limit(1)
           .maybeSingle();
-        roleChurchId = networkChurch?.id || churches[0]?.id;
+        roleChurchId = (networkChurch as any)?.id || churches[0]?.id;
       }
 
       if (!roleChurchId) {
@@ -216,7 +199,7 @@ export default function Master() {
         throw new Error("Erro ao adicionar papel: " + roleError.message);
       }
 
-      toast({ title: "Líder adicionado!", description: `${leaderForm.email} vinculado à rede como ${profileData.full_name || leaderForm.email}.` });
+      toast({ title: "Líder adicionado!", description: `${emailTrimmed} vinculado à rede como ${userData.full_name || emailTrimmed}.` });
       setShowAddLeader(false);
       setLeaderForm({ email: "", network_id: "", role: "network_admin" });
       loadNetworkLeaders();
