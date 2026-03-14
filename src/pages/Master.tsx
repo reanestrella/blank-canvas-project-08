@@ -118,6 +118,49 @@ export default function Master() {
     setNetworks((data as NetworkItem[]) || []);
   };
 
+  const loadNetworkLeaders = async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("user_id, email, full_name, ministry_network_id")
+      .not("ministry_network_id", "is", null);
+    setNetworkLeaders(data || []);
+  };
+
+  const handleAddLeader = async () => {
+    if (!leaderForm.email.trim() || !leaderForm.network_id) {
+      toast({ title: "Erro", description: "Preencha email e rede.", variant: "destructive" });
+      return;
+    }
+    try {
+      // Find user by email
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .ilike("email", leaderForm.email.trim())
+        .maybeSingle();
+      if (!profileData) throw new Error("Usuário não encontrado com esse email.");
+
+      // Update profile with network
+      await supabase.from("profiles").update({
+        ministry_network_id: leaderForm.network_id,
+      } as any).eq("user_id", (profileData as any).user_id);
+
+      // Add role
+      await supabase.from("user_roles").insert({
+        user_id: (profileData as any).user_id,
+        church_id: churches[0]?.id, // needs a church_id for the roles table
+        role: leaderForm.role,
+      } as any);
+
+      toast({ title: "Líder adicionado!", description: `${leaderForm.email} vinculado à rede.` });
+      setShowAddLeader(false);
+      setLeaderForm({ email: "", network_id: "", role: "network_admin" });
+      loadNetworkLeaders();
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    }
+  };
+
   const loadErrorLogs = async () => {
     setLogsLoading(true);
     const { data } = await supabase
