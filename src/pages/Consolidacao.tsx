@@ -402,6 +402,9 @@ export default function Consolidacao() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditRecord(record)}>
+                                  Editar
+                                </DropdownMenuItem>
                                 <DropdownMenuItem className="text-destructive" onClick={() => deleteRecord(record.id)}>
                                   Excluir
                                 </DropdownMenuItem>
