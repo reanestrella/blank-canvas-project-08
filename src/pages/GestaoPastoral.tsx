@@ -437,7 +437,7 @@ function DiscipuladoTab({ churchId }: { churchId: string }) {
 
 // ─── Visitas Tab (wrapper) ──────────────────────────────────
 function VisitasTab({ churchId }: { churchId: string }) {
-  const { visits, isLoading, createVisit, updateVisit, deleteVisit } = usePastoralVisits(churchId);
+  const { visits, isLoading, createVisit, deleteVisit } = usePastoralVisits(churchId);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ member_id: "", visit_date: new Date().toISOString().split("T")[0], reason: "", notes: "" });
 
