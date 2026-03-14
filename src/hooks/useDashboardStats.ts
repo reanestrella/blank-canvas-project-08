@@ -82,6 +82,15 @@ export function useDashboardStats(congregationId?: string | null) {
           .limit(10);
         
         setAlerts((alertsData as Alert[]) || []);
+
+        // Consolidation count (active records: contato + acompanhamento + integracao)
+        const { count: consolCount } = await supabase
+          .from("consolidation_records")
+          .select("id", { count: "exact", head: true })
+          .eq("church_id", currentChurchId)
+          .in("status", ["contato", "acompanhamento", "integracao"]);
+        
+        setConsolidationCount(consolCount || 0);
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);
       } finally {
