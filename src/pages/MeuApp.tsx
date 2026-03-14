@@ -625,6 +625,7 @@ export default function MeuApp() {
               <TabsTrigger value="courses">Cursos</TabsTrigger>
               <TabsTrigger value="schedules">Escalas</TabsTrigger>
               <TabsTrigger value="contribuicao">Contribuição</TabsTrigger>
+              <TabsTrigger value="campanhas">Campanhas</TabsTrigger>
               <TabsTrigger value="events">Eventos</TabsTrigger>
               <TabsTrigger value="prayer">Oração</TabsTrigger>
               <TabsTrigger value="profile">Perfil</TabsTrigger>
