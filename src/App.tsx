@@ -85,6 +85,11 @@ const App = () => (
 
                 {/* Network Dashboard */}
                 <Route path="/rede" element={<NetworkDashboard />} />
+                <Route path="/gestao-app" element={
+                  <RequireAnyRole allowedRoles={["pastor"]}>
+                    <GestaoApp />
+                  </RequireAnyRole>
+                } />
 
                 {/* Always accessible to any authenticated user */}
                 <Route path="/app" element={<Dashboard />} />
