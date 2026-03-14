@@ -1,6 +1,10 @@
 import { useState, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -38,6 +42,8 @@ export default function Consolidacao() {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [selectedConsolidatorId, setSelectedConsolidatorId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("acompanhamentos");
+  const [editingRecord, setEditingRecord] = useState<ConsolidationRecord | null>(null);
+  const [editForm, setEditForm] = useState({ consolidator_id: "", notes: "", contact_date: "", first_visit_date: "", cell_integration_date: "" });
 
   const now = new Date();
   const [periodMode, setPeriodMode] = useState<PeriodMode>("month");
@@ -46,7 +52,7 @@ export default function Consolidacao() {
 
   const { profile } = useAuth();
   const churchId = profile?.church_id;
-  const { records, isLoading, createRecord, updateStatus, deleteRecord } = useConsolidation(churchId || undefined);
+  const { records, isLoading, createRecord, updateRecord, updateStatus, deleteRecord } = useConsolidation(churchId || undefined);
   const { members } = useMembers(churchId || undefined);
 
   // Filter records by time period
@@ -135,6 +141,27 @@ export default function Consolidacao() {
       status: "contato",
       contact_date: new Date().toISOString().split("T")[0],
     });
+  };
+
+  const handleEditRecord = (record: ConsolidationRecord) => {
+    setEditingRecord(record);
+    setEditForm({
+      consolidator_id: record.consolidator_id || "",
+      notes: record.notes || "",
+      contact_date: record.contact_date || "",
+      first_visit_date: record.first_visit_date || "",
+      cell_integration_date: record.cell_integration_date || "",
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingRecord) return;
+    await updateRecord(editingRecord.id, {
+      consolidator_id: editForm.consolidator_id || undefined,
+      notes: editForm.notes || undefined,
+      contact_date: editForm.contact_date || undefined,
+    } as any);
+    setEditingRecord(null);
   };
 
   if (!churchId) return null;
@@ -402,6 +429,9 @@ export default function Consolidacao() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditRecord(record)}>
+                                  Editar
+                                </DropdownMenuItem>
                                 <DropdownMenuItem className="text-destructive" onClick={() => deleteRecord(record.id)}>
                                   Excluir
                                 </DropdownMenuItem>
@@ -542,6 +572,44 @@ export default function Consolidacao() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Edit Modal */}
+        <Dialog open={!!editingRecord} onOpenChange={open => !open && setEditingRecord(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Consolidação - {editingRecord?.member?.full_name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Consolidador</Label>
+                <MemberAutocomplete
+                  churchId={churchId}
+                  value={editForm.consolidator_id || undefined}
+                  onChange={v => setEditForm(f => ({ ...f, consolidator_id: v || "" }))}
+                  placeholder="Quem vai acompanhar..."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Data Contato</Label>
+                  <Input type="date" value={editForm.contact_date} onChange={e => setEditForm(f => ({ ...f, contact_date: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Primeira Visita</Label>
+                  <Input type="date" value={editForm.first_visit_date} onChange={e => setEditForm(f => ({ ...f, first_visit_date: e.target.value }))} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Observações</Label>
+                <Textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} rows={3} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingRecord(null)}>Cancelar</Button>
+              <Button onClick={handleSaveEdit}>Salvar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

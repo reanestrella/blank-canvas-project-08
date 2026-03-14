@@ -31,6 +31,7 @@ const Consolidacao = lazy(() => import("./pages/Consolidacao"));
 const Discipulados = lazy(() => import("./pages/Discipulados"));
 const Visitas = lazy(() => import("./pages/Visitas"));
 const Gabinete = lazy(() => import("./pages/Gabinete"));
+const GestaoPastoral = lazy(() => import("./pages/GestaoPastoral"));
 const Lembretes = lazy(() => import("./pages/Lembretes"));
 const Cadastrar = lazy(() => import("./pages/Cadastrar"));
 const Instalar = lazy(() => import("./pages/Instalar"));
@@ -94,7 +95,6 @@ const App = () => (
                 {/* Always accessible to any authenticated user */}
                 <Route path="/app" element={<Dashboard />} />
                 <Route path="/meu-app" element={<MeuApp />} />
-                <Route path="/contribuicao" element={<Contribuicao />} />
                 <Route path="/perfil" element={<Perfil />} />
 
                 {/* Role-protected routes */}
@@ -146,6 +146,11 @@ const App = () => (
                 <Route path="/gabinete" element={
                   <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
                     <Gabinete />
+                  </RequireAnyRole>
+                } />
+                <Route path="/gestao-pastoral" element={
+                  <RequireAnyRole allowedRoles={["pastor"]}>
+                    <GestaoPastoral />
                   </RequireAnyRole>
                 } />
                 <Route path="/lembretes" element={

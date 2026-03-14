@@ -3,8 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, Heart, GraduationCap, Grid3X3, DollarSign,
   Calendar, User, Settings, ChevronLeft, ChevronRight, Church, LogOut,
-  Crown, Handshake, BookOpen, Home, Armchair, Bell, Shield, Sparkles, Wallet,
-  Smartphone,
+  Crown, Handshake, BookOpen, Home, Armchair, Bell, Shield, Sparkles,
+  Smartphone, HeartHandshake,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -28,13 +28,10 @@ const allMenuItems: MenuItem[] = [
   { icon: GraduationCap, label: "Ensino", path: "/ensino", allowedRoles: ["pastor", "secretario"] },
   { icon: DollarSign, label: "Financeiro", path: "/financeiro", allowedRoles: ["pastor", "tesoureiro"] },
   { icon: Calendar, label: "Eventos", path: "/eventos", allowedRoles: ["pastor", "secretario"] },
-  { icon: BookOpen, label: "Discipulados", path: "/discipulados", allowedRoles: ["pastor", "secretario"] },
-  { icon: Home, label: "Visitas", path: "/visitas", allowedRoles: ["pastor", "secretario"] },
-  { icon: Armchair, label: "Gabinete", path: "/gabinete", allowedRoles: ["pastor", "secretario"] },
+  { icon: HeartHandshake, label: "Gestão Pastoral", path: "/gestao-pastoral", allowedRoles: ["pastor"] },
   { icon: Bell, label: "Lembretes", path: "/lembretes", allowedRoles: ["pastor", "secretario"] },
   { icon: Sparkles, label: "Meu Assistente", path: "/assistente", allowedRoles: ["pastor", "lider_celula", "lider_ministerio"] },
   { icon: User, label: "Meu App", path: "/meu-app" },
-  { icon: Wallet, label: "Contribuição", path: "/contribuicao" },
   { icon: Smartphone, label: "Gestão App", path: "/gestao-app", allowedRoles: ["pastor"] as AppRole[] },
 ];
 
