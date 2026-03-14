@@ -667,6 +667,14 @@ export default function MeuApp() {
         <Card className="gradient-hero text-primary-foreground">
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row md:items-center gap-6">
+              {/* Church logo */}
+              {church?.logo_url ? (
+                <img
+                  src={church.logo_url}
+                  alt={church.name || "Logo"}
+                  className="w-16 h-16 rounded-xl object-contain bg-primary-foreground/10 p-1 flex-shrink-0"
+                />
+              ) : null}
               <Avatar className="w-20 h-20 border-4 border-primary-foreground/20 flex-shrink-0">
                 <AvatarImage src={profile?.avatar_url || ""} className="object-cover" />
                 <AvatarFallback className="text-2xl bg-primary-foreground/20 text-primary-foreground">{initials}</AvatarFallback>

@@ -31,11 +31,9 @@ function PastorDashboard() {
   const { stats, isLoading, members } = useDashboardStats(selectedCongregation);
   const [aiOpen, setAiOpen] = useState(false);
 
-  const totalCadastrados = members.length;
-
   const statCards = [
-    { title: "Cadastrados", value: totalCadastrados.toString(), change: "Total no sistema", changeType: "positive" as const, icon: Users, iconColor: "bg-primary/10 text-primary" },
-    { title: "Membros", value: stats.totalMembers.toString(), change: "Membros + Líderes", changeType: "positive" as const, icon: Heart, iconColor: "bg-success/10 text-success" },
+    { title: "Membros", value: stats.totalMembers.toString(), change: "Membros + Congregados", changeType: "positive" as const, icon: Users, iconColor: "bg-primary/10 text-primary" },
+    { title: "Decididos", value: stats.totalDecididos.toString(), change: "Novos convertidos", changeType: "positive" as const, icon: Heart, iconColor: "bg-success/10 text-success" },
     { title: "Visitantes", value: stats.totalVisitantes.toString(), change: "Em acompanhamento", changeType: "neutral" as const, icon: Eye, iconColor: "bg-secondary/10 text-secondary" },
     { title: "Batizados", value: stats.totalBaptized.toString(), change: "Total batizados", changeType: "positive" as const, icon: TrendingUp, iconColor: "bg-info/10 text-info" },
   ];
