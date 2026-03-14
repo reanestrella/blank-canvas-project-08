@@ -78,6 +78,10 @@ export default function Master() {
   const [deletingChurch, setDeletingChurch] = useState<ChurchItem | null>(null);
   const [showNewNetwork, setShowNewNetwork] = useState(false);
   const [newNetworkName, setNewNetworkName] = useState("");
+  // Network leader management
+  const [networkLeaders, setNetworkLeaders] = useState<any[]>([]);
+  const [showAddLeader, setShowAddLeader] = useState(false);
+  const [leaderForm, setLeaderForm] = useState({ email: "", network_id: "", role: "network_admin" });
 
   useEffect(() => {
     if (!isSuperAdmin) return;
