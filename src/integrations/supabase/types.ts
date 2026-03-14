@@ -2263,6 +2263,82 @@ export type Database = {
           },
         ]
       }
+      pastoral_appointments: {
+        Row: {
+          appointment_date: string
+          appointment_time: string | null
+          appointment_type: string
+          church_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_time: string | null
+          id: string
+          member_id: string | null
+          notes: string | null
+          responsible_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_date?: string
+          appointment_time?: string | null
+          appointment_type?: string
+          church_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          member_id?: string | null
+          notes?: string | null
+          responsible_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          appointment_time?: string | null
+          appointment_type?: string
+          church_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          member_id?: string | null
+          notes?: string | null
+          responsible_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pastoral_appointments_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pastoral_appointments_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pastoral_appointments_responsible_id_fkey"
+            columns: ["responsible_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pastoral_counseling: {
         Row: {
           church_id: string

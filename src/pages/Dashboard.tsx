@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Users, Heart, Grid3X3, TrendingUp, Eye, Loader2, DollarSign, ChevronDown, ChevronUp, Sparkles, Brain } from "lucide-react";
+import { Users, Heart, Grid3X3, TrendingUp, Eye, Loader2, DollarSign, ChevronDown, ChevronUp, Sparkles, Brain, UserCheck, Droplets } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { SpiritualFunnel } from "@/components/dashboard/SpiritualFunnel";
@@ -32,10 +32,11 @@ function PastorDashboard() {
   const [aiOpen, setAiOpen] = useState(false);
 
   const statCards = [
-    { title: "Membros", value: stats.totalMembers.toString(), change: "Membros + Congregados", changeType: "positive" as const, icon: Users, iconColor: "bg-primary/10 text-primary" },
+    { title: "Membros", value: stats.totalMembers.toString(), change: "Membros ativos", changeType: "positive" as const, icon: Users, iconColor: "bg-primary/10 text-primary" },
     { title: "Decididos", value: stats.totalDecididos.toString(), change: "Novos convertidos", changeType: "positive" as const, icon: Heart, iconColor: "bg-success/10 text-success" },
-    { title: "Visitantes", value: stats.totalVisitantes.toString(), change: "Em acompanhamento", changeType: "neutral" as const, icon: Eye, iconColor: "bg-secondary/10 text-secondary" },
-    { title: "Batizados", value: stats.totalBaptized.toString(), change: "Total batizados", changeType: "positive" as const, icon: TrendingUp, iconColor: "bg-info/10 text-info" },
+    { title: "Visitantes", value: stats.totalVisitantes.toString(), change: "Cadastrados", changeType: "neutral" as const, icon: Eye, iconColor: "bg-secondary/10 text-secondary" },
+    { title: "Em Consolidação", value: stats.totalConsolidacao.toString(), change: "Em acompanhamento", changeType: "positive" as const, icon: UserCheck, iconColor: "bg-accent/10 text-accent-foreground" },
+    { title: "Batizados", value: stats.totalBaptized.toString(), change: "Total batizados", changeType: "positive" as const, icon: Droplets, iconColor: "bg-info/10 text-info" },
   ];
 
   if (isLoading) {
@@ -52,7 +53,7 @@ function PastorDashboard() {
         <CongregationSelector congregations={congregations} selectedId={selectedCongregation} onSelect={setSelectedCongregation} />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {statCards.map((stat, index) => (
           <StatCard key={stat.title} {...stat} className="animate-slide-up" style={{ animationDelay: `${index * 100}ms` } as React.CSSProperties} />
         ))}
@@ -111,8 +112,8 @@ function SecretaryDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Membros" value={stats.totalMembers.toString()} change="Ativos" changeType="positive" icon={Users} iconColor="bg-primary/10 text-primary" />
         <StatCard title="Decididos" value={stats.totalDecididos.toString()} change="Novos convertidos" changeType="positive" icon={Heart} iconColor="bg-success/10 text-success" />
-        <StatCard title="Visitantes" value={stats.totalVisitantes.toString()} change="Em acompanhamento" changeType="neutral" icon={Eye} iconColor="bg-secondary/10 text-secondary" />
-        <StatCard title="Batizados" value={stats.totalBaptized.toString()} change="Total" changeType="positive" icon={TrendingUp} iconColor="bg-info/10 text-info" />
+        <StatCard title="Visitantes" value={stats.totalVisitantes.toString()} change="Cadastrados" changeType="neutral" icon={Eye} iconColor="bg-secondary/10 text-secondary" />
+        <StatCard title="Batizados" value={stats.totalBaptized.toString()} change="Total" changeType="positive" icon={Droplets} iconColor="bg-info/10 text-info" />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <BirthdayCard birthdaysThisMonth={stats.birthdaysThisMonth} birthdaysThisWeek={stats.birthdaysThisWeek} />
