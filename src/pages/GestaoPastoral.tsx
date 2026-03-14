@@ -19,6 +19,7 @@ import {
   Plus, Edit2, Trash2, Loader2, MoreHorizontal, Search, Users,
   Eye, UserCheck, Phone, Mail, Save, X,
 } from "lucide-react";
+import { AgendaTab } from "@/components/pastoral/AgendaTab";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
