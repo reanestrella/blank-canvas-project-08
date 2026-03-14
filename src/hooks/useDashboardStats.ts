@@ -113,18 +113,19 @@ export function useDashboardStats(congregationId?: string | null) {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
 
+    // Match Secretaria exactly: membros = membro + lider + discipulador
     const totalMembers = members.filter(m => 
       m.spiritual_status === "membro" || m.spiritual_status === "lider" || 
-      m.spiritual_status === "discipulador" || m.spiritual_status === "congregado"
+      m.spiritual_status === "discipulador"
     ).length;
     const totalDecididos = members.filter(m => m.spiritual_status === "novo_convertido").length;
     const totalVisitantes = members.filter(m => m.spiritual_status === "visitante").length;
     const totalBaptized = members.filter(m => (m as any).baptism_date !== null).length;
 
-    // Network stats
+    // Network stats - match Secretaria: use only the network field
     const networkStats = {
-      homens: members.filter(m => m.network === "homens" || (m.gender === "M" && !m.network)).length,
-      mulheres: members.filter(m => m.network === "mulheres" || (m.gender === "F" && !m.network)).length,
+      homens: members.filter(m => m.network === "homens").length,
+      mulheres: members.filter(m => m.network === "mulheres").length,
       jovens: members.filter(m => m.network === "jovens").length,
       kids: members.filter(m => m.network === "kids").length,
     };
