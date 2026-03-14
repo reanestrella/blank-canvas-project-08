@@ -2327,6 +2327,57 @@ export type Database = {
           },
         ]
       }
+      pastoral_notes: {
+        Row: {
+          church_id: string
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          member_id: string | null
+          note_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          church_id: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          member_id?: string | null
+          note_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          church_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          member_id?: string | null
+          note_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pastoral_notes_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pastoral_notes_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pastoral_visits: {
         Row: {
           church_id: string
@@ -2706,6 +2757,56 @@ export type Database = {
           },
         ]
       }
+      sermon_outlines: {
+        Row: {
+          base_text: string | null
+          church_id: string
+          content: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          sermon_date: string | null
+          tags: string[] | null
+          theme: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          base_text?: string | null
+          church_id: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          sermon_date?: string | null
+          tags?: string[] | null
+          theme?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          base_text?: string | null
+          church_id?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          sermon_date?: string | null
+          tags?: string[] | null
+          theme?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sermon_outlines_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       signup_error_log: {
         Row: {
           created_at: string
@@ -3033,6 +3134,16 @@ export type Database = {
       enable_ai_trial: {
         Args: { p_church_id: string; p_trial_days?: number }
         Returns: undefined
+      }
+      find_user_by_email: {
+        Args: { p_email: string }
+        Returns: {
+          church_id: string
+          email: string
+          full_name: string
+          ministry_network_id: string
+          user_id: string
+        }[]
       }
       get_current_church_id: { Args: never; Returns: string }
       get_my_roles: {
