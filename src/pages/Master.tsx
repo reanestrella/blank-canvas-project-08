@@ -88,6 +88,7 @@ export default function Master() {
     loadChurches();
     loadErrorLogs();
     loadNetworks();
+    loadNetworkLeaders();
   }, [isSuperAdmin]);
 
   const loadChurches = async () => {
