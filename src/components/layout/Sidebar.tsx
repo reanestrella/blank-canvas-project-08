@@ -34,6 +34,7 @@ const allMenuItems: MenuItem[] = [
   { icon: Sparkles, label: "Meu Assistente", path: "/assistente", allowedRoles: ["pastor", "lider_celula", "lider_ministerio"] },
   { icon: User, label: "Meu App", path: "/meu-app" },
   { icon: Wallet, label: "Contribuição", path: "/contribuicao" },
+  { icon: Smartphone, label: "Gestão App", path: "/gestao-app", allowedRoles: ["pastor"] as AppRole[] },
 ];
 
 const bottomItems: MenuItem[] = [
