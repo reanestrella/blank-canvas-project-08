@@ -13,7 +13,7 @@ import {
 import {
   TrendingUp, TrendingDown, Plus, Download, ArrowUpRight, ArrowDownRight,
   PiggyBank, Target, Loader2, MoreHorizontal, Users, Heart, Upload,
-  QrCode, DollarSign, Save, Edit, Copy, Smartphone, Package,
+  DollarSign, Edit, Package,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
