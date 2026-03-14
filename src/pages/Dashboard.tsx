@@ -28,7 +28,7 @@ function PastorDashboard() {
   const { profile } = useAuth();
   const churchId = profile?.church_id;
   const { congregations, selectedCongregation, setSelectedCongregation } = useCongregations(churchId || undefined);
-  const { stats, isLoading } = useDashboardStats(selectedCongregation);
+  const { stats, isLoading, members } = useDashboardStats(selectedCongregation);
   const [aiOpen, setAiOpen] = useState(false);
 
   const totalCadastrados = members.length;
