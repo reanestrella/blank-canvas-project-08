@@ -431,6 +431,78 @@ function ContribuicaoView({ churchId }: { churchId: string }) {
   );
 }
 
+// ─── Campanhas App View ──────────────────────────────────
+function CampanhasAppView({ churchId }: { churchId: string }) {
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!churchId) return;
+    (async () => {
+      setLoading(true);
+      const { data } = await supabase
+        .from("financial_campaigns")
+        .select("id, name, description, goal_amount, current_amount, start_date, end_date")
+        .eq("church_id", churchId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+      setCampaigns(data || []);
+      setLoading(false);
+    })();
+  }, [churchId]);
+
+  if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+
+  if (campaigns.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center">
+          <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">Nenhuma campanha ativa no momento.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold flex items-center gap-2">
+        <Heart className="w-5 h-5 text-primary" /> Campanhas
+      </h3>
+      {campaigns.map((c: any) => {
+        const progress = c.goal_amount ? Math.min(100, ((c.current_amount || 0) / c.goal_amount) * 100) : 0;
+        return (
+          <Card key={c.id}>
+            <CardContent className="p-4 space-y-3">
+              <h4 className="font-semibold">{c.name}</h4>
+              {c.description && <p className="text-sm text-muted-foreground">{c.description}</p>}
+              {c.goal_amount && (
+                <div>
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                    <span>R$ {Number(c.current_amount || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                    <span>Meta: R$ {Number(c.goal_amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progress}%` }} />
+                  </div>
+                  <p className="text-xs text-muted-foreground text-right mt-1">{progress.toFixed(0)}%</p>
+                </div>
+              )}
+              {(c.start_date || c.end_date) && (
+                <p className="text-xs text-muted-foreground">
+                  {c.start_date && `Início: ${new Date(c.start_date + "T12:00:00").toLocaleDateString("pt-BR")}`}
+                  {c.start_date && c.end_date && " · "}
+                  {c.end_date && `Fim: ${new Date(c.end_date + "T12:00:00").toLocaleDateString("pt-BR")}`}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function MeuApp() {
   const { profile, church, user } = useAuth();
   const navigate = useNavigate();
