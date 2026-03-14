@@ -171,6 +171,7 @@ export function useDashboardStats(congregationId?: string | null) {
       totalDecididos,
       totalVisitantes,
       totalBaptized,
+      totalConsolidacao: consolidationCount,
       networkStats,
       birthdaysThisMonth,
       birthdaysThisWeek,
@@ -178,7 +179,7 @@ export function useDashboardStats(congregationId?: string | null) {
       weddingAnniversariesThisWeek,
       recentAlerts: alerts,
     };
-  }, [members, alerts]);
+  }, [members, alerts, consolidationCount]);
 
   return {
     stats,

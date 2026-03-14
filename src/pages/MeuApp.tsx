@@ -663,32 +663,48 @@ export default function MeuApp() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Profile Header */}
-        <Card className="gradient-hero text-primary-foreground">
+        {/* Church Brand Header */}
+        <Card className="gradient-hero text-primary-foreground overflow-hidden">
           <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row md:items-center gap-6">
-              {/* Church logo */}
+            <div className="flex flex-col items-center text-center gap-4">
+              {/* Church logo - prominent */}
               {church?.logo_url ? (
                 <img
                   src={church.logo_url}
                   alt={church.name || "Logo"}
-                  className="w-16 h-16 rounded-xl object-contain bg-primary-foreground/10 p-1 flex-shrink-0"
+                  className="w-24 h-24 md:w-28 md:h-28 rounded-2xl object-contain bg-primary-foreground/10 p-2"
                 />
-              ) : null}
-              <Avatar className="w-20 h-20 border-4 border-primary-foreground/20 flex-shrink-0">
+              ) : (
+                <div className="w-24 h-24 md:w-28 md:h-28 rounded-2xl bg-primary-foreground/10 flex items-center justify-center">
+                  <span className="text-3xl font-bold text-primary-foreground/60">
+                    {(church?.name || "I").charAt(0)}
+                  </span>
+                </div>
+              )}
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold">{church?.name || "Minha Igreja"}</h2>
+                {(church as any)?.ministry_name && (
+                  <p className="text-sm opacity-70 mt-1">{(church as any).ministry_name}</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* User profile strip */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <Avatar className="w-12 h-12 border-2 border-primary/20 flex-shrink-0">
                 <AvatarImage src={profile?.avatar_url || ""} className="object-cover" />
-                <AvatarFallback className="text-2xl bg-primary-foreground/20 text-primary-foreground">{initials}</AvatarFallback>
+                <AvatarFallback className="text-lg bg-primary/10 text-primary">{initials}</AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-2xl font-bold truncate">{profile?.full_name || "Membro"}</h1>
-                  <Badge className="bg-primary-foreground/20 text-primary-foreground border-0 flex-shrink-0">Membro</Badge>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold truncate">{profile?.full_name || "Membro"}</h3>
+                  <Badge variant="secondary" className="text-xs flex-shrink-0">Membro</Badge>
                 </div>
-                <div className="flex flex-wrap gap-4 text-sm opacity-90">
-                  <span className="truncate">{profile?.email || ""}</span>
-                  {profile?.phone && <span>• {profile.phone}</span>}
-                </div>
-                <p className="text-sm opacity-70 mt-1 truncate">{church?.name || ""}</p>
+                <p className="text-sm text-muted-foreground truncate">{profile?.email || ""}</p>
               </div>
             </div>
           </CardContent>
