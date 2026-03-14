@@ -134,35 +134,53 @@ export default function Master() {
     try {
       const emailTrimmed = leaderForm.email.trim().toLowerCase();
 
-      // Try finding by profile email first
-      let { data: profileData } = await supabase
+      // Use Supabase Admin: lookup all profiles to find by email (case insensitive)
+      const { data: allProfiles } = await supabase
         .from("profiles")
-        .select("user_id, church_id")
-        .ilike("email", emailTrimmed)
-        .maybeSingle();
+        .select("user_id, email, church_id, full_name");
 
-      // If not found, try via edge: search all profiles (email might be null in profile)
-      if (!profileData) {
-        // Try matching by looking up all profiles and checking
-        const { data: allProfiles } = await supabase
-          .from("profiles")
-          .select("user_id, email, church_id");
+      let profileData: any = null;
+      if (allProfiles) {
+        profileData = allProfiles.find(
+          (p: any) => p.email && p.email.toLowerCase() === emailTrimmed
+        );
+      }
+
+      // If profile email doesn't match, try finding by user_id from auth email match
+      // We search members table as a fallback (some profiles have null email)
+      if (!profileData && allProfiles) {
+        // Try matching against members table email
+        const { data: memberMatch } = await supabase
+          .from("members")
+          .select("id, email")
+          .ilike("email", emailTrimmed)
+          .limit(1)
+          .maybeSingle();
         
-        if (allProfiles) {
-          profileData = allProfiles.find(
-            (p: any) => p.email?.toLowerCase() === emailTrimmed
-          ) as any;
+        if (memberMatch) {
+          // Find profile linked to this member
+          profileData = allProfiles.find((p: any) => p.member_id === memberMatch.id);
         }
+      }
+
+      // Last resort: check if any profile has this email stored differently 
+      if (!profileData && allProfiles) {
+        // Some profiles may have email set during signup but stored with different casing
+        profileData = allProfiles.find(
+          (p: any) => p.full_name && p.email === null
+        );
+        // This won't work reliably, so just show the error
+        profileData = null;
       }
 
       if (!profileData) {
         throw new Error(
-          "Usuário não encontrado. Verifique se o email está correto e se o usuário já se cadastrou na plataforma."
+          "Usuário não encontrado. Verifique se o email está correto e se o usuário já se cadastrou na plataforma. O email precisa ser exatamente o mesmo usado no cadastro."
         );
       }
 
-      const userId = (profileData as any).user_id;
-      const userChurchId = (profileData as any).church_id;
+      const userId = profileData.user_id;
+      const userChurchId = profileData.church_id;
 
       // Update profile with network
       const { error: updateError } = await supabase.from("profiles").update({
@@ -174,7 +192,6 @@ export default function Master() {
       // For the role, use the user's own church_id, or pick a church from the network
       let roleChurchId = userChurchId;
       if (!roleChurchId) {
-        // Find any church in this network
         const { data: networkChurch } = await supabase
           .from("churches")
           .select("id")
@@ -199,7 +216,7 @@ export default function Master() {
         throw new Error("Erro ao adicionar papel: " + roleError.message);
       }
 
-      toast({ title: "Líder adicionado!", description: `${leaderForm.email} vinculado à rede.` });
+      toast({ title: "Líder adicionado!", description: `${leaderForm.email} vinculado à rede como ${profileData.full_name || leaderForm.email}.` });
       setShowAddLeader(false);
       setLeaderForm({ email: "", network_id: "", role: "network_admin" });
       loadNetworkLeaders();
