@@ -723,6 +723,59 @@ export type Database = {
           },
         ]
       }
+      church_assets: {
+        Row: {
+          acquired_at: string | null
+          category: string
+          church_id: string
+          condition: string | null
+          created_at: string
+          estimated_value: number | null
+          id: string
+          location: string | null
+          name: string
+          notes: string | null
+          quantity: number
+          updated_at: string
+        }
+        Insert: {
+          acquired_at?: string | null
+          category?: string
+          church_id: string
+          condition?: string | null
+          created_at?: string
+          estimated_value?: number | null
+          id?: string
+          location?: string | null
+          name: string
+          notes?: string | null
+          quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          acquired_at?: string | null
+          category?: string
+          church_id?: string
+          condition?: string | null
+          created_at?: string
+          estimated_value?: number | null
+          id?: string
+          location?: string | null
+          name?: string
+          notes?: string | null
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "church_assets_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       church_features: {
         Row: {
           ai_enabled: boolean
