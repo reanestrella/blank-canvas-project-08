@@ -7,6 +7,7 @@ interface DashboardStats {
   totalDecididos: number;
   totalVisitantes: number;
   totalBaptized: number;
+  totalConsolidacao: number;
   networkStats: {
     homens: number;
     mulheres: number;
