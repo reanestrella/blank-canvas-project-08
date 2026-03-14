@@ -883,6 +883,7 @@ export type Database = {
           logo_url: string | null
           max_members: number | null
           ministry_name: string | null
+          ministry_network_id: string | null
           name: string
           phone: string | null
           plan: string
@@ -903,6 +904,7 @@ export type Database = {
           logo_url?: string | null
           max_members?: number | null
           ministry_name?: string | null
+          ministry_network_id?: string | null
           name: string
           phone?: string | null
           plan?: string
@@ -923,6 +925,7 @@ export type Database = {
           logo_url?: string | null
           max_members?: number | null
           ministry_name?: string | null
+          ministry_network_id?: string | null
           name?: string
           phone?: string | null
           plan?: string
@@ -932,7 +935,15 @@ export type Database = {
           state?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "churches_ministry_network_id_fkey"
+            columns: ["ministry_network_id"]
+            isOneToOne: false
+            referencedRelation: "ministries_network"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       congregations: {
         Row: {
@@ -2051,6 +2062,42 @@ export type Database = {
           },
         ]
       }
+      ministries_network: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          name: string
+          primary_color: string | null
+          secondary_color: string | null
+          slug: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          slug?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name?: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          slug?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ministry_role_members: {
         Row: {
           church_id: string
@@ -2399,6 +2446,7 @@ export type Database = {
           full_name: string | null
           id: string
           member_id: string | null
+          ministry_network_id: string | null
           phone: string | null
           updated_at: string | null
           user_id: string
@@ -2412,6 +2460,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           member_id?: string | null
+          ministry_network_id?: string | null
           phone?: string | null
           updated_at?: string | null
           user_id: string
@@ -2425,6 +2474,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           member_id?: string | null
+          ministry_network_id?: string | null
           phone?: string | null
           updated_at?: string | null
           user_id?: string
@@ -2456,6 +2506,13 @@ export type Database = {
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_ministry_network_id_fkey"
+            columns: ["ministry_network_id"]
+            isOneToOne: false
+            referencedRelation: "ministries_network"
             referencedColumns: ["id"]
           },
         ]
@@ -2972,6 +3029,7 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { p_token: string }; Returns: undefined }
+      delete_church_cascade: { Args: { p_church_id: string }; Returns: Json }
       enable_ai_trial: {
         Args: { p_church_id: string; p_trial_days?: number }
         Returns: undefined
@@ -3046,6 +3104,8 @@ export type Database = {
         | "lider_ministerio"
         | "consolidacao"
         | "membro"
+        | "network_admin"
+        | "network_finance"
       spiritual_status:
         | "visitante"
         | "novo_convertido"
@@ -3188,6 +3248,8 @@ export const Constants = {
         "lider_ministerio",
         "consolidacao",
         "membro",
+        "network_admin",
+        "network_finance",
       ],
       spiritual_status: [
         "visitante",

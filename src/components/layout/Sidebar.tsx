@@ -40,6 +40,8 @@ const bottomItems: MenuItem[] = [
   { icon: Settings, label: "Configurações", path: "/configuracoes", allowedRoles: ["pastor"] },
 ];
 
+import { Network } from "lucide-react";
+
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
@@ -61,6 +63,7 @@ export function Sidebar() {
     const items = [...bottomItems];
     if (isSuperAdmin) {
       items.unshift({ icon: Shield, label: "Painel Master", path: "/master" });
+      items.unshift({ icon: Network, label: "Painel Rede", path: "/rede" });
     }
     if (isAdmin()) return items;
     return items.filter(item => {
