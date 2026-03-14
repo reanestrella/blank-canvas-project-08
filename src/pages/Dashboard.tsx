@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Users, Heart, Grid3X3, TrendingUp, Eye, Loader2, DollarSign, ChevronDown, ChevronUp, Sparkles, Brain } from "lucide-react";
+import { Users, Heart, Grid3X3, TrendingUp, Eye, Loader2, DollarSign, ChevronDown, ChevronUp, Sparkles, Brain, UserCheck, Droplets } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { SpiritualFunnel } from "@/components/dashboard/SpiritualFunnel";
