@@ -15,8 +15,6 @@ import {
   PiggyBank, Target, Loader2, MoreHorizontal, Users, Heart, Upload,
   DollarSign, Edit, Package,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFinancial, CreateTransactionData } from "@/hooks/useFinancial";
 import { useFinancialAccounts } from "@/hooks/useFinancialAccounts";
