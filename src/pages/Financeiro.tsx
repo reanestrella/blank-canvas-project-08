@@ -490,9 +490,6 @@ export default function Financeiro() {
             {churchId && <PatrimonioTab churchId={churchId} />}
           </TabsContent>
 
-          <TabsContent value="contribuicao-app" className="mt-6">
-            {churchId && <ContribuicaoAppTab churchId={churchId} />}
-          </TabsContent>
         </Tabs>
       </div>
 
