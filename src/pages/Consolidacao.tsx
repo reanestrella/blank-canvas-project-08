@@ -38,6 +38,8 @@ export default function Consolidacao() {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [selectedConsolidatorId, setSelectedConsolidatorId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("acompanhamentos");
+  const [editingRecord, setEditingRecord] = useState<ConsolidationRecord | null>(null);
+  const [editForm, setEditForm] = useState({ consolidator_id: "", notes: "", contact_date: "", first_visit_date: "", cell_integration_date: "" });
 
   const now = new Date();
   const [periodMode, setPeriodMode] = useState<PeriodMode>("month");
