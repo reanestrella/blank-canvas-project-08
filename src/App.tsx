@@ -95,7 +95,6 @@ const App = () => (
                 {/* Always accessible to any authenticated user */}
                 <Route path="/app" element={<Dashboard />} />
                 <Route path="/meu-app" element={<MeuApp />} />
-                <Route path="/contribuicao" element={<Contribuicao />} />
                 <Route path="/perfil" element={<Perfil />} />
 
                 {/* Role-protected routes */}
