@@ -148,6 +148,11 @@ const App = () => (
                     <Gabinete />
                   </RequireAnyRole>
                 } />
+                <Route path="/gestao-pastoral" element={
+                  <RequireAnyRole allowedRoles={["pastor"]}>
+                    <GestaoPastoral />
+                  </RequireAnyRole>
+                } />
                 <Route path="/lembretes" element={
                   <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
                     <Lembretes />
