@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,33 +7,45 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { RequireAnyRole } from "@/components/guards/RequireAnyRole";
-import LandingPage from "./pages/LandingPage";
-import Login from "./pages/Login";
-import Registro from "./pages/Registro";
-import Convite from "./pages/Convite";
-import InviteGate from "./pages/InviteGate";
-import Dashboard from "./pages/Dashboard";
-import Secretaria from "./pages/Secretaria";
-import Ministerios from "./pages/Ministerios";
-import Celulas from "./pages/Celulas";
-import Ensino from "./pages/Ensino";
-import Financeiro from "./pages/Financeiro";
-import Eventos from "./pages/Eventos";
-import MeuApp from "./pages/MeuApp";
-import Contribuicao from "./pages/Contribuicao";
-import Perfil from "./pages/Perfil";
-import Configuracoes from "./pages/Configuracoes";
-import Consolidacao from "./pages/Consolidacao";
-import Discipulados from "./pages/Discipulados";
-import Visitas from "./pages/Visitas";
-import Gabinete from "./pages/Gabinete";
-import Lembretes from "./pages/Lembretes";
-import Cadastrar from "./pages/Cadastrar";
-import Instalar from "./pages/Instalar";
-import Master from "./pages/Master";
-import Assistente from "./pages/Assistente";
-import NotFound from "./pages/NotFound";
 import { queryClient } from "@/lib/queryClient";
+import { Loader2 } from "lucide-react";
+
+// Lazy-loaded pages
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const Login = lazy(() => import("./pages/Login"));
+const Registro = lazy(() => import("./pages/Registro"));
+const Convite = lazy(() => import("./pages/Convite"));
+const InviteGate = lazy(() => import("./pages/InviteGate"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Secretaria = lazy(() => import("./pages/Secretaria"));
+const Ministerios = lazy(() => import("./pages/Ministerios"));
+const Celulas = lazy(() => import("./pages/Celulas"));
+const Ensino = lazy(() => import("./pages/Ensino"));
+const Financeiro = lazy(() => import("./pages/Financeiro"));
+const Eventos = lazy(() => import("./pages/Eventos"));
+const MeuApp = lazy(() => import("./pages/MeuApp"));
+const Contribuicao = lazy(() => import("./pages/Contribuicao"));
+const Perfil = lazy(() => import("./pages/Perfil"));
+const Configuracoes = lazy(() => import("./pages/Configuracoes"));
+const Consolidacao = lazy(() => import("./pages/Consolidacao"));
+const Discipulados = lazy(() => import("./pages/Discipulados"));
+const Visitas = lazy(() => import("./pages/Visitas"));
+const Gabinete = lazy(() => import("./pages/Gabinete"));
+const Lembretes = lazy(() => import("./pages/Lembretes"));
+const Cadastrar = lazy(() => import("./pages/Cadastrar"));
+const Instalar = lazy(() => import("./pages/Instalar"));
+const Master = lazy(() => import("./pages/Master"));
+const Assistente = lazy(() => import("./pages/Assistente"));
+const NetworkDashboard = lazy(() => import("./pages/NetworkDashboard"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+    </div>
+  );
+}
 
 function UnhandledRejectionHandler() {
   useEffect(() => {
@@ -55,96 +67,101 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/registro" element={<Registro />} />
-              <Route path="/convite/:token" element={<Convite />} />
-              <Route path="/accept-invite" element={<InviteGate />} />
-              <Route path="/cadastrar" element={<Cadastrar />} />
-              <Route path="/instalar" element={<Instalar />} />
-              
-              {/* Super Admin - standalone (no AppLayout) */}
-              <Route path="/master" element={<Master />} />
-              <Route path="/dev-admin" element={<Master />} />
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/registro" element={<Registro />} />
+                <Route path="/convite/:token" element={<Convite />} />
+                <Route path="/accept-invite" element={<InviteGate />} />
+                <Route path="/cadastrar" element={<Cadastrar />} />
+                <Route path="/instalar" element={<Instalar />} />
+                
+                {/* Super Admin - standalone */}
+                <Route path="/master" element={<Master />} />
+                <Route path="/dev-admin" element={<Master />} />
 
-              {/* Always accessible to any authenticated user */}
-              <Route path="/app" element={<Dashboard />} />
-              <Route path="/meu-app" element={<MeuApp />} />
-              <Route path="/contribuicao" element={<Contribuicao />} />
-              <Route path="/perfil" element={<Perfil />} />
+                {/* Network Dashboard */}
+                <Route path="/rede" element={<NetworkDashboard />} />
 
-              {/* Role-protected routes */}
-              <Route path="/secretaria" element={
-                <RequireAnyRole allowedRoles={["pastor", "secretario", "consolidacao"]}>
-                  <Secretaria />
-                </RequireAnyRole>
-              } />
-              <Route path="/ministerios" element={
-                <RequireAnyRole allowedRoles={["pastor", "lider_ministerio"]}>
-                  <Ministerios />
-                </RequireAnyRole>
-              } />
-              <Route path="/celulas" element={
-                <RequireAnyRole allowedRoles={["pastor", "lider_celula", "consolidacao", "secretario"]}>
-                  <Celulas />
-                </RequireAnyRole>
-              } />
-              <Route path="/ensino" element={
-                <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
-                  <Ensino />
-                </RequireAnyRole>
-              } />
-              <Route path="/financeiro" element={
-                <RequireAnyRole allowedRoles={["pastor", "tesoureiro"]}>
-                  <Financeiro />
-                </RequireAnyRole>
-              } />
-              <Route path="/eventos" element={
-                <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
-                  <Eventos />
-                </RequireAnyRole>
-              } />
-              <Route path="/consolidacao" element={
-                <RequireAnyRole allowedRoles={["pastor", "consolidacao"]}>
-                  <Consolidacao />
-                </RequireAnyRole>
-              } />
-              <Route path="/discipulados" element={
-                <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
-                  <Discipulados />
-                </RequireAnyRole>
-              } />
-              <Route path="/visitas" element={
-                <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
-                  <Visitas />
-                </RequireAnyRole>
-              } />
-              <Route path="/gabinete" element={
-                <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
-                  <Gabinete />
-                </RequireAnyRole>
-              } />
-              <Route path="/lembretes" element={
-                <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
-                  <Lembretes />
-                </RequireAnyRole>
-              } />
-              <Route path="/configuracoes" element={
-                <RequireAnyRole allowedRoles={["pastor"]}>
-                  <Configuracoes />
-                </RequireAnyRole>
-              } />
-              <Route path="/assistente" element={
-                <RequireAnyRole allowedRoles={["pastor", "lider_celula", "lider_ministerio"]}>
-                  <Assistente />
-                </RequireAnyRole>
-              } />
-              
-              {/* Catch-all */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+                {/* Always accessible to any authenticated user */}
+                <Route path="/app" element={<Dashboard />} />
+                <Route path="/meu-app" element={<MeuApp />} />
+                <Route path="/contribuicao" element={<Contribuicao />} />
+                <Route path="/perfil" element={<Perfil />} />
+
+                {/* Role-protected routes */}
+                <Route path="/secretaria" element={
+                  <RequireAnyRole allowedRoles={["pastor", "secretario", "consolidacao"]}>
+                    <Secretaria />
+                  </RequireAnyRole>
+                } />
+                <Route path="/ministerios" element={
+                  <RequireAnyRole allowedRoles={["pastor", "lider_ministerio"]}>
+                    <Ministerios />
+                  </RequireAnyRole>
+                } />
+                <Route path="/celulas" element={
+                  <RequireAnyRole allowedRoles={["pastor", "lider_celula", "consolidacao", "secretario"]}>
+                    <Celulas />
+                  </RequireAnyRole>
+                } />
+                <Route path="/ensino" element={
+                  <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
+                    <Ensino />
+                  </RequireAnyRole>
+                } />
+                <Route path="/financeiro" element={
+                  <RequireAnyRole allowedRoles={["pastor", "tesoureiro"]}>
+                    <Financeiro />
+                  </RequireAnyRole>
+                } />
+                <Route path="/eventos" element={
+                  <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
+                    <Eventos />
+                  </RequireAnyRole>
+                } />
+                <Route path="/consolidacao" element={
+                  <RequireAnyRole allowedRoles={["pastor", "consolidacao"]}>
+                    <Consolidacao />
+                  </RequireAnyRole>
+                } />
+                <Route path="/discipulados" element={
+                  <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
+                    <Discipulados />
+                  </RequireAnyRole>
+                } />
+                <Route path="/visitas" element={
+                  <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
+                    <Visitas />
+                  </RequireAnyRole>
+                } />
+                <Route path="/gabinete" element={
+                  <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
+                    <Gabinete />
+                  </RequireAnyRole>
+                } />
+                <Route path="/lembretes" element={
+                  <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
+                    <Lembretes />
+                  </RequireAnyRole>
+                } />
+                <Route path="/configuracoes" element={
+                  <RequireAnyRole allowedRoles={["pastor"]}>
+                    <Configuracoes />
+                  </RequireAnyRole>
+                } />
+                <Route path="/assistente" element={
+                  <RequireAnyRole allowedRoles={["pastor", "lider_celula", "lider_ministerio"]}>
+                    <Assistente />
+                  </RequireAnyRole>
+                } />
+                
+                {/* Catch-all */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
           </BrowserRouter>
         </AuthProvider>
       </TooltipProvider>

@@ -40,6 +40,8 @@ const bottomItems: MenuItem[] = [
   { icon: Settings, label: "Configurações", path: "/configuracoes", allowedRoles: ["pastor"] },
 ];
 
+import { Network } from "lucide-react";
+
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();

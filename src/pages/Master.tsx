@@ -12,10 +12,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 import {
   Loader2, Shield, Church, Bot, Calendar, AlertTriangle,
   Users, Building2, Palette, Power, Edit2, Save, X, Plus, LogOut,
-  Smartphone, Image, Megaphone,
+  Trash2, Network,
 } from "lucide-react";
 
 interface ChurchItem {
@@ -30,6 +31,7 @@ interface ChurchItem {
   logo_url: string | null;
   created_at: string;
   member_count?: number;
+  ministry_network_id?: string | null;
 }
 
 interface ChurchFeatures {
@@ -46,6 +48,13 @@ interface AiErrorLog {
   created_at: string;
 }
 
+interface NetworkItem {
+  id: string;
+  name: string;
+  slug: string | null;
+  is_active: boolean;
+}
+
 export default function Master() {
   const { isSuperAdmin, isChecking } = useSuperAdmin();
   const { user, signOut } = useAuth();
@@ -53,6 +62,7 @@ export default function Master() {
   const navigate = useNavigate();
 
   const [churches, setChurches] = useState<ChurchItem[]>([]);
+  const [networks, setNetworks] = useState<NetworkItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedChurch, setSelectedChurch] = useState<string | null>(null);
   const [features, setFeatures] = useState<ChurchFeatures | null>(null);
@@ -65,18 +75,22 @@ export default function Master() {
   const [showNewChurchForm, setShowNewChurchForm] = useState(false);
   const [newChurch, setNewChurch] = useState({ name: "", email: "", full_name: "" });
   const [creating, setCreating] = useState(false);
+  const [deletingChurch, setDeletingChurch] = useState<ChurchItem | null>(null);
+  const [showNewNetwork, setShowNewNetwork] = useState(false);
+  const [newNetworkName, setNewNetworkName] = useState("");
 
   useEffect(() => {
     if (!isSuperAdmin) return;
     loadChurches();
     loadErrorLogs();
+    loadNetworks();
   }, [isSuperAdmin]);
 
   const loadChurches = async () => {
     setLoading(true);
     const { data: churchesData } = await supabase
       .from("churches")
-      .select("id, name, slug, plan, is_active, primary_color, secondary_color, ministry_name, logo_url, created_at")
+      .select("id, name, slug, plan, is_active, primary_color, secondary_color, ministry_name, logo_url, created_at, ministry_network_id")
       .order("name");
 
     if (churchesData) {
@@ -92,6 +106,11 @@ export default function Master() {
       setChurches(enriched);
     }
     setLoading(false);
+  };
+
+  const loadNetworks = async () => {
+    const { data } = await supabase.from("ministries_network").select("id, name, slug, is_active").order("name");
+    setNetworks((data as NetworkItem[]) || []);
   };
 
   const loadErrorLogs = async () => {
@@ -135,7 +154,6 @@ export default function Master() {
     setCreating(true);
     try {
       if (newChurch.email.trim()) {
-        // Create church with admin user via RPC
         const { data, error } = await supabase.rpc("setup_new_church", {
           _church_name: newChurch.name,
           _email: newChurch.email,
@@ -143,15 +161,10 @@ export default function Master() {
         });
         if (error) throw error;
         const result = data as any;
-        if (result && !result.success) {
-          throw new Error(result.error || "Falha ao criar igreja");
-        }
+        if (result && !result.success) throw new Error(result.error || "Falha ao criar igreja");
         toast({ title: "Igreja criada!", description: `${newChurch.name} criada e admin vinculado.` });
       } else {
-        // Create church only (no admin)
-        const { error } = await supabase.from("churches").insert({
-          name: newChurch.name,
-        } as any);
+        const { error } = await supabase.from("churches").insert({ name: newChurch.name } as any);
         if (error) throw error;
         toast({ title: "Igreja criada!", description: `${newChurch.name} criada com sucesso.` });
       }
@@ -166,23 +179,49 @@ export default function Master() {
     }
   };
 
+  const handleDeleteChurch = async (): Promise<{ error: any }> => {
+    if (!deletingChurch) return { error: "Nenhuma igreja selecionada" };
+    try {
+      const { data, error } = await supabase.rpc("delete_church_cascade", { p_church_id: deletingChurch.id });
+      if (error) throw error;
+      const result = data as any;
+      if (!result?.success) throw new Error(result?.error || "Falha na exclusão");
+      toast({ title: "Igreja excluída", description: `${deletingChurch.name} e todos os dados foram removidos.` });
+      loadChurches();
+      return { error: null };
+    } catch (e: any) {
+      toast({ title: "Erro ao excluir", description: e.message, variant: "destructive" });
+      return { error: e };
+    }
+  };
+
+  const handleCreateNetwork = async () => {
+    if (!newNetworkName.trim()) return;
+    try {
+      const { error } = await supabase.from("ministries_network").insert({ name: newNetworkName } as any);
+      if (error) throw error;
+      toast({ title: "Rede criada!", description: newNetworkName });
+      setNewNetworkName("");
+      setShowNewNetwork(false);
+      loadNetworks();
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    }
+  };
+
   const handleSaveFeatures = async () => {
     if (!selectedChurch || !features) return;
     setSaving(true);
     try {
       const { error } = await supabase.from("church_features").upsert({
-        church_id: selectedChurch,
-        ai_enabled: features.ai_enabled,
-        ai_trial_enabled: features.ai_trial_enabled,
-        ai_trial_end: features.ai_trial_end,
+        church_id: selectedChurch, ai_enabled: features.ai_enabled,
+        ai_trial_enabled: features.ai_trial_enabled, ai_trial_end: features.ai_trial_end,
       }, { onConflict: "church_id" });
       if (error) throw error;
       toast({ title: "Salvo", description: "Configurações de IA atualizadas." });
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const handleActivateTrial = async () => {
@@ -191,73 +230,46 @@ export default function Master() {
     try {
       const { error } = await supabase.rpc("enable_ai_trial", { p_church_id: selectedChurch, p_trial_days: trialDays });
       if (error) throw error;
-      toast({ title: "Trial ativado", description: `Trial de ${trialDays} dias ativado.` });
+      toast({ title: "Trial ativado", description: `Trial de ${trialDays} dias.` });
       await loadFeatures(selectedChurch);
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const toggleChurchActive = async (churchId: string, currentState: boolean) => {
-    const { error } = await supabase
-      .from("churches")
-      .update({ is_active: !currentState } as any)
-      .eq("id", churchId);
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: currentState ? "Igreja desativada" : "Igreja ativada" });
-      loadChurches();
-    }
+    const { error } = await supabase.from("churches").update({ is_active: !currentState } as any).eq("id", churchId);
+    if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
+    else { toast({ title: currentState ? "Igreja desativada" : "Igreja ativada" }); loadChurches(); }
   };
 
   const saveChurchBranding = async () => {
     if (!editingChurch) return;
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("churches")
-        .update({
-          name: editingChurch.name,
-          ministry_name: editingChurch.ministry_name,
-          primary_color: editingChurch.primary_color,
-          secondary_color: editingChurch.secondary_color,
-          plan: editingChurch.plan,
-          logo_url: editingChurch.logo_url,
-        } as any)
-        .eq("id", editingChurch.id);
+      const { error } = await supabase.from("churches").update({
+        name: editingChurch.name, ministry_name: editingChurch.ministry_name,
+        primary_color: editingChurch.primary_color, secondary_color: editingChurch.secondary_color,
+        plan: editingChurch.plan, logo_url: editingChurch.logo_url,
+        ministry_network_id: editingChurch.ministry_network_id,
+      } as any).eq("id", editingChurch.id);
       if (error) throw error;
-      toast({ title: "Salvo", description: "Dados da igreja atualizados." });
-      setEditingChurch(null);
-      loadChurches();
+      toast({ title: "Salvo" }); setEditingChurch(null); loadChurches();
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/login");
-  };
+  const handleSignOut = async () => { await signOut(); navigate("/login"); };
 
-  if (isChecking) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
-  }
-
-  if (!isSuperAdmin) {
-    return <Navigate to="/app" replace />;
-  }
+  if (isChecking) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+  if (!isSuperAdmin) return <Navigate to="/app" replace />;
 
   const totalMembers = churches.reduce((sum, c) => sum + (c.member_count || 0), 0);
   const activeChurches = churches.filter(c => c.is_active).length;
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Standalone header for super admin */}
       <header className="sticky top-0 z-30 border-b bg-card/95 backdrop-blur px-4 md:px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Shield className="w-6 h-6 text-primary" />
@@ -267,132 +279,75 @@ export default function Master() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/rede")}>
+            <Network className="w-4 h-4 mr-1" /> Rede
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => navigate("/app")}>
-            <Church className="w-4 h-4 mr-1" /> Ir para Igreja
+            <Church className="w-4 h-4 mr-1" /> Igreja
           </Button>
-          <Button variant="ghost" size="icon" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4" />
-          </Button>
+          <Button variant="ghost" size="icon" onClick={handleSignOut}><LogOut className="w-4 h-4" /></Button>
         </div>
       </header>
 
       <main className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <Building2 className="w-8 h-8 text-primary" />
-                <div>
-                  <p className="text-2xl font-bold">{churches.length}</p>
-                  <p className="text-sm text-muted-foreground">Igrejas</p>
+          {[
+            { icon: Building2, value: churches.length, label: "Igrejas", color: "text-primary" },
+            { icon: Power, value: activeChurches, label: "Ativas", color: "text-emerald-500" },
+            { icon: Users, value: totalMembers, label: "Membros Total", color: "text-secondary" },
+            { icon: AlertTriangle, value: errorLogs.length, label: "Erros IA", color: "text-destructive" },
+          ].map((s, i) => (
+            <Card key={i}>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <s.icon className={`w-8 h-8 ${s.color}`} />
+                  <div>
+                    <p className="text-2xl font-bold">{s.value}</p>
+                    <p className="text-sm text-muted-foreground">{s.label}</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <Power className="w-8 h-8 text-emerald-500" />
-                <div>
-                  <p className="text-2xl font-bold">{activeChurches}</p>
-                  <p className="text-sm text-muted-foreground">Ativas</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <Users className="w-8 h-8 text-secondary" />
-                <div>
-                  <p className="text-2xl font-bold">{totalMembers}</p>
-                  <p className="text-sm text-muted-foreground">Membros Total</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="w-8 h-8 text-destructive" />
-                <div>
-                  <p className="text-2xl font-bold">{errorLogs.length}</p>
-                  <p className="text-sm text-muted-foreground">Erros IA</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         <Tabs defaultValue="churches" className="space-y-4">
           <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="churches">Igrejas</TabsTrigger>
-            <TabsTrigger value="ai">Recursos de IA</TabsTrigger>
+            <TabsTrigger value="networks">Redes</TabsTrigger>
+            <TabsTrigger value="ai">IA</TabsTrigger>
             <TabsTrigger value="logs">Logs</TabsTrigger>
           </TabsList>
 
           {/* Churches Tab */}
           <TabsContent value="churches" className="space-y-4">
-            {/* Create Church Form */}
             {showNewChurchForm && (
               <Card className="border-primary">
                 <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Plus className="w-5 h-5" /> Nova Igreja
-                  </CardTitle>
-                  <CardDescription>Crie uma nova igreja na plataforma. Opcionalmente vincule um admin pelo email.</CardDescription>
+                  <CardTitle className="text-lg flex items-center gap-2"><Plus className="w-5 h-5" /> Nova Igreja</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label>Nome da Igreja *</Label>
-                      <Input value={newChurch.name} onChange={e => setNewChurch(p => ({ ...p, name: e.target.value }))} placeholder="Ex: Igreja Nova Aliança" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Email do Admin (opcional)</Label>
-                      <Input type="email" value={newChurch.email} onChange={e => setNewChurch(p => ({ ...p, email: e.target.value }))} placeholder="admin@igreja.com" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Nome do Admin (opcional)</Label>
-                      <Input value={newChurch.full_name} onChange={e => setNewChurch(p => ({ ...p, full_name: e.target.value }))} placeholder="Nome completo" />
-                    </div>
+                    <div className="space-y-2"><Label>Nome *</Label><Input value={newChurch.name} onChange={e => setNewChurch(p => ({ ...p, name: e.target.value }))} placeholder="Igreja Nova Aliança" /></div>
+                    <div className="space-y-2"><Label>Email Admin (opcional)</Label><Input type="email" value={newChurch.email} onChange={e => setNewChurch(p => ({ ...p, email: e.target.value }))} /></div>
+                    <div className="space-y-2"><Label>Nome Admin</Label><Input value={newChurch.full_name} onChange={e => setNewChurch(p => ({ ...p, full_name: e.target.value }))} /></div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Se informar o email, o usuário precisa já ter uma conta criada. Ele será vinculado como pastor/admin da igreja.
-                  </p>
                   <div className="flex gap-2">
-                    <Button onClick={handleCreateChurch} disabled={creating}>
-                      {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      <Plus className="w-4 h-4 mr-2" /> Criar Igreja
-                    </Button>
-                    <Button variant="outline" onClick={() => setShowNewChurchForm(false)}>
-                      <X className="w-4 h-4 mr-2" /> Cancelar
-                    </Button>
+                    <Button onClick={handleCreateChurch} disabled={creating}>{creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}<Plus className="w-4 h-4 mr-2" /> Criar</Button>
+                    <Button variant="outline" onClick={() => setShowNewChurchForm(false)}><X className="w-4 h-4 mr-2" /> Cancelar</Button>
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Edit Church Form */}
             {editingChurch && (
               <Card className="border-primary">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Palette className="w-5 h-5" />
-                    Editar: {editingChurch.name}
-                  </CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="flex items-center gap-2 text-lg"><Palette className="w-5 h-5" /> Editar: {editingChurch.name}</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Nome da Igreja</Label>
-                      <Input value={editingChurch.name} onChange={e => setEditingChurch({ ...editingChurch, name: e.target.value })} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Nome do Ministério (white-label)</Label>
-                      <Input value={editingChurch.ministry_name || ""} onChange={e => setEditingChurch({ ...editingChurch, ministry_name: e.target.value })} placeholder="Ex: Ministério Alcançando Vidas" />
-                    </div>
+                    <div className="space-y-2"><Label>Nome</Label><Input value={editingChurch.name} onChange={e => setEditingChurch({ ...editingChurch, name: e.target.value })} /></div>
+                    <div className="space-y-2"><Label>Ministério (white-label)</Label><Input value={editingChurch.ministry_name || ""} onChange={e => setEditingChurch({ ...editingChurch, ministry_name: e.target.value })} /></div>
                     <div className="space-y-2">
                       <Label>Cor Primária</Label>
                       <div className="flex gap-2">
@@ -407,23 +362,19 @@ export default function Master() {
                         <Input value={editingChurch.secondary_color || "#d97706"} onChange={e => setEditingChurch({ ...editingChurch, secondary_color: e.target.value })} />
                       </div>
                     </div>
+                    <div className="space-y-2"><Label>Logo URL</Label><Input value={editingChurch.logo_url || ""} onChange={e => setEditingChurch({ ...editingChurch, logo_url: e.target.value })} /></div>
+                    <div className="space-y-2"><Label>Plano</Label><Input value={editingChurch.plan} onChange={e => setEditingChurch({ ...editingChurch, plan: e.target.value })} /></div>
                     <div className="space-y-2">
-                      <Label>URL do Logo</Label>
-                      <Input value={editingChurch.logo_url || ""} onChange={e => setEditingChurch({ ...editingChurch, logo_url: e.target.value })} placeholder="https://..." />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Plano</Label>
-                      <Input value={editingChurch.plan} onChange={e => setEditingChurch({ ...editingChurch, plan: e.target.value })} />
+                      <Label>Rede Ministerial</Label>
+                      <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={editingChurch.ministry_network_id || ""} onChange={e => setEditingChurch({ ...editingChurch, ministry_network_id: e.target.value || null })}>
+                        <option value="">Nenhuma</option>
+                        {networks.map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
+                      </select>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={saveChurchBranding} disabled={saving}>
-                      {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      <Save className="w-4 h-4 mr-2" /> Salvar
-                    </Button>
-                    <Button variant="outline" onClick={() => setEditingChurch(null)}>
-                      <X className="w-4 h-4 mr-2" /> Cancelar
-                    </Button>
+                    <Button onClick={saveChurchBranding} disabled={saving}>{saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}<Save className="w-4 h-4 mr-2" /> Salvar</Button>
+                    <Button variant="outline" onClick={() => setEditingChurch(null)}><X className="w-4 h-4 mr-2" /> Cancelar</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -432,26 +383,19 @@ export default function Master() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Church className="w-5 h-5" />
-                    Todas as Igrejas
-                  </CardTitle>
-                  <CardDescription>{churches.length} igrejas cadastradas</CardDescription>
+                  <CardTitle className="flex items-center gap-2"><Church className="w-5 h-5" /> Todas as Igrejas</CardTitle>
+                  <CardDescription>{churches.length} igrejas</CardDescription>
                 </div>
-                <Button onClick={() => setShowNewChurchForm(true)} disabled={showNewChurchForm}>
-                  <Plus className="w-4 h-4 mr-2" /> Nova Igreja
-                </Button>
+                <Button onClick={() => setShowNewChurchForm(true)} disabled={showNewChurchForm}><Plus className="w-4 h-4 mr-2" /> Nova Igreja</Button>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
-                ) : (
+                {loading ? <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div> : (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Igreja</TableHead>
-                          <TableHead>Slug</TableHead>
+                          <TableHead>Rede</TableHead>
                           <TableHead>Plano</TableHead>
                           <TableHead>Membros</TableHead>
                           <TableHead>Status</TableHead>
@@ -464,27 +408,17 @@ export default function Master() {
                           <TableRow key={c.id} className={!c.is_active ? "opacity-50" : ""}>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                {c.logo_url ? (
-                                  <img src={c.logo_url} alt="" className="w-8 h-8 rounded object-cover" />
-                                ) : (
-                                  <div className="w-8 h-8 rounded bg-muted flex items-center justify-center">
-                                    <Church className="w-4 h-4 text-muted-foreground" />
-                                  </div>
-                                )}
+                                {c.logo_url ? <img src={c.logo_url} alt="" className="w-8 h-8 rounded object-cover" /> : <div className="w-8 h-8 rounded bg-muted flex items-center justify-center"><Church className="w-4 h-4 text-muted-foreground" /></div>}
                                 <div>
                                   <p className="font-medium text-sm">{c.name}</p>
                                   {c.ministry_name && <p className="text-xs text-muted-foreground">{c.ministry_name}</p>}
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell><code className="text-xs">{c.slug}</code></TableCell>
+                            <TableCell className="text-xs">{networks.find(n => n.id === c.ministry_network_id)?.name || "—"}</TableCell>
                             <TableCell><Badge variant="outline">{c.plan}</Badge></TableCell>
                             <TableCell>{c.member_count}</TableCell>
-                            <TableCell>
-                              <Badge variant={c.is_active ? "default" : "destructive"}>
-                                {c.is_active ? "Ativa" : "Inativa"}
-                              </Badge>
-                            </TableCell>
+                            <TableCell><Badge variant={c.is_active ? "default" : "destructive"}>{c.is_active ? "Ativa" : "Inativa"}</Badge></TableCell>
                             <TableCell>
                               <div className="flex gap-1">
                                 <div className="w-5 h-5 rounded border" style={{ backgroundColor: c.primary_color || "#1e3a5f" }} />
@@ -493,15 +427,10 @@ export default function Master() {
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-1">
-                                <Button variant="ghost" size="icon" onClick={() => setEditingChurch(c)} title="Editar">
-                                  <Edit2 className="w-4 h-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" onClick={() => toggleChurchActive(c.id, c.is_active)} title={c.is_active ? "Desativar" : "Ativar"}>
-                                  <Power className={`w-4 h-4 ${c.is_active ? "text-emerald-500" : "text-destructive"}`} />
-                                </Button>
-                                <Button variant="ghost" size="icon" onClick={() => setSelectedChurch(c.id)} title="Configurar IA">
-                                  <Bot className="w-4 h-4" />
-                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => setEditingChurch(c)} title="Editar"><Edit2 className="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="icon" onClick={() => toggleChurchActive(c.id, c.is_active)} title={c.is_active ? "Desativar" : "Ativar"}><Power className={`w-4 h-4 ${c.is_active ? "text-emerald-500" : "text-destructive"}`} /></Button>
+                                <Button variant="ghost" size="icon" onClick={() => setSelectedChurch(c.id)} title="IA"><Bot className="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="icon" onClick={() => setDeletingChurch(c)} title="Excluir"><Trash2 className="w-4 h-4 text-destructive" /></Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -509,6 +438,45 @@ export default function Master() {
                       </TableBody>
                     </Table>
                   </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Networks Tab */}
+          <TabsContent value="networks" className="space-y-4">
+            {showNewNetwork && (
+              <Card className="border-primary">
+                <CardContent className="pt-6 space-y-4">
+                  <div className="space-y-2"><Label>Nome da Rede</Label><Input value={newNetworkName} onChange={e => setNewNetworkName(e.target.value)} placeholder="Ministério Alcançando Vidas" /></div>
+                  <div className="flex gap-2">
+                    <Button onClick={handleCreateNetwork}><Plus className="w-4 h-4 mr-2" /> Criar</Button>
+                    <Button variant="outline" onClick={() => setShowNewNetwork(false)}>Cancelar</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2"><Network className="w-5 h-5" /> Redes Ministeriais</CardTitle>
+                <Button onClick={() => setShowNewNetwork(true)} size="sm"><Plus className="w-4 h-4 mr-2" /> Nova Rede</Button>
+              </CardHeader>
+              <CardContent>
+                {networks.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">Nenhuma rede cadastrada.</p>
+                ) : (
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Igrejas</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {networks.map(n => (
+                        <TableRow key={n.id}>
+                          <TableCell className="font-medium">{n.name}</TableCell>
+                          <TableCell>{churches.filter(c => c.ministry_network_id === n.id).length}</TableCell>
+                          <TableCell><Badge variant={n.is_active ? "default" : "destructive"}>{n.is_active ? "Ativa" : "Inativa"}</Badge></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 )}
               </CardContent>
             </Card>
@@ -522,11 +490,7 @@ export default function Master() {
                 <CardContent>
                   <div className="space-y-2 max-h-[60vh] overflow-y-auto">
                     {churches.map(c => (
-                      <button
-                        key={c.id}
-                        onClick={() => setSelectedChurch(c.id)}
-                        className={`w-full text-left p-3 rounded-lg border transition-colors ${selectedChurch === c.id ? "bg-primary/10 border-primary" : "hover:bg-muted/50"}`}
-                      >
+                      <button key={c.id} onClick={() => setSelectedChurch(c.id)} className={`w-full text-left p-3 rounded-lg border transition-colors ${selectedChurch === c.id ? "bg-primary/10 border-primary" : "hover:bg-muted/50"}`}>
                         <p className="font-medium text-sm">{c.name}</p>
                         <p className="text-xs text-muted-foreground">Plano: {c.plan} · {c.member_count} membros</p>
                       </button>
@@ -534,56 +498,34 @@ export default function Master() {
                   </div>
                 </CardContent>
               </Card>
-
               <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg"><Bot className="w-5 h-5" /> Recursos de IA</CardTitle>
                   <CardDescription>{selectedChurch ? churches.find(c => c.id === selectedChurch)?.name : "Selecione uma igreja"}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {!selectedChurch ? (
-                    <p className="text-muted-foreground text-center py-8">Selecione uma igreja</p>
-                  ) : featuresLoading ? (
-                    <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
-                  ) : features ? (
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between p-4 rounded-lg border">
-                        <div>
-                          <p className="font-medium">IA Habilitada (permanente)</p>
-                          <p className="text-sm text-muted-foreground">Libera todos os recursos de IA</p>
+                  {!selectedChurch ? <p className="text-muted-foreground text-center py-8">Selecione uma igreja</p>
+                    : featuresLoading ? <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
+                    : features ? (
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between p-4 rounded-lg border">
+                          <div><p className="font-medium">IA Habilitada</p><p className="text-sm text-muted-foreground">Libera todos os recursos de IA</p></div>
+                          <Switch checked={features.ai_enabled} onCheckedChange={checked => setFeatures({ ...features, ai_enabled: checked })} />
                         </div>
-                        <Switch checked={features.ai_enabled} onCheckedChange={(checked) => setFeatures({ ...features, ai_enabled: checked })} />
-                      </div>
-                      <div className="flex items-center justify-between p-4 rounded-lg border">
-                        <div>
-                          <p className="font-medium">Trial Ativo</p>
-                          <p className="text-sm text-muted-foreground">
-                            {features.ai_trial_enabled && features.ai_trial_end
-                              ? `Válido até: ${new Date(features.ai_trial_end).toLocaleDateString("pt-BR")}`
-                              : "Sem trial ativo"}
-                          </p>
+                        <div className="flex items-center justify-between p-4 rounded-lg border">
+                          <div><p className="font-medium">Trial Ativo</p><p className="text-sm text-muted-foreground">{features.ai_trial_enabled && features.ai_trial_end ? `Até: ${new Date(features.ai_trial_end).toLocaleDateString("pt-BR")}` : "Sem trial"}</p></div>
+                          <Switch checked={features.ai_trial_enabled} onCheckedChange={checked => setFeatures({ ...features, ai_trial_enabled: checked })} />
                         </div>
-                        <Switch checked={features.ai_trial_enabled} onCheckedChange={(checked) => setFeatures({ ...features, ai_trial_enabled: checked })} />
-                      </div>
-                      <div className="p-4 rounded-lg border border-dashed space-y-3">
-                        <p className="font-medium flex items-center gap-2"><Calendar className="w-4 h-4" /> Ativar Trial</p>
-                        <div className="flex items-end gap-3">
-                          <div className="space-y-1">
-                            <Label>Dias</Label>
-                            <Input type="number" value={trialDays} onChange={(e) => setTrialDays(Number(e.target.value))} className="w-24" min={1} max={365} />
+                        <div className="p-4 rounded-lg border border-dashed space-y-3">
+                          <p className="font-medium flex items-center gap-2"><Calendar className="w-4 h-4" /> Ativar Trial</p>
+                          <div className="flex items-end gap-3">
+                            <div className="space-y-1"><Label>Dias</Label><Input type="number" value={trialDays} onChange={e => setTrialDays(Number(e.target.value))} className="w-24" min={1} max={365} /></div>
+                            <Button onClick={handleActivateTrial} disabled={saving} variant="outline">{saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Ativar</Button>
                           </div>
-                          <Button onClick={handleActivateTrial} disabled={saving} variant="outline">
-                            {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            Ativar Trial
-                          </Button>
                         </div>
+                        <Button onClick={handleSaveFeatures} disabled={saving} className="w-full">{saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Salvar</Button>
                       </div>
-                      <Button onClick={handleSaveFeatures} disabled={saving} className="w-full">
-                        {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                        Salvar Alterações
-                      </Button>
-                    </div>
-                  ) : null}
+                    ) : null}
                 </CardContent>
               </Card>
             </div>
@@ -594,17 +536,12 @@ export default function Master() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <AlertTriangle className="w-5 h-5 text-destructive" />
-                  Logs da IA
-                  <Button variant="ghost" size="sm" onClick={loadErrorLogs} disabled={logsLoading} className="ml-auto">
-                    {logsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Atualizar"}
-                  </Button>
+                  <AlertTriangle className="w-5 h-5 text-destructive" /> Logs da IA
+                  <Button variant="ghost" size="sm" onClick={loadErrorLogs} disabled={logsLoading} className="ml-auto">{logsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Atualizar"}</Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {errorLogs.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">Nenhum erro registrado.</p>
-                ) : (
+                {errorLogs.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">Nenhum erro.</p> : (
                   <div className="space-y-2 max-h-[400px] overflow-y-auto">
                     {errorLogs.map(log => (
                       <div key={log.id} className="p-3 rounded-lg border text-sm space-y-1">
@@ -623,6 +560,15 @@ export default function Master() {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Delete Confirmation */}
+      <DeleteConfirmModal
+        open={!!deletingChurch}
+        onOpenChange={open => !open && setDeletingChurch(null)}
+        title={`Excluir ${deletingChurch?.name || "igreja"}?`}
+        description={`ATENÇÃO: Esta ação removerá PERMANENTEMENTE a igreja "${deletingChurch?.name}" e TODOS os dados vinculados (membros, células, financeiro, relatórios, etc). Esta ação NÃO pode ser desfeita.`}
+        onConfirm={handleDeleteChurch}
+      />
     </div>
   );
 }
