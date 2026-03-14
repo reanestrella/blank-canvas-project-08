@@ -275,9 +275,11 @@ function CampanhasSection({ churchId }: { churchId: string }) {
 // ─── Identidade Visual App ──────────────────────────────────
 function BrandingSection({ churchId }: { churchId: string }) {
   const { toast } = useToast();
+  const { refreshChurch } = useAuth();
   const [church, setChurch] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -288,6 +290,33 @@ function BrandingSection({ churchId }: { churchId: string }) {
     })();
   }, [churchId]);
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "Erro", description: "Imagem deve ter no máximo 2MB.", variant: "destructive" });
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `${churchId}/logo.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("church-logos").upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("church-logos").getPublicUrl(path);
+      const logoUrl = urlData.publicUrl + "?t=" + Date.now();
+      setChurch({ ...church, logo_url: logoUrl });
+      // Save immediately
+      await supabase.from("churches").update({ logo_url: logoUrl } as any).eq("id", churchId);
+      await refreshChurch();
+      toast({ title: "Logo atualizada!" });
+    } catch (err: any) {
+      toast({ title: "Erro ao enviar logo", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!church) return;
     setSaving(true);
@@ -296,6 +325,7 @@ function BrandingSection({ churchId }: { churchId: string }) {
         logo_url: church.logo_url, primary_color: church.primary_color, secondary_color: church.secondary_color,
       } as any).eq("id", churchId);
       if (error) throw error;
+      await refreshChurch();
       toast({ title: "Visual atualizado!", description: "Logo e cores do App atualizados." });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -317,9 +347,31 @@ function BrandingSection({ churchId }: { churchId: string }) {
         <CardHeader><CardTitle className="flex items-center gap-2"><Image className="w-5 h-5" /> Logo e Cores</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>URL da Logo</Label>
-            <Input value={church.logo_url || ""} onChange={e => setChurch({ ...church, logo_url: e.target.value })} placeholder="https://..." />
-            {church.logo_url && <img src={church.logo_url} alt="Logo" className="w-20 h-20 object-contain rounded border mt-2" />}
+            <Label>Logo da Igreja</Label>
+            <div className="flex items-center gap-4">
+              {church.logo_url ? (
+                <img src={church.logo_url} alt="Logo" className="w-16 h-16 object-contain rounded border" />
+              ) : (
+                <div className="w-16 h-16 rounded border bg-muted flex items-center justify-center">
+                  <Image className="w-8 h-8 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex-1 space-y-2">
+                <div>
+                  <Label htmlFor="logo-upload" className="cursor-pointer">
+                    <Button variant="outline" size="sm" asChild disabled={uploading}>
+                      <span>
+                        {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Image className="w-4 h-4 mr-2" />}
+                        {uploading ? "Enviando..." : "Enviar Imagem"}
+                      </span>
+                    </Button>
+                  </Label>
+                  <input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                </div>
+                <p className="text-xs text-muted-foreground">ou cole uma URL:</p>
+                <Input value={church.logo_url || ""} onChange={e => setChurch({ ...church, logo_url: e.target.value })} placeholder="https://..." className="text-xs" />
+              </div>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
