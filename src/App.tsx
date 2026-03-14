@@ -31,6 +31,7 @@ const Consolidacao = lazy(() => import("./pages/Consolidacao"));
 const Discipulados = lazy(() => import("./pages/Discipulados"));
 const Visitas = lazy(() => import("./pages/Visitas"));
 const Gabinete = lazy(() => import("./pages/Gabinete"));
+const GestaoPastoral = lazy(() => import("./pages/GestaoPastoral"));
 const Lembretes = lazy(() => import("./pages/Lembretes"));
 const Cadastrar = lazy(() => import("./pages/Cadastrar"));
 const Instalar = lazy(() => import("./pages/Instalar"));
