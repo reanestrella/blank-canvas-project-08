@@ -48,7 +48,7 @@ export default function Consolidacao() {
 
   const { profile } = useAuth();
   const churchId = profile?.church_id;
-  const { records, isLoading, createRecord, updateStatus, deleteRecord } = useConsolidation(churchId || undefined);
+  const { records, isLoading, createRecord, updateRecord, updateStatus, deleteRecord } = useConsolidation(churchId || undefined);
   const { members } = useMembers(churchId || undefined);
 
   // Filter records by time period
