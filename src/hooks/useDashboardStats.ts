@@ -45,6 +45,7 @@ interface Alert {
 export function useDashboardStats(congregationId?: string | null) {
   const [members, setMembers] = useState<Member[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [consolidationCount, setConsolidationCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const { currentChurchId } = useAuth();
 
