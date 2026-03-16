@@ -85,6 +85,7 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
         start_date: course?.start_date || "",
         end_date: course?.end_date || "",
         cover_image_url: course?.cover_image_url || "",
+        show_in_app: course?.show_in_app !== undefined ? course.show_in_app : true,
       });
     }
   }, [open, course, form]);
