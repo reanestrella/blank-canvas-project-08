@@ -562,10 +562,36 @@ export default function MeuApp() {
     switch (activeView) {
       case "courses": return <CoursesTab />;
       case "schedules": return <SchedulesView schedules={schedules} onConfirm={handleConfirmSchedule} />;
-      case "contribuicao": return churchId ? <><h3 className="text-lg font-semibold flex items-center gap-2 mb-4"><DollarSign className="w-5 h-5 text-primary" /> Contribuição</h3><ContribuicaoView churchId={churchId} /></> : null;
-      case "campanhas": return <CampanhasAppView churchId={churchId || ""} />;
+      case "contribuicao": return churchId ? (
+        <>
+          <h3 className="text-lg font-semibold flex items-center gap-2 mb-4"><DollarSign className="w-5 h-5 text-primary" /> Doação</h3>
+          <ContribuicaoView churchId={churchId} />
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold flex items-center gap-2 mb-4"><Heart className="w-5 h-5 text-primary" /> Campanhas</h3>
+            <CampanhasAppView churchId={churchId} />
+          </div>
+        </>
+      ) : null;
       case "ministries": return churchId ? <MinistriesView churchId={churchId} /> : null;
       case "cells": return churchId ? <CellsView churchId={churchId} /> : null;
+      case "devocional": return (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2"><Flame className="w-5 h-5 text-primary" /> Devocional</h3>
+          <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Em breve devocioanais diários estarão disponíveis aqui.</p></CardContent></Card>
+        </div>
+      );
+      case "youtube": return (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2"><Video className="w-5 h-5 text-primary" /> YouTube</h3>
+          <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Em breve os vídeos do canal da igreja estarão disponíveis aqui.</p></CardContent></Card>
+        </div>
+      );
+      case "redes-sociais": return (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2"><Users className="w-5 h-5 text-primary" /> Redes Sociais</h3>
+          <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Em breve as redes sociais da igreja estarão integradas aqui.</p></CardContent></Card>
+        </div>
+      );
       case "events": return (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold flex items-center gap-2"><CalendarIcon className="w-5 h-5 text-primary" /> Eventos</h3>
@@ -590,7 +616,7 @@ export default function MeuApp() {
         </div>
       );
       case "profile": return <ProfileEditTab />;
-      default: return renderHome();
+      default: return null;
     }
   };
 
