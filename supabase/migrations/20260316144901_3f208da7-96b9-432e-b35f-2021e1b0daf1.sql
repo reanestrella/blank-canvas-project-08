@@ -1,0 +1,1 @@
+ALTER TABLE public.courses ADD COLUMN IF NOT EXISTS show_in_app boolean NOT NULL DEFAULT true;
