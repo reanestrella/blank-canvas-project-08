@@ -454,6 +454,49 @@ export default function NetworkDashboard() {
             )}
           </>
         )}
+          </TabsContent>
+
+          <TabsContent value="informes" className="mt-4 space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold flex items-center gap-2"><Megaphone className="w-5 h-5 text-primary" /> Informes da Rede</h2>
+              <Button onClick={() => { setEditingAnn(null); setAnnForm({ title: "", content: "" }); setAnnouncementModal(true); }}><Plus className="w-4 h-4 mr-1" /> Novo Informe</Button>
+            </div>
+            {netAnnouncements.length === 0 ? (
+              <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum informe cadastrado.</CardContent></Card>
+            ) : netAnnouncements.map((a: any) => (
+              <Card key={a.id}>
+                <CardContent className="p-4 flex items-start justify-between gap-4">
+                  <div><h4 className="font-semibold">{a.title}</h4><p className="text-sm text-muted-foreground mt-1">{a.content}</p><span className="text-xs text-muted-foreground">{new Date(a.created_at).toLocaleDateString("pt-BR")}</span></div>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <Button variant="ghost" size="icon" onClick={() => { setEditingAnn(a); setAnnForm({ title: a.title, content: a.content }); setAnnouncementModal(true); }}><Edit2 className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => deleteAnnouncement(a.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            <Dialog open={announcementModal} onOpenChange={setAnnouncementModal}>
+              <DialogContent>
+                <DialogHeader><DialogTitle>{editingAnn ? "Editar Informe" : "Novo Informe"}</DialogTitle></DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2"><Label>Título *</Label><Input value={annForm.title} onChange={e => setAnnForm(f => ({ ...f, title: e.target.value }))} /></div>
+                  <div className="space-y-2"><Label>Conteúdo</Label><Textarea value={annForm.content} onChange={e => setAnnForm(f => ({ ...f, content: e.target.value }))} rows={4} /></div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAnnouncementModal(false)}>Cancelar</Button>
+                  <Button onClick={saveAnnouncement} disabled={!annForm.title.trim()}>{editingAnn ? "Salvar" : "Criar"}</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+
+          <TabsContent value="cursos" className="mt-4">
+            <Card><CardContent className="py-8 text-center text-muted-foreground">
+              <GraduationCap className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <p>Gerenciamento de cursos da rede em breve.</p>
+              <p className="text-xs mt-1">Os cursos criados aqui serão disponibilizados para todas as igrejas da rede.</p>
+            </CardContent></Card>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
