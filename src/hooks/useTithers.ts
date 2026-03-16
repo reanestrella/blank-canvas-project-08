@@ -50,9 +50,9 @@ export function useTithers(churchId?: string) {
 
       if (error) throw error;
 
-      // Filter only tithes (Dízimo category)
+      // Filter only tithes (Dízimo/Dizimo category - case insensitive)
       const tithes = (data || []).filter(
-        (tx: any) => tx.category?.name === "Dízimo"
+        (tx: any) => tx.category?.name?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === "dizimo"
       );
 
       // Transform data - parse date as local to avoid timezone issues

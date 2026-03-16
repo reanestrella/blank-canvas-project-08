@@ -36,7 +36,6 @@ import type { FinancialAccount } from "@/hooks/useFinancialAccounts";
 const transactionSchema = z.object({
   type: z.enum(["receita", "despesa"]),
   amount: z.string().min(1, "Valor é obrigatório"),
-  description: z.string().min(2, "Descrição deve ter pelo menos 2 caracteres").max(200),
   transaction_date: z.string().min(1, "Data é obrigatória"),
   category_id: z.string().optional().or(z.literal("")),
   member_id: z.string().optional().or(z.literal("")),
@@ -76,7 +75,6 @@ export function TransactionModal({
     defaultValues: {
       type: defaultType,
       amount: "",
-      description: "",
       transaction_date: new Date().toISOString().split("T")[0],
       category_id: "",
       member_id: "",
@@ -94,7 +92,6 @@ export function TransactionModal({
         form.reset({
           type: transaction.type,
           amount: transaction.amount?.toString() || "",
-          description: transaction.description || "",
           transaction_date: transaction.transaction_date || new Date().toISOString().split("T")[0],
           category_id: transaction.category_id || "",
           member_id: transaction.member_id || "",
@@ -107,7 +104,6 @@ export function TransactionModal({
         form.reset({
           type: defaultType,
           amount: "",
-          description: "",
           transaction_date: new Date().toISOString().split("T")[0],
           category_id: "",
           member_id: "",
@@ -126,10 +122,14 @@ export function TransactionModal({
   const handleSubmit = async (data: TransactionFormData) => {
     setIsSubmitting(true);
     try {
+      // Auto-generate description from category name
+      const selectedCategory = categories.find(c => c.id === data.category_id);
+      const autoDescription = selectedCategory?.name || (data.type === "receita" ? "Receita" : "Despesa");
+      
       const cleanedData: CreateTransactionData = {
         type: data.type,
         amount: parseFloat(data.amount.replace(",", ".")),
-        description: data.description,
+        description: autoDescription,
         transaction_date: data.transaction_date,
         category_id: data.category_id || undefined,
         member_id: data.member_id || undefined,
@@ -223,19 +223,8 @@ export function TransactionModal({
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Dízimo, Oferta, Energia..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+
+
 
             <FormField
               control={form.control}

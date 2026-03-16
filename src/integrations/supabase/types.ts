@@ -252,6 +252,41 @@ export type Database = {
           },
         ]
       }
+      app_module_configs: {
+        Row: {
+          church_id: string
+          config: Json
+          created_at: string
+          id: string
+          module_key: string
+          updated_at: string
+        }
+        Insert: {
+          church_id: string
+          config?: Json
+          created_at?: string
+          id?: string
+          module_key: string
+          updated_at?: string
+        }
+        Update: {
+          church_id?: string
+          config?: Json
+          created_at?: string
+          id?: string
+          module_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_module_configs_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cell_leadership_development: {
         Row: {
           cell_id: string
@@ -2265,6 +2300,47 @@ export type Database = {
             columns: ["ministry_id"]
             isOneToOne: false
             referencedRelation: "ministries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      network_announcements: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          network_id: string
+          title: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          network_id: string
+          title: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          network_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "network_announcements_network_id_fkey"
+            columns: ["network_id"]
+            isOneToOne: false
+            referencedRelation: "ministries_network"
             referencedColumns: ["id"]
           },
         ]

@@ -7,16 +7,23 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Loader2, Building2, Users, Grid3X3, TrendingUp, TrendingDown,
   PiggyBank, AlertTriangle, UserPlus, Network, ArrowLeft,
   BarChart3, DollarSign, ChevronDown, ChevronUp, Wallet,
+  Megaphone, Plus, Edit2, Trash2, GraduationCap,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useToast } from "@/hooks/use-toast";
 
 interface NetworkChurchData {
   id: string;
@@ -46,6 +53,12 @@ export default function NetworkDashboard() {
   const [filterMonth, setFilterMonth] = useState<string>("all");
   const [filterChurch, setFilterChurch] = useState<string>("all");
   const [chartsOpen, setChartsOpen] = useState(false);
+  const [netAnnouncements, setNetAnnouncements] = useState<any[]>([]);
+  const [announcementModal, setAnnouncementModal] = useState(false);
+  const [editingAnn, setEditingAnn] = useState<any>(null);
+  const [annForm, setAnnForm] = useState({ title: "", content: "" });
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const { toast } = useToast();
 
   const userRoles = roles.map(r => r.role);
   const isNetworkUser = userRoles.includes("network_admin" as any) || userRoles.includes("network_finance" as any);
@@ -185,6 +198,39 @@ export default function NetworkDashboard() {
     return items;
   }, [churches]);
 
+  const loadAnnouncements = async () => {
+    if (!networkId) return;
+    const { data } = await supabase.from("network_announcements" as any)
+      .select("*").eq("network_id", networkId).order("created_at", { ascending: false });
+    setNetAnnouncements(data || []);
+  };
+
+  const saveAnnouncement = async () => {
+    if (!annForm.title.trim() || !networkId) return;
+    try {
+      if (editingAnn) {
+        await supabase.from("network_announcements" as any).update({ title: annForm.title, content: annForm.content } as any).eq("id", editingAnn.id);
+      } else {
+        await supabase.from("network_announcements" as any).insert({ network_id: networkId, title: annForm.title, content: annForm.content, created_by: user?.id } as any);
+      }
+      toast({ title: editingAnn ? "Informe atualizado!" : "Informe criado!" });
+      setAnnouncementModal(false);
+      setEditingAnn(null);
+      setAnnForm({ title: "", content: "" });
+      loadAnnouncements();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const deleteAnnouncement = async (id: string) => {
+    await supabase.from("network_announcements" as any).delete().eq("id", id);
+    toast({ title: "Informe removido" });
+    loadAnnouncements();
+  };
+
+  useEffect(() => { if (hasAccess && networkId) loadAnnouncements(); }, [hasAccess, networkId]);
+
   if (isChecking) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (!hasAccess) return <Navigate to="/app" replace />;
@@ -205,6 +251,14 @@ export default function NetworkDashboard() {
       </header>
 
       <main className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="informes"><Megaphone className="w-4 h-4 mr-1" /> Informes</TabsTrigger>
+            <TabsTrigger value="cursos"><GraduationCap className="w-4 h-4 mr-1" /> Cursos</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="dashboard" className="mt-4 space-y-6">
         {/* Filters */}
         <div className="flex flex-wrap gap-3 items-center">
           <Select value={String(filterYear)} onValueChange={v => setFilterYear(Number(v))}>
@@ -400,6 +454,49 @@ export default function NetworkDashboard() {
             )}
           </>
         )}
+          </TabsContent>
+
+          <TabsContent value="informes" className="mt-4 space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold flex items-center gap-2"><Megaphone className="w-5 h-5 text-primary" /> Informes da Rede</h2>
+              <Button onClick={() => { setEditingAnn(null); setAnnForm({ title: "", content: "" }); setAnnouncementModal(true); }}><Plus className="w-4 h-4 mr-1" /> Novo Informe</Button>
+            </div>
+            {netAnnouncements.length === 0 ? (
+              <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum informe cadastrado.</CardContent></Card>
+            ) : netAnnouncements.map((a: any) => (
+              <Card key={a.id}>
+                <CardContent className="p-4 flex items-start justify-between gap-4">
+                  <div><h4 className="font-semibold">{a.title}</h4><p className="text-sm text-muted-foreground mt-1">{a.content}</p><span className="text-xs text-muted-foreground">{new Date(a.created_at).toLocaleDateString("pt-BR")}</span></div>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <Button variant="ghost" size="icon" onClick={() => { setEditingAnn(a); setAnnForm({ title: a.title, content: a.content }); setAnnouncementModal(true); }}><Edit2 className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => deleteAnnouncement(a.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            <Dialog open={announcementModal} onOpenChange={setAnnouncementModal}>
+              <DialogContent>
+                <DialogHeader><DialogTitle>{editingAnn ? "Editar Informe" : "Novo Informe"}</DialogTitle></DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2"><Label>Título *</Label><Input value={annForm.title} onChange={e => setAnnForm(f => ({ ...f, title: e.target.value }))} /></div>
+                  <div className="space-y-2"><Label>Conteúdo</Label><Textarea value={annForm.content} onChange={e => setAnnForm(f => ({ ...f, content: e.target.value }))} rows={4} /></div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAnnouncementModal(false)}>Cancelar</Button>
+                  <Button onClick={saveAnnouncement} disabled={!annForm.title.trim()}>{editingAnn ? "Salvar" : "Criar"}</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+
+          <TabsContent value="cursos" className="mt-4">
+            <Card><CardContent className="py-8 text-center text-muted-foreground">
+              <GraduationCap className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <p>Gerenciamento de cursos da rede em breve.</p>
+              <p className="text-xs mt-1">Os cursos criados aqui serão disponibilizados para todas as igrejas da rede.</p>
+            </CardContent></Card>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
