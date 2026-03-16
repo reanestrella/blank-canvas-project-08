@@ -80,16 +80,22 @@ export default function NetworkDashboard() {
 
       const enriched: NetworkChurchData[] = await Promise.all(
         (churchesRaw as any[]).map(async (ch) => {
-          const [members, cells, visitors, transactions] = await Promise.all([
-            supabase.from("members").select("id", { count: "exact", head: true }).eq("church_id", ch.id).eq("is_active", true),
+          const [membersData, cells, transactions, consolidation] = await Promise.all([
+            supabase.from("members").select("id, spiritual_status, baptism_date, is_active").eq("church_id", ch.id),
             supabase.from("cells").select("id", { count: "exact", head: true }).eq("church_id", ch.id).eq("is_active", true),
-            supabase.from("cell_visitors").select("id", { count: "exact", head: true }).eq("church_id", ch.id).gte("visit_date", dateFrom).lte("visit_date", dateTo),
             supabase.from("financial_transactions").select("type, amount").eq("church_id", ch.id).gte("transaction_date", dateFrom).lte("transaction_date", dateTo),
+            supabase.from("consolidation_records").select("id", { count: "exact", head: true }).eq("church_id", ch.id).in("status", ["contato", "acompanhamento", "integracao"]),
           ]);
+          const activeMembers = ((membersData.data || []) as any[]).filter(m => m.is_active);
           const txs = (transactions.data || []) as any[];
           return {
             id: ch.id, name: ch.name, is_active: ch.is_active,
-            member_count: members.count || 0, cell_count: cells.count || 0, visitor_count: visitors.count || 0,
+            member_count: activeMembers.filter(m => m.spiritual_status === "membro" || m.spiritual_status === "lider" || m.spiritual_status === "discipulador").length,
+            cell_count: cells.count || 0,
+            visitor_count: activeMembers.filter(m => m.spiritual_status === "visitante").length,
+            decidido_count: activeMembers.filter(m => m.spiritual_status === "novo_convertido").length,
+            baptized_count: activeMembers.filter(m => m.baptism_date !== null).length,
+            consolidation_count: consolidation.count || 0,
             income: txs.filter(t => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0),
             expense: txs.filter(t => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0),
           };
