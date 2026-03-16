@@ -440,6 +440,152 @@ function CellsView({ churchId }: { churchId: string }) {
   );
 }
 
+// ─── Igreja View ──────────────────────────────────
+function IgrejaView({ churchId, church }: { churchId: string; church: any }) {
+  const [config, setConfig] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const { data } = await supabase.from("app_module_configs" as any)
+        .select("config").eq("church_id", churchId).eq("module_key", "igreja").maybeSingle();
+      setConfig((data as any)?.config || {});
+      setLoading(false);
+    })();
+  }, [churchId]);
+
+  if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold flex items-center gap-2"><Church className="w-5 h-5 text-primary" /> Nossa Igreja</h3>
+      <Card>
+        <CardContent className="p-4 space-y-3">
+          {church?.logo_url && (
+            <div className="flex justify-center">
+              <img src={church.logo_url} alt="" className="w-24 h-24 object-contain rounded-xl" />
+            </div>
+          )}
+          <h4 className="text-lg font-bold text-center">{church?.name || "Igreja"}</h4>
+          {config?.pastor_name && (
+            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Pastor:</span><span className="font-medium">{config.pastor_name}</span></div>
+          )}
+          {(church?.address || config?.address) && (
+            <div className="flex items-start gap-2 text-sm"><MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" /><span>{config?.address || church.address}</span></div>
+          )}
+          {(church?.phone || config?.phone) && (
+            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Telefone:</span><span>{config?.phone || church.phone}</span></div>
+          )}
+          {(church?.email || config?.email) && (
+            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Email:</span><span>{config?.email || church.email}</span></div>
+          )}
+          {config?.schedule && (
+            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Horários:</span><span>{config.schedule}</span></div>
+          )}
+          {config?.about && (
+            <div className="mt-3 pt-3 border-t">
+              <p className="text-sm text-muted-foreground">{config.about}</p>
+            </div>
+          )}
+          {!config?.pastor_name && !config?.about && !church?.address && (
+            <p className="text-center text-muted-foreground text-sm py-4">Informações da igreja ainda não foram configuradas.</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ─── YouTube View ──────────────────────────────────
+function YoutubeView({ churchId }: { churchId: string }) {
+  const [config, setConfig] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const { data } = await supabase.from("app_module_configs" as any)
+        .select("config").eq("church_id", churchId).eq("module_key", "youtube").maybeSingle();
+      setConfig((data as any)?.config || {});
+      setLoading(false);
+    })();
+  }, [churchId]);
+
+  if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold flex items-center gap-2"><Video className="w-5 h-5 text-primary" /> YouTube</h3>
+      {config?.channel_url ? (
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <a href={config.channel_url} target="_blank" rel="noopener noreferrer" className="text-primary underline text-sm font-medium">
+              Acessar Canal no YouTube →
+            </a>
+            {config.description && <p className="text-sm text-muted-foreground">{config.description}</p>}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Canal do YouTube ainda não foi configurado.</p></CardContent></Card>
+      )}
+    </div>
+  );
+}
+
+// ─── Redes Sociais View ──────────────────────────────────
+function RedesSociaisView({ churchId }: { churchId: string }) {
+  const [config, setConfig] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const { data } = await supabase.from("app_module_configs" as any)
+        .select("config").eq("church_id", churchId).eq("module_key", "redes_sociais").maybeSingle();
+      setConfig((data as any)?.config || {});
+      setLoading(false);
+    })();
+  }, [churchId]);
+
+  if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+
+  const links = [
+    { key: "instagram", label: "Instagram", icon: "📸" },
+    { key: "facebook", label: "Facebook", icon: "📘" },
+    { key: "tiktok", label: "TikTok", icon: "🎵" },
+    { key: "twitter", label: "X (Twitter)", icon: "🐦" },
+    { key: "website", label: "Site", icon: "🌐" },
+  ];
+
+  const hasAny = links.some(l => config?.[l.key]);
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold flex items-center gap-2"><Users className="w-5 h-5 text-primary" /> Redes Sociais</h3>
+      {hasAny ? (
+        <div className="space-y-3">
+          {links.filter(l => config?.[l.key]).map(l => (
+            <Card key={l.key}>
+              <CardContent className="p-4">
+                <a href={config[l.key]} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3">
+                  <span className="text-xl">{l.icon}</span>
+                  <div>
+                    <p className="font-medium text-sm">{l.label}</p>
+                    <p className="text-xs text-primary truncate">{config[l.key]}</p>
+                  </div>
+                </a>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Redes sociais ainda não foram configuradas.</p></CardContent></Card>
+      )}
+    </div>
+  );
+}
+
 // ─── Shortcut Button ──────────────────────────────────
 function ShortcutButton({ icon: Icon, label, onClick, variant = "dark" }: { icon: any; label: string; onClick: () => void; variant?: "light" | "dark" }) {
   if (variant === "light") {
