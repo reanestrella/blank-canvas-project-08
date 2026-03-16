@@ -161,6 +161,7 @@ export function useTithers(churchId?: string) {
 
   return {
     tithers,
+    rawData,
     months,
     monthlyTotals,
     stats,

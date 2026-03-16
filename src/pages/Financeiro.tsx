@@ -113,11 +113,14 @@ export default function Financeiro() {
 
       if (periodMode === "all") return true;
 
-      const d = new Date(tx.transaction_date);
-      if (periodMode === "year") return d.getFullYear() === filterYear;
+      // Parse date as local to avoid timezone shift
+      const parts = tx.transaction_date.split("-");
+      const txYear = parseInt(parts[0]);
+      const txMonth = parseInt(parts[1]) - 1; // 0-indexed
+      if (periodMode === "year") return txYear === filterYear;
 
       // month
-      return d.getFullYear() === filterYear && d.getMonth() === filterMonth;
+      return txYear === filterYear && txMonth === filterMonth;
     });
   }, [transactions, periodMode, filterMonth, filterYear, accountFilter]);
 

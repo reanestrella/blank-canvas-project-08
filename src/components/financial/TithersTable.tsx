@@ -125,14 +125,14 @@ export function TithersTable({ tithers, months }: TithersTableProps) {
                       <Badge
                         variant="outline"
                         className={cn(
-                          tither.months_paid >= 10
+                          tither.months_paid >= 6
                             ? "text-success border-success/30 bg-success/10"
-                            : tither.months_paid >= 6
+                            : tither.months_paid >= 3
                             ? "text-amber-600 border-amber-500/30 bg-amber-500/10"
                             : "text-muted-foreground"
                         )}
                       >
-                        {tither.months_paid}/12 meses
+                        {tither.months_paid} meses
                       </Badge>
                     </TableCell>
                   </TableRow>
