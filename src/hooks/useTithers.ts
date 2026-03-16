@@ -129,9 +129,12 @@ export function useTithers(churchId?: string) {
       const total = rawData
         .filter((d) => d.month === month)
         .reduce((sum, d) => sum + d.total, 0);
+      // Parse month string as local date to avoid timezone issues
+      const [y, m] = month.split("-");
+      const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
       return {
         month,
-        label: format(new Date(month + "-01"), "MMM"),
+        label: monthNames[parseInt(m) - 1],
         total,
       };
     });
