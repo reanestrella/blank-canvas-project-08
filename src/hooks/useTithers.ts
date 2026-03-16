@@ -6,6 +6,8 @@ export interface TitherData {
   member_id: string;
   member_name: string;
   month: string;
+  year: number;
+  monthNum: number; // 0-indexed
   total: number;
 }
 
