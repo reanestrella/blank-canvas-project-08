@@ -140,7 +140,7 @@ export function useTithers(churchId?: string) {
     const totalTithers = tithers.length;
     const totalAmount = tithers.reduce((sum, t) => sum + t.total_year, 0);
     const averagePerTither = totalTithers > 0 ? totalAmount / totalTithers : 0;
-    const regularTithers = tithers.filter((t) => t.months_paid >= 6).length;
+    const regularTithers = tithers.filter((t) => t.months_paid >= 3).length;
 
     return {
       totalTithers,
