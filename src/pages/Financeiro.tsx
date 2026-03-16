@@ -381,7 +381,7 @@ export default function Financeiro() {
                       {filteredTransactions.map((tx) => (
                         <TableRow key={tx.id}>
                           <TableCell>
-                            {new Date(tx.transaction_date).toLocaleDateString("pt-BR")}
+                            {new Date(tx.transaction_date + "T12:00:00").toLocaleDateString("pt-BR")}
                           </TableCell>
                           <TableCell className="font-medium">{tx.description}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">
