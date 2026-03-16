@@ -445,13 +445,23 @@ export default function Financeiro() {
 
           {/* Tithers Tab */}
           <TabsContent value="tithers" className="space-y-6 mt-6">
+            {/* Tither Period Filters */}
+            <FinancialFilters
+              mode={titherPeriodMode}
+              month={titherMonth}
+              year={titherYear}
+              onModeChange={setTitherPeriodMode}
+              onMonthChange={setTitherMonth}
+              onYearChange={setTitherYear}
+            />
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="stat-card">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Total Dizimistas</p>
                     <p className="text-2xl font-bold mt-1">{titherStats.totalTithers}</p>
-                    <p className="text-xs mt-1 text-muted-foreground">Nos últimos 12 meses</p>
+                    <p className="text-xs mt-1 text-muted-foreground">No período selecionado</p>
                   </div>
                   <div className="p-3 rounded-xl bg-primary/10 text-primary">
                     <Users className="w-5 h-5" />
@@ -465,7 +475,7 @@ export default function Financeiro() {
                     <p className="text-2xl font-bold mt-1">
                       R$ {titherStats.totalAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </p>
-                    <p className="text-xs mt-1 text-success">Acumulado do ano</p>
+                    <p className="text-xs mt-1 text-success">Acumulado do período</p>
                   </div>
                   <div className="p-3 rounded-xl bg-success/10 text-success">
                     <Heart className="w-5 h-5" />
@@ -479,7 +489,7 @@ export default function Financeiro() {
                     <p className="text-2xl font-bold mt-1">
                       R$ {titherStats.averagePerTither.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </p>
-                    <p className="text-xs mt-1 text-muted-foreground">Anual</p>
+                    <p className="text-xs mt-1 text-muted-foreground">No período</p>
                   </div>
                   <div className="p-3 rounded-xl bg-secondary/10 text-secondary">
                     <Target className="w-5 h-5" />
@@ -491,7 +501,7 @@ export default function Financeiro() {
                   <div>
                     <p className="text-sm text-muted-foreground">Dizimistas Regulares</p>
                     <p className="text-2xl font-bold mt-1">{titherStats.regularTithers}</p>
-                    <p className="text-xs mt-1 text-muted-foreground">6+ meses de contribuição</p>
+                    <p className="text-xs mt-1 text-muted-foreground">3+ meses de contribuição</p>
                   </div>
                   <div className="p-3 rounded-xl bg-accent/10 text-accent-foreground">
                     <TrendingUp className="w-5 h-5" />
@@ -506,8 +516,8 @@ export default function Financeiro() {
               </div>
             ) : (
               <>
-                <TithersChart data={monthlyTotals} />
-                <TithersTable tithers={tithers} months={months} />
+                <TithersChart data={allMonthlyTotals} />
+                <TithersTable tithers={filteredTithers} months={months} />
               </>
             )}
           </TabsContent>
