@@ -116,6 +116,9 @@ export default function NetworkDashboard() {
     members: displayChurches.reduce((s, c) => s + c.member_count, 0),
     cells: displayChurches.reduce((s, c) => s + c.cell_count, 0),
     visitors: displayChurches.reduce((s, c) => s + c.visitor_count, 0),
+    decididos: displayChurches.reduce((s, c) => s + c.decidido_count, 0),
+    baptized: displayChurches.reduce((s, c) => s + c.baptized_count, 0),
+    consolidation: displayChurches.reduce((s, c) => s + c.consolidation_count, 0),
     income: displayChurches.reduce((s, c) => s + c.income, 0),
     expense: displayChurches.reduce((s, c) => s + c.expense, 0),
   }), [displayChurches]);
