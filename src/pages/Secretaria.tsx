@@ -104,6 +104,17 @@ export default function Secretaria() {
   // Stats by type
   const stats = useMemo(() => {
     const activeMembers = members.filter(m => m.is_active);
+    
+    // Build dynamic network counts from actual data
+    const networkCounts: Record<string, number> = {};
+    activeMembers.forEach(m => {
+      if (m.network) {
+        networkCounts[m.network] = (networkCounts[m.network] || 0) + 1;
+      }
+    });
+    // Also count members without a network
+    const withoutNetwork = activeMembers.filter(m => !m.network).length;
+    
     return {
       total: activeMembers.length,
       membros: activeMembers.filter(m => 
@@ -114,12 +125,8 @@ export default function Secretaria() {
       decididos: activeMembers.filter(m => m.spiritual_status === "novo_convertido").length,
       visitantes: activeMembers.filter(m => m.spiritual_status === "visitante").length,
       batizados: activeMembers.filter(m => m.baptism_date !== null).length,
-      networks: {
-        homens: activeMembers.filter(m => m.network === "homens").length,
-        mulheres: activeMembers.filter(m => m.network === "mulheres").length,
-        jovens: activeMembers.filter(m => m.network === "jovens").length,
-        kids: activeMembers.filter(m => m.network === "kids").length,
-      }
+      networks: networkCounts,
+      withoutNetwork,
     };
   }, [members]);
 
