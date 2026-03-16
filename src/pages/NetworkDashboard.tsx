@@ -196,6 +196,46 @@ export default function NetworkDashboard() {
   if (!user) return <Navigate to="/login" replace />;
   if (!hasAccess) return <Navigate to="/app" replace />;
 
+  // Network announcements state
+  const [netAnnouncements, setNetAnnouncements] = useState<any[]>([]);
+  const [announcementModal, setAnnouncementModal] = useState(false);
+  const [editingAnn, setEditingAnn] = useState<any>(null);
+  const [annForm, setAnnForm] = useState({ title: "", content: "" });
+  const [activeTab, setActiveTab] = useState("dashboard");
+
+  const loadAnnouncements = async () => {
+    if (!networkId) return;
+    const { data } = await supabase.from("network_announcements" as any)
+      .select("*").eq("network_id", networkId).order("created_at", { ascending: false });
+    setNetAnnouncements(data || []);
+  };
+
+  const saveAnnouncement = async () => {
+    if (!annForm.title.trim() || !networkId) return;
+    try {
+      if (editingAnn) {
+        await supabase.from("network_announcements" as any).update({ title: annForm.title, content: annForm.content } as any).eq("id", editingAnn.id);
+      } else {
+        await supabase.from("network_announcements" as any).insert({ network_id: networkId, title: annForm.title, content: annForm.content, created_by: user?.id } as any);
+      }
+      toast({ title: editingAnn ? "Informe atualizado!" : "Informe criado!" });
+      setAnnouncementModal(false);
+      setEditingAnn(null);
+      setAnnForm({ title: "", content: "" });
+      loadAnnouncements();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const deleteAnnouncement = async (id: string) => {
+    await supabase.from("network_announcements" as any).delete().eq("id", id);
+    toast({ title: "Informe removido" });
+    loadAnnouncements();
+  };
+
+  useEffect(() => { if (hasAccess && networkId) loadAnnouncements(); }, [hasAccess, networkId]);
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b bg-card/95 backdrop-blur px-4 md:px-6 py-3 flex items-center justify-between">
@@ -212,6 +252,14 @@ export default function NetworkDashboard() {
       </header>
 
       <main className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="informes"><Megaphone className="w-4 h-4 mr-1" /> Informes</TabsTrigger>
+            <TabsTrigger value="cursos"><GraduationCap className="w-4 h-4 mr-1" /> Cursos</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="dashboard" className="mt-4 space-y-6">
         {/* Filters */}
         <div className="flex flex-wrap gap-3 items-center">
           <Select value={String(filterYear)} onValueChange={v => setFilterYear(Number(v))}>
