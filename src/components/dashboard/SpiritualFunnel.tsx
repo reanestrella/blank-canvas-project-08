@@ -30,6 +30,7 @@ export function SpiritualFunnel() {
       { label: "Visitantes", value: stats.totalVisitantes, color: "bg-muted-foreground" },
       { label: "Decididos", value: stats.totalDecididos, color: "bg-success" },
       { label: "Batizados", value: baptizedInPeriod, color: "bg-info" },
+      { label: "Membros", value: stats.totalMembers, color: "bg-primary" },
     ];
   }, [members, stats, periodMode, filterMonth, filterYear]);
 

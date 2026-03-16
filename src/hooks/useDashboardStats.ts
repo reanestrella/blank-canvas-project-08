@@ -169,12 +169,15 @@ export function useDashboardStats(congregationId?: string | null) {
     const totalVisitantes = activeMembers.filter(m => m.spiritual_status === "visitante").length;
     const totalBaptized = activeMembers.filter(m => m.baptism_date !== null).length;
 
-    // Network stats - match Secretaria (lines 117-122)
+    // Network stats - count only "membros" (membro/lider/discipulador) to match Secretaria
+    const membrosForNetwork = activeMembers.filter(m =>
+      m.spiritual_status === "membro" || m.spiritual_status === "lider" || m.spiritual_status === "discipulador"
+    );
     const networkStats = {
-      homens: activeMembers.filter(m => m.network === "homens").length,
-      mulheres: activeMembers.filter(m => m.network === "mulheres").length,
-      jovens: activeMembers.filter(m => m.network === "jovens").length,
-      kids: activeMembers.filter(m => m.network === "kids").length,
+      homens: membrosForNetwork.filter(m => m.network === "homens").length,
+      mulheres: membrosForNetwork.filter(m => m.network === "mulheres").length,
+      jovens: membrosForNetwork.filter(m => m.network === "jovens").length,
+      kids: membrosForNetwork.filter(m => m.network === "kids").length,
     };
 
     // Birthday calculations
