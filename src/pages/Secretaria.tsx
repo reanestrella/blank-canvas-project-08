@@ -90,7 +90,7 @@ export default function Secretaria() {
       }
 
       // Network filter
-      const matchesNetwork = networkFilter === "all" || member.network === networkFilter;
+      const matchesNetwork = networkFilter === "all" || (networkFilter === "__none" ? !member.network : member.network === networkFilter);
 
       // Congregation filter
       const matchesCongregation = !selectedCongregation || 
