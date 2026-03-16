@@ -443,12 +443,16 @@ export default function GestaoApp() {
         <Tabs defaultValue="branding">
           <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="branding"><Palette className="w-4 h-4 mr-1" /> Visual</TabsTrigger>
+            <TabsTrigger value="modulos"><Smartphone className="w-4 h-4 mr-1" /> Módulos</TabsTrigger>
             <TabsTrigger value="contribuicao"><QrCode className="w-4 h-4 mr-1" /> Contribuição App</TabsTrigger>
             <TabsTrigger value="campanhas"><Target className="w-4 h-4 mr-1" /> Campanhas</TabsTrigger>
           </TabsList>
 
           <TabsContent value="branding" className="mt-6">
             <BrandingSection churchId={churchId} />
+          </TabsContent>
+          <TabsContent value="modulos" className="mt-6">
+            <ModulosSection />
           </TabsContent>
           <TabsContent value="contribuicao" className="mt-6">
             <ContribuicaoSection churchId={churchId} />
