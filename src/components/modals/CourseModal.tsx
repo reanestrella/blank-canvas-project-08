@@ -71,7 +71,7 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
   const form = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
     defaultValues: {
-      name: "", description: "", track: "", teacher_id: "", start_date: "", end_date: "", cover_image_url: "",
+      name: "", description: "", track: "", teacher_id: "", start_date: "", end_date: "", cover_image_url: "", show_in_app: true,
     },
   });
 
