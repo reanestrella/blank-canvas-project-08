@@ -50,7 +50,7 @@ export function useDashboardStats(congregationId?: string | null) {
   const [consolidationCount, setConsolidationCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [hasFetched, setHasFetched] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<Record<string, any>>({});
+  
   const { currentChurchId } = useAuth();
 
   useEffect(() => {
