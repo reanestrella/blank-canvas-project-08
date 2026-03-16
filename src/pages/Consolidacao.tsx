@@ -164,6 +164,16 @@ export default function Consolidacao() {
     setEditingRecord(null);
   };
 
+  const handleRegisterReturn = async (record: ConsolidationRecord) => {
+    const currentCount = (record as any).visit_count || 1;
+    const today = new Date().toISOString().split("T")[0];
+    await updateRecord(record.id, {
+      visit_count: currentCount + 1,
+      last_visit_date: today,
+      notes: `${record.notes || ""}\n[${today}] Retorno registrado (visita #${currentCount + 1})`.trim(),
+    } as any);
+  };
+
   if (!churchId) return null;
 
   const funnelSteps = [
