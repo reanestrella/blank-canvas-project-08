@@ -122,10 +122,14 @@ export function TransactionModal({
   const handleSubmit = async (data: TransactionFormData) => {
     setIsSubmitting(true);
     try {
+      // Auto-generate description from category name
+      const selectedCategory = categories.find(c => c.id === data.category_id);
+      const autoDescription = selectedCategory?.name || (data.type === "receita" ? "Receita" : "Despesa");
+      
       const cleanedData: CreateTransactionData = {
         type: data.type,
         amount: parseFloat(data.amount.replace(",", ".")),
-        description: data.description,
+        description: autoDescription,
         transaction_date: data.transaction_date,
         category_id: data.category_id || undefined,
         member_id: data.member_id || undefined,
