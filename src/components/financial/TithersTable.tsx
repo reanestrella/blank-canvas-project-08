@@ -26,10 +26,14 @@ export function TithersTable({ tithers, months }: TithersTableProps) {
   const [search, setSearch] = useState("");
 
   const displayMonths = useMemo(() => {
-    return months.slice(-6).map((m) => ({
-      key: m,
-      label: format(new Date(m + "-01"), "MMM", { locale: ptBR }),
-    }));
+    return months.slice(-6).map((m) => {
+      const [y, mo] = m.split("-");
+      const monthNames = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+      return {
+        key: m,
+        label: monthNames[parseInt(mo) - 1],
+      };
+    });
   }, [months]);
 
   const filteredTithers = useMemo(() => {
