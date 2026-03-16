@@ -10,10 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import {
   Smartphone, QrCode, DollarSign, Save, Loader2, Palette, Image,
-  Plus, Edit2, Trash2, Target, Megaphone,
+  Plus, Edit2, Trash2, Target, Megaphone, ArrowLeft,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -306,7 +306,6 @@ function BrandingSection({ churchId }: { churchId: string }) {
       const { data: urlData } = supabase.storage.from("church-logos").getPublicUrl(path);
       const logoUrl = urlData.publicUrl + "?t=" + Date.now();
       setChurch({ ...church, logo_url: logoUrl });
-      // Save immediately
       await supabase.from("churches").update({ logo_url: logoUrl } as any).eq("id", churchId);
       await refreshChurch();
       toast({ title: "Logo atualizada!" });
@@ -417,7 +416,7 @@ function BrandingSection({ churchId }: { churchId: string }) {
   );
 }
 
-// ─── Módulos do App com Edição ──────────────────────────────────────────
+// ─── Módulos do App com Edição em Página ──────────────────────────────────────────
 function ModulosSection({ churchId }: { churchId: string }) {
   const { toast } = useToast();
   const [editingModule, setEditingModule] = useState<string | null>(null);
@@ -429,6 +428,15 @@ function ModulosSection({ churchId }: { churchId: string }) {
   const [igrejaForm, setIgrejaForm] = useState({ pastor_name: "", address: "", phone: "", email: "", schedule: "", about: "" });
   const [youtubeForm, setYoutubeForm] = useState({ channel_url: "", description: "" });
   const [redesForm, setRedesForm] = useState({ instagram: "", facebook: "", tiktok: "", twitter: "", website: "" });
+  const [devocionalForm, setDevocionalForm] = useState({ title: "", content: "", emoji: "🙏" });
+  const [eventosForm, setEventosForm] = useState({ description: "", emoji: "📅" });
+  const [muralForm, setMuralForm] = useState({ description: "", emoji: "🙏" });
+  const [escalasForm, setEscalasForm] = useState({ description: "", emoji: "⏰" });
+  const [cursosForm, setCursosForm] = useState({ description: "", emoji: "🎓" });
+  const [celulasForm, setCelulasForm] = useState({ description: "", emoji: "⬛" });
+  const [ministeriosForm, setMinisteriosForm] = useState({ description: "", emoji: "🔥" });
+  const [doacaoForm, setDoacaoForm] = useState({ description: "", emoji: "🤲" });
+  const [perfilForm, setPerfilForm] = useState({ description: "", emoji: "👤" });
 
   useEffect(() => {
     (async () => {
@@ -442,6 +450,15 @@ function ModulosSection({ churchId }: { churchId: string }) {
       if (map.igreja) setIgrejaForm({ pastor_name: map.igreja.pastor_name || "", address: map.igreja.address || "", phone: map.igreja.phone || "", email: map.igreja.email || "", schedule: map.igreja.schedule || "", about: map.igreja.about || "" });
       if (map.youtube) setYoutubeForm({ channel_url: map.youtube.channel_url || "", description: map.youtube.description || "" });
       if (map.redes_sociais) setRedesForm({ instagram: map.redes_sociais.instagram || "", facebook: map.redes_sociais.facebook || "", tiktok: map.redes_sociais.tiktok || "", twitter: map.redes_sociais.twitter || "", website: map.redes_sociais.website || "" });
+      if (map.devocional) setDevocionalForm({ title: map.devocional.title || "", content: map.devocional.content || "", emoji: map.devocional.emoji || "🙏" });
+      if (map.eventos) setEventosForm({ description: map.eventos.description || "", emoji: map.eventos.emoji || "📅" });
+      if (map.mural_oracoes) setMuralForm({ description: map.mural_oracoes.description || "", emoji: map.mural_oracoes.emoji || "🙏" });
+      if (map.escalas) setEscalasForm({ description: map.escalas.description || "", emoji: map.escalas.emoji || "⏰" });
+      if (map.cursos) setCursosForm({ description: map.cursos.description || "", emoji: map.cursos.emoji || "🎓" });
+      if (map.celulas) setCelulasForm({ description: map.celulas.description || "", emoji: map.celulas.emoji || "⬛" });
+      if (map.ministerios) setMinisteriosForm({ description: map.ministerios.description || "", emoji: map.ministerios.emoji || "🔥" });
+      if (map.doacao) setDoacaoForm({ description: map.doacao.description || "", emoji: map.doacao.emoji || "🤲" });
+      if (map.perfil) setPerfilForm({ description: map.perfil.description || "", emoji: map.perfil.emoji || "👤" });
       setLoading(false);
     })();
   }, [churchId]);
@@ -475,9 +492,135 @@ function ModulosSection({ churchId }: { churchId: string }) {
     { key: "perfil", label: "Meu Perfil", icon: "👤" },
   ];
 
-  const editableModules = ["igreja", "youtube", "redes_sociais"];
+  const getFormForModule = (key: string) => {
+    switch (key) {
+      case "igreja": return igrejaForm;
+      case "youtube": return youtubeForm;
+      case "redes_sociais": return redesForm;
+      case "devocional": return devocionalForm;
+      case "eventos": return eventosForm;
+      case "mural_oracoes": return muralForm;
+      case "escalas": return escalasForm;
+      case "cursos": return cursosForm;
+      case "celulas": return celulasForm;
+      case "ministerios": return ministeriosForm;
+      case "doacao": return doacaoForm;
+      case "perfil": return perfilForm;
+      default: return {};
+    }
+  };
 
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+
+  // If editing a module, show full-page editor
+  if (editingModule) {
+    const mod = modules.find(m => m.key === editingModule);
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => setEditingModule(null)}>
+          <ArrowLeft className="w-4 h-4 mr-1" /> Voltar aos Módulos
+        </Button>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <span className="text-xl">{mod?.icon}</span> Configurar: {mod?.label}
+            </CardTitle>
+            <CardDescription>Dados que aparecem quando o membro acessa "{mod?.label}" no App</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {editingModule === "igreja" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>Nome do Pastor</Label><Input value={igrejaForm.pastor_name} onChange={e => setIgrejaForm(f => ({ ...f, pastor_name: e.target.value }))} placeholder="Pr. João Silva" /></div>
+                <div className="space-y-2"><Label>Telefone</Label><Input value={igrejaForm.phone} onChange={e => setIgrejaForm(f => ({ ...f, phone: e.target.value }))} placeholder="(00) 00000-0000" /></div>
+                <div className="space-y-2"><Label>Email</Label><Input value={igrejaForm.email} onChange={e => setIgrejaForm(f => ({ ...f, email: e.target.value }))} placeholder="contato@igreja.com" /></div>
+                <div className="space-y-2"><Label>Horários de Culto</Label><Input value={igrejaForm.schedule} onChange={e => setIgrejaForm(f => ({ ...f, schedule: e.target.value }))} placeholder="Dom 9h e 18h / Qua 19h30" /></div>
+                <div className="space-y-2 md:col-span-2"><Label>Endereço</Label><Input value={igrejaForm.address} onChange={e => setIgrejaForm(f => ({ ...f, address: e.target.value }))} placeholder="Rua, número, bairro, cidade" /></div>
+                <div className="space-y-2 md:col-span-2"><Label>Sobre a Igreja</Label><Textarea value={igrejaForm.about} onChange={e => setIgrejaForm(f => ({ ...f, about: e.target.value }))} placeholder="Breve descrição da igreja... Use emojis à vontade! 🙏⛪" rows={4} /></div>
+              </div>
+            )}
+
+            {editingModule === "youtube" && (
+              <>
+                <div className="space-y-2"><Label>URL do Canal</Label><Input value={youtubeForm.channel_url} onChange={e => setYoutubeForm(f => ({ ...f, channel_url: e.target.value }))} placeholder="https://youtube.com/@suaigreja" /></div>
+                <div className="space-y-2"><Label>Descrição</Label><Textarea value={youtubeForm.description} onChange={e => setYoutubeForm(f => ({ ...f, description: e.target.value }))} placeholder="Acesse nossos cultos e pregações 🎬" rows={3} /></div>
+              </>
+            )}
+
+            {editingModule === "redes_sociais" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>📸 Instagram</Label><Input value={redesForm.instagram} onChange={e => setRedesForm(f => ({ ...f, instagram: e.target.value }))} placeholder="https://instagram.com/suaigreja" /></div>
+                <div className="space-y-2"><Label>📘 Facebook</Label><Input value={redesForm.facebook} onChange={e => setRedesForm(f => ({ ...f, facebook: e.target.value }))} placeholder="https://facebook.com/suaigreja" /></div>
+                <div className="space-y-2"><Label>🎵 TikTok</Label><Input value={redesForm.tiktok} onChange={e => setRedesForm(f => ({ ...f, tiktok: e.target.value }))} placeholder="https://tiktok.com/@suaigreja" /></div>
+                <div className="space-y-2"><Label>🐦 X (Twitter)</Label><Input value={redesForm.twitter} onChange={e => setRedesForm(f => ({ ...f, twitter: e.target.value }))} placeholder="https://x.com/suaigreja" /></div>
+                <div className="space-y-2 md:col-span-2"><Label>🌐 Site</Label><Input value={redesForm.website} onChange={e => setRedesForm(f => ({ ...f, website: e.target.value }))} placeholder="https://www.suaigreja.com.br" /></div>
+              </div>
+            )}
+
+            {/* Generic modules: emoji + description */}
+            {!["igreja", "youtube", "redes_sociais"].includes(editingModule) && (
+              <>
+                <div className="space-y-2">
+                  <Label>Emoji / Ícone</Label>
+                  <Input
+                    value={(getFormForModule(editingModule) as any)?.emoji || ""}
+                    onChange={e => {
+                      const val = e.target.value;
+                      switch (editingModule) {
+                        case "devocional": setDevocionalForm(f => ({ ...f, emoji: val })); break;
+                        case "eventos": setEventosForm(f => ({ ...f, emoji: val })); break;
+                        case "mural_oracoes": setMuralForm(f => ({ ...f, emoji: val })); break;
+                        case "escalas": setEscalasForm(f => ({ ...f, emoji: val })); break;
+                        case "cursos": setCursosForm(f => ({ ...f, emoji: val })); break;
+                        case "celulas": setCelulasForm(f => ({ ...f, emoji: val })); break;
+                        case "ministerios": setMinisteriosForm(f => ({ ...f, emoji: val })); break;
+                        case "doacao": setDoacaoForm(f => ({ ...f, emoji: val })); break;
+                        case "perfil": setPerfilForm(f => ({ ...f, emoji: val })); break;
+                      }
+                    }}
+                    placeholder="Escolha um emoji 🎯"
+                    className="text-xl w-20"
+                  />
+                  <p className="text-xs text-muted-foreground">Cole emojis diretamente no campo (ex: 🙏 ⛪ 🎵 📖 ❤️)</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Descrição / Conteúdo</Label>
+                  <Textarea
+                    value={(getFormForModule(editingModule) as any)?.description || (getFormForModule(editingModule) as any)?.content || ""}
+                    onChange={e => {
+                      const val = e.target.value;
+                      switch (editingModule) {
+                        case "devocional": setDevocionalForm(f => ({ ...f, content: val })); break;
+                        case "eventos": setEventosForm(f => ({ ...f, description: val })); break;
+                        case "mural_oracoes": setMuralForm(f => ({ ...f, description: val })); break;
+                        case "escalas": setEscalasForm(f => ({ ...f, description: val })); break;
+                        case "cursos": setCursosForm(f => ({ ...f, description: val })); break;
+                        case "celulas": setCelulasForm(f => ({ ...f, description: val })); break;
+                        case "ministerios": setMinisteriosForm(f => ({ ...f, description: val })); break;
+                        case "doacao": setDoacaoForm(f => ({ ...f, description: val })); break;
+                        case "perfil": setPerfilForm(f => ({ ...f, description: val })); break;
+                      }
+                    }}
+                    placeholder="Descrição que aparece no módulo... Use emojis à vontade! 🙏"
+                    rows={4}
+                  />
+                </div>
+                {editingModule === "devocional" && (
+                  <div className="space-y-2">
+                    <Label>Título do Devocional</Label>
+                    <Input value={devocionalForm.title} onChange={e => setDevocionalForm(f => ({ ...f, title: e.target.value }))} placeholder="Devocional do dia 📖" />
+                  </div>
+                )}
+              </>
+            )}
+
+            <Button onClick={() => saveModule(editingModule, getFormForModule(editingModule))} disabled={saving}>
+              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />} Salvar
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -491,25 +634,23 @@ function ModulosSection({ churchId }: { churchId: string }) {
       <Card>
         <CardHeader>
           <CardTitle>Módulos do App</CardTitle>
-          <CardDescription>Clique em "Editar" para configurar o conteúdo de cada módulo</CardDescription>
+          <CardDescription>Clique em "Editar" para configurar o conteúdo de cada módulo em uma página dedicada</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             {modules.map(m => (
               <div key={m.key} className="flex items-center justify-between p-3 rounded-lg border border-border">
                 <div className="flex items-center gap-3">
-                  <span className="text-xl">{m.icon}</span>
+                  <span className="text-xl">{configs[m.key]?.emoji || m.icon}</span>
                   <div>
                     <span className="font-medium text-sm">{m.label}</span>
                     {configs[m.key] && <Badge variant="secondary" className="ml-2 text-[10px]">Configurado</Badge>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {editableModules.includes(m.key) && (
-                    <Button variant="outline" size="sm" onClick={() => setEditingModule(editingModule === m.key ? null : m.key)}>
-                      <Edit2 className="w-3 h-3 mr-1" /> Editar
-                    </Button>
-                  )}
+                  <Button variant="outline" size="sm" onClick={() => setEditingModule(m.key)}>
+                    <Edit2 className="w-3 h-3 mr-1" /> Editar
+                  </Button>
                   <Switch checked={true} />
                 </div>
               </div>
@@ -517,57 +658,6 @@ function ModulosSection({ churchId }: { churchId: string }) {
           </div>
         </CardContent>
       </Card>
-
-      {/* Editing Panels */}
-      {editingModule === "igreja" && (
-        <Card>
-          <CardHeader><CardTitle className="text-base">Configurar: Igreja</CardTitle><CardDescription>Dados que aparecem quando o membro clica em "Igreja"</CardDescription></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Nome do Pastor</Label><Input value={igrejaForm.pastor_name} onChange={e => setIgrejaForm(f => ({ ...f, pastor_name: e.target.value }))} placeholder="Pr. João Silva" /></div>
-              <div className="space-y-2"><Label>Telefone</Label><Input value={igrejaForm.phone} onChange={e => setIgrejaForm(f => ({ ...f, phone: e.target.value }))} placeholder="(00) 00000-0000" /></div>
-              <div className="space-y-2"><Label>Email</Label><Input value={igrejaForm.email} onChange={e => setIgrejaForm(f => ({ ...f, email: e.target.value }))} placeholder="contato@igreja.com" /></div>
-              <div className="space-y-2"><Label>Horários de Culto</Label><Input value={igrejaForm.schedule} onChange={e => setIgrejaForm(f => ({ ...f, schedule: e.target.value }))} placeholder="Dom 9h e 18h / Qua 19h30" /></div>
-              <div className="space-y-2 md:col-span-2"><Label>Endereço</Label><Input value={igrejaForm.address} onChange={e => setIgrejaForm(f => ({ ...f, address: e.target.value }))} placeholder="Rua, número, bairro, cidade" /></div>
-              <div className="space-y-2 md:col-span-2"><Label>Sobre a Igreja</Label><Textarea value={igrejaForm.about} onChange={e => setIgrejaForm(f => ({ ...f, about: e.target.value }))} placeholder="Breve descrição da igreja..." rows={3} /></div>
-            </div>
-            <Button onClick={() => saveModule("igreja", igrejaForm)} disabled={saving}>
-              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />} Salvar
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {editingModule === "youtube" && (
-        <Card>
-          <CardHeader><CardTitle className="text-base">Configurar: YouTube</CardTitle><CardDescription>Link do canal que aparece para os membros</CardDescription></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2"><Label>URL do Canal</Label><Input value={youtubeForm.channel_url} onChange={e => setYoutubeForm(f => ({ ...f, channel_url: e.target.value }))} placeholder="https://youtube.com/@suaigreja" /></div>
-            <div className="space-y-2"><Label>Descrição</Label><Input value={youtubeForm.description} onChange={e => setYoutubeForm(f => ({ ...f, description: e.target.value }))} placeholder="Acesse nossos cultos e pregações" /></div>
-            <Button onClick={() => saveModule("youtube", youtubeForm)} disabled={saving}>
-              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />} Salvar
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {editingModule === "redes_sociais" && (
-        <Card>
-          <CardHeader><CardTitle className="text-base">Configurar: Redes Sociais</CardTitle><CardDescription>Links das redes sociais da igreja</CardDescription></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Instagram</Label><Input value={redesForm.instagram} onChange={e => setRedesForm(f => ({ ...f, instagram: e.target.value }))} placeholder="https://instagram.com/suaigreja" /></div>
-              <div className="space-y-2"><Label>Facebook</Label><Input value={redesForm.facebook} onChange={e => setRedesForm(f => ({ ...f, facebook: e.target.value }))} placeholder="https://facebook.com/suaigreja" /></div>
-              <div className="space-y-2"><Label>TikTok</Label><Input value={redesForm.tiktok} onChange={e => setRedesForm(f => ({ ...f, tiktok: e.target.value }))} placeholder="https://tiktok.com/@suaigreja" /></div>
-              <div className="space-y-2"><Label>X (Twitter)</Label><Input value={redesForm.twitter} onChange={e => setRedesForm(f => ({ ...f, twitter: e.target.value }))} placeholder="https://x.com/suaigreja" /></div>
-              <div className="space-y-2 md:col-span-2"><Label>Site</Label><Input value={redesForm.website} onChange={e => setRedesForm(f => ({ ...f, website: e.target.value }))} placeholder="https://www.suaigreja.com.br" /></div>
-            </div>
-            <Button onClick={() => saveModule("redes_sociais", redesForm)} disabled={saving}>
-              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />} Salvar
-            </Button>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

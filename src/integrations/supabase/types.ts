@@ -1339,6 +1339,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          network_id: string | null
           start_date: string | null
           teacher_id: string | null
           track: string | null
@@ -1352,6 +1353,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          network_id?: string | null
           start_date?: string | null
           teacher_id?: string | null
           track?: string | null
@@ -1365,6 +1367,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          network_id?: string | null
           start_date?: string | null
           teacher_id?: string | null
           track?: string | null
@@ -1375,6 +1378,13 @@ export type Database = {
             columns: ["church_id"]
             isOneToOne: false
             referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courses_network_id_fkey"
+            columns: ["network_id"]
+            isOneToOne: false
+            referencedRelation: "ministries_network"
             referencedColumns: ["id"]
           },
           {
@@ -2309,30 +2319,39 @@ export type Database = {
           content: string
           created_at: string
           created_by: string | null
+          end_date: string | null
           expires_at: string | null
           id: string
+          image_url: string | null
           is_active: boolean
           network_id: string
+          start_date: string | null
           title: string
         }
         Insert: {
           content: string
           created_at?: string
           created_by?: string | null
+          end_date?: string | null
           expires_at?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           network_id: string
+          start_date?: string | null
           title: string
         }
         Update: {
           content?: string
           created_at?: string
           created_by?: string | null
+          end_date?: string | null
           expires_at?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           network_id?: string
+          start_date?: string | null
           title?: string
         }
         Relationships: [
