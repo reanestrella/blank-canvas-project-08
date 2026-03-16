@@ -169,6 +169,11 @@ const App = () => (
                     <Assistente />
                   </RequireAnyRole>
                 } />
+                <Route path="/patrimonio" element={
+                  <RequireAnyRole allowedRoles={["pastor", "tesoureiro"]}>
+                    <Patrimonio />
+                  </RequireAnyRole>
+                } />
                 
                 {/* Catch-all */}
                 <Route path="*" element={<NotFound />} />
