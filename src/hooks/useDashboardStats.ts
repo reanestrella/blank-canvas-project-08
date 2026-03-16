@@ -230,5 +230,6 @@ export function useDashboardStats(congregationId?: string | null) {
     stats,
     isLoading,
     members,
+    debugInfo,
   };
 }
