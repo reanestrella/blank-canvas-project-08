@@ -59,21 +59,8 @@ function PastorDashboard() {
         ))}
       </div>
 
-      {/* DEBUG PANEL - temporary diagnostic */}
-      <div className="p-4 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/50 text-xs font-mono space-y-1">
-        <p className="font-bold text-sm mb-2">🔍 Dashboard Debug</p>
-        <p>currentChurchId: {debugInfo?.currentChurchId || "null"}</p>
-        <p>totalMembersFetched: {debugInfo?.totalMembersFetched ?? "?"}</p>
-        <p>membersError: {debugInfo?.membersError || "none"}</p>
-        <p>membrosCount: {debugInfo?.membrosCount ?? "?"}</p>
-        <p>decididosCount: {debugInfo?.decididosCount ?? "?"}</p>
-        <p>visitantesCount: {debugInfo?.visitantesCount ?? "?"}</p>
-        <p>batizadosCount: {debugInfo?.batizadosCount ?? "?"}</p>
-        <p>consolidacaoCount: {debugInfo?.consolidacaoCount ?? "?"}</p>
-        <p>redes: H={debugInfo?.redes?.homens ?? "?"} M={debugInfo?.redes?.mulheres ?? "?"} J={debugInfo?.redes?.jovens ?? "?"} K={debugInfo?.redes?.kids ?? "?"}</p>
-        <p className="mt-1">stats.totalMembers: {stats.totalMembers} | stats.totalDecididos: {stats.totalDecididos} | stats.totalVisitantes: {stats.totalVisitantes} | stats.totalBaptized: {stats.totalBaptized} | stats.totalConsolidacao: {stats.totalConsolidacao}</p>
-        <p>members array length: {members?.length ?? 0}</p>
-      </div>
+
+
 
       {stats.recentAlerts.length > 0 && <AlertsCard alerts={stats.recentAlerts} />}
 
