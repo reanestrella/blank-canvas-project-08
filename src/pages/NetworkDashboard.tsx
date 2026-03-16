@@ -24,6 +24,9 @@ interface NetworkChurchData {
   member_count: number;
   cell_count: number;
   visitor_count: number;
+  decidido_count: number;
+  baptized_count: number;
+  consolidation_count: number;
   income: number;
   expense: number;
 }
