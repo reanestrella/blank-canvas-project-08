@@ -75,7 +75,6 @@ export function TransactionModal({
     defaultValues: {
       type: defaultType,
       amount: "",
-      description: "",
       transaction_date: new Date().toISOString().split("T")[0],
       category_id: "",
       member_id: "",
