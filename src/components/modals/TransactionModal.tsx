@@ -92,7 +92,6 @@ export function TransactionModal({
         form.reset({
           type: transaction.type,
           amount: transaction.amount?.toString() || "",
-          description: transaction.description || "",
           transaction_date: transaction.transaction_date || new Date().toISOString().split("T")[0],
           category_id: transaction.category_id || "",
           member_id: transaction.member_id || "",
@@ -105,7 +104,6 @@ export function TransactionModal({
         form.reset({
           type: defaultType,
           amount: "",
-          description: "",
           transaction_date: new Date().toISOString().split("T")[0],
           category_id: "",
           member_id: "",
