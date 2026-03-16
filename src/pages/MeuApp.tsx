@@ -658,18 +658,18 @@ export default function MeuApp() {
           </div>
 
           {/* Centered Logo - BIGGER and more prominent */}
-          <div className="flex flex-col items-center text-center gap-4 relative z-10 py-6">
+          <div className="flex flex-col items-center text-center gap-4 relative z-10 py-8">
             {church?.logo_url ? (
-              <div className="w-32 h-32 md:w-40 md:h-40 rounded-[2rem] bg-white/10 backdrop-blur-md p-4 shadow-2xl border border-white/20">
-                <img src={church.logo_url} alt={church.name || "Logo"} className="w-full h-full rounded-2xl object-contain" />
+              <div className="w-40 h-40 md:w-52 md:h-52 rounded-[2.5rem] bg-white/15 backdrop-blur-lg p-5 shadow-2xl border-2 border-white/25 ring-4 ring-white/10">
+                <img src={church.logo_url} alt={church.name || "Logo"} className="w-full h-full rounded-2xl object-contain drop-shadow-lg" />
               </div>
             ) : (
-              <div className="w-32 h-32 md:w-40 md:h-40 rounded-[2rem] bg-primary-foreground/10 flex items-center justify-center shadow-2xl backdrop-blur-md border border-white/20">
-                <Church className="w-16 h-16 text-primary-foreground/70" />
+              <div className="w-40 h-40 md:w-52 md:h-52 rounded-[2.5rem] bg-primary-foreground/10 flex items-center justify-center shadow-2xl backdrop-blur-lg border-2 border-white/25 ring-4 ring-white/10">
+                <Church className="w-20 h-20 text-primary-foreground/70" />
               </div>
             )}
             <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-primary-foreground tracking-tight">
+              <h1 className="text-3xl md:text-4xl font-extrabold text-primary-foreground tracking-tight drop-shadow-md">
                 {(church as any)?.ministry_name || church?.name || "Minha Igreja"}
               </h1>
               {(church as any)?.ministry_name && church?.name && (
