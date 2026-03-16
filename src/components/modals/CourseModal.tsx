@@ -36,6 +36,7 @@ const courseSchema = z.object({
   start_date: z.string().optional(),
   end_date: z.string().optional(),
   cover_image_url: z.string().optional(),
+  show_in_app: z.boolean().optional(),
 });
 
 type CourseFormData = z.infer<typeof courseSchema>;
