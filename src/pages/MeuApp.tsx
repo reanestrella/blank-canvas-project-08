@@ -9,6 +9,7 @@ import {
   User, Users, Bell, Calendar as CalendarIcon, BookOpen, Heart, MessageSquare,
   Clock, MapPin, Plus, Loader2, Camera, GraduationCap, Settings,
   List, CalendarDays, Check, X, DollarSign, QrCode, Copy,
+  Church, Mic, Video, Newspaper, HandHeart,
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -74,124 +75,58 @@ interface ContribuicaoData {
   bank_account_type: string | null;
 }
 
+// ─── Schedules View ──────────────────────────────────
 function SchedulesView({ schedules, onConfirm }: { schedules: MySchedule[]; onConfirm: (sv: MySchedule) => void }) {
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [expandedSchedule, setExpandedSchedule] = useState<string | null>(null);
-  const [coVolunteers, setCoVolunteers] = useState<Record<string, CoVolunteer[]>>({});
+  const [coVolunteers, setCoVolunteers] = useState<Record<string, any>>({});
   const [loadingVols, setLoadingVols] = useState<string | null>(null);
 
   const scheduleDates = useMemo(() => {
-    const dates: Date[] = [];
-    schedules.forEach(s => {
-      if (s.schedule?.event_date) {
-        dates.push(new Date(s.schedule.event_date + "T12:00:00"));
-      }
-    });
-    return dates;
+    return schedules.map(s => s.schedule?.event_date ? new Date(s.schedule.event_date + "T12:00:00") : null).filter(Boolean) as Date[];
   }, [schedules]);
 
   const filteredSchedules = useMemo(() => {
     if (!selectedDate) return schedules;
-    return schedules.filter(s => {
-      if (!s.schedule?.event_date) return false;
-      return isSameDay(new Date(s.schedule.event_date + "T12:00:00"), selectedDate);
-    });
+    return schedules.filter(s => s.schedule?.event_date && isSameDay(new Date(s.schedule.event_date + "T12:00:00"), selectedDate));
   }, [schedules, selectedDate]);
 
   const displaySchedules = viewMode === "calendar" ? filteredSchedules : schedules;
 
   const loadCoVolunteers = async (scheduleId: string) => {
-    if (expandedSchedule === scheduleId) {
-      setExpandedSchedule(null);
-      return;
-    }
+    if (expandedSchedule === scheduleId) { setExpandedSchedule(null); return; }
     setExpandedSchedule(scheduleId);
-    if (coVolunteers[scheduleId]) return; // already cached
-
+    if (coVolunteers[scheduleId]) return;
     setLoadingVols(scheduleId);
     try {
-      // Load volunteers
-      const { data } = await supabase
-        .from("schedule_volunteers")
-        .select("id, confirmed, role, member:members(full_name)")
-        .eq("schedule_id", scheduleId);
-      
-      // Load songs for this schedule
-      const { data: songsData } = await supabase
-        .from("schedule_songs" as any)
-        .select("id, order_index, song:worship_songs(title, key_signature, artist, chord_url, audio_url)")
-        .eq("schedule_id", scheduleId)
-        .order("order_index");
-      
-      setCoVolunteers(prev => ({
-        ...prev,
-        [scheduleId]: {
-          volunteers: (data || []) as any,
-          songs: (songsData || []) as any,
-        } as any,
-      }));
-    } catch (err) {
-      console.error("[MeuApp] Error loading schedule details:", err);
-    } finally {
-      setLoadingVols(null);
-    }
+      const { data } = await supabase.from("schedule_volunteers").select("id, confirmed, role, member:members(full_name)").eq("schedule_id", scheduleId);
+      const { data: songsData } = await supabase.from("schedule_songs" as any).select("id, order_index, song:worship_songs(title, key_signature, artist, chord_url, audio_url)").eq("schedule_id", scheduleId).order("order_index");
+      setCoVolunteers(prev => ({ ...prev, [scheduleId]: { volunteers: data || [], songs: songsData || [] } }));
+    } catch (err) { console.error("[MeuApp] Error loading schedule details:", err); }
+    finally { setLoadingVols(null); }
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Clock className="w-5 h-5 text-primary" /> Minhas Escalas
-        </h3>
+        <h3 className="text-lg font-semibold flex items-center gap-2"><Clock className="w-5 h-5 text-primary" /> Minhas Escalas</h3>
         <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-          <Button
-            variant={viewMode === "list" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => { setViewMode("list"); setSelectedDate(undefined); }}
-          >
-            <List className="w-4 h-4 mr-1" /> Lista
-          </Button>
-          <Button
-            variant={viewMode === "calendar" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("calendar")}
-          >
-            <CalendarDays className="w-4 h-4 mr-1" /> Calendário
-          </Button>
+          <Button variant={viewMode === "list" ? "default" : "ghost"} size="sm" onClick={() => { setViewMode("list"); setSelectedDate(undefined); }}><List className="w-4 h-4 mr-1" /> Lista</Button>
+          <Button variant={viewMode === "calendar" ? "default" : "ghost"} size="sm" onClick={() => setViewMode("calendar")}><CalendarDays className="w-4 h-4 mr-1" /> Calendário</Button>
         </div>
       </div>
 
       {viewMode === "calendar" && (
-        <Card>
-          <CardContent className="p-4 flex justify-center overflow-hidden">
-            <div className="w-full max-w-sm">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                locale={ptBR}
-                modifiers={{ scheduled: scheduleDates }}
-                modifiersClassNames={{ scheduled: "bg-primary/20 font-bold text-primary" }}
-                className="rounded-md mx-auto"
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="p-4 flex justify-center overflow-hidden"><div className="w-full max-w-sm">
+          <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} locale={ptBR} modifiers={{ scheduled: scheduleDates }} modifiersClassNames={{ scheduled: "bg-primary/20 font-bold text-primary" }} className="rounded-md mx-auto" />
+        </div></CardContent></Card>
       )}
 
       {schedules.length === 0 ? (
-        <Card>
-          <CardContent className="py-8">
-            <p className="text-center text-muted-foreground">Você não está escalado(a) em nenhum evento.</p>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Você não está escalado(a) em nenhum evento.</p></CardContent></Card>
       ) : displaySchedules.length === 0 ? (
-        <Card>
-          <CardContent className="py-8">
-            <p className="text-center text-muted-foreground">Nenhuma escala nesta data.</p>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Nenhuma escala nesta data.</p></CardContent></Card>
       ) : (
         <div className="space-y-3">
           {displaySchedules.map((s) => {
@@ -199,79 +134,48 @@ function SchedulesView({ schedules, onConfirm }: { schedules: MySchedule[]; onCo
             const isPast = eventDate ? eventDate < new Date(new Date().setHours(0,0,0,0)) : false;
             const isExpanded = expandedSchedule === s.schedule_id;
             const vols = coVolunteers[s.schedule_id];
-
             return (
               <Card key={s.id} className={isPast ? "opacity-60" : ""}>
                 <CardContent className="p-4">
-                  <div
-                    className="flex items-center gap-4 cursor-pointer"
-                    onClick={() => s.schedule_id && loadCoVolunteers(s.schedule_id)}
-                  >
+                  <div className="flex items-center gap-4 cursor-pointer" onClick={() => s.schedule_id && loadCoVolunteers(s.schedule_id)}>
                     <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-primary/10 flex-shrink-0">
                       <span className="text-xl font-bold text-primary">{eventDate?.getDate() || "?"}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase">
-                        {eventDate ? format(eventDate, "MMM", { locale: ptBR }) : ""}
-                      </span>
+                      <span className="text-[10px] text-muted-foreground uppercase">{eventDate ? format(eventDate, "MMM", { locale: ptBR }) : ""}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-sm">{s.schedule?.event_name || "Evento"}</h4>
                       <p className="text-xs text-muted-foreground">{s.schedule?.ministry?.name || "Ministério"}</p>
-                      {s.role && (
-                        <Badge variant="secondary" className="text-[10px] py-0 h-4 mt-1">
-                          {s.role}
-                        </Badge>
-                      )}
-                      {s.schedule?.notes && <p className="text-xs text-muted-foreground mt-1 truncate">{s.schedule.notes}</p>}
+                      {s.role && <Badge variant="secondary" className="text-[10px] py-0 h-4 mt-1">{s.role}</Badge>}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {s.confirmed ? (
-                        <Badge variant="default" className="bg-emerald-600">
-                          <Check className="w-3 h-3 mr-1" />Confirmado
-                        </Badge>
+                        <Badge variant="default" className="bg-emerald-600"><Check className="w-3 h-3 mr-1" />Confirmado</Badge>
                       ) : !isPast ? (
-                        <Button size="sm" onClick={(e) => { e.stopPropagation(); onConfirm(s); }}>
-                          <Check className="w-3 h-3 mr-1" />Confirmar
-                        </Button>
+                        <Button size="sm" onClick={(e) => { e.stopPropagation(); onConfirm(s); }}><Check className="w-3 h-3 mr-1" />Confirmar</Button>
                       ) : (
                         <Badge variant="secondary">Pendente</Badge>
                       )}
                     </div>
                   </div>
-
-                  {/* Co-volunteers panel */}
                   {isExpanded && (
                     <div className="mt-4 pt-3 border-t space-y-4">
                       <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                          <Users className="w-3 h-3" /> Escalados do dia
-                        </p>
+                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1"><Users className="w-3 h-3" /> Escalados do dia</p>
                         {loadingVols === s.schedule_id ? (
                           <div className="flex justify-center py-2"><Loader2 className="w-4 h-4 animate-spin" /></div>
-                        ) : (vols as any)?.volunteers && (vols as any).volunteers.length > 0 ? (
+                        ) : vols?.volunteers?.length > 0 ? (
                           <div className="space-y-1.5">
-                            {((vols as any).volunteers as CoVolunteer[]).map((v) => (
+                            {(vols.volunteers as CoVolunteer[]).map((v) => (
                               <div key={v.id} className="flex items-center gap-2 text-sm p-1.5 rounded-md bg-muted/50">
-                                <Avatar className="w-6 h-6">
-                                  <AvatarFallback className="text-[10px]">
-                                    {(v.member?.full_name || "?").split(" ").map(n => n[0]).join("").slice(0, 2)}
-                                  </AvatarFallback>
-                                </Avatar>
+                                <Avatar className="w-6 h-6"><AvatarFallback className="text-[10px]">{(v.member?.full_name || "?").split(" ").map(n => n[0]).join("").slice(0, 2)}</AvatarFallback></Avatar>
                                 <div className="flex-1 min-w-0">
                                   <span className="text-xs font-medium truncate block">{v.member?.full_name || "Membro"}</span>
-                                  {v.role && (
-                                    <Badge variant="secondary" className="text-[10px] py-0 h-4 mt-0.5">
-                                      {v.role}
-                                    </Badge>
-                                  )}
+                                  {v.role && <Badge variant="secondary" className="text-[10px] py-0 h-4 mt-0.5">{v.role}</Badge>}
                                 </div>
                                 {v.confirmed ? (
-                                  <Badge variant="outline" className="text-[10px] py-0 h-5 text-emerald-600 border-emerald-200">
-                                    <Check className="w-2.5 h-2.5 mr-0.5" />OK
-                                  </Badge>
+                                  <Badge variant="outline" className="text-[10px] py-0 h-5 text-emerald-600 border-emerald-200"><Check className="w-2.5 h-2.5 mr-0.5" />OK</Badge>
                                 ) : (
-                                  <Badge variant="outline" className="text-[10px] py-0 h-5 text-amber-600 border-amber-200">
-                                    Pendente
-                                  </Badge>
+                                  <Badge variant="outline" className="text-[10px] py-0 h-5 text-amber-600 border-amber-200">Pendente</Badge>
                                 )}
                               </div>
                             ))}
@@ -280,35 +184,23 @@ function SchedulesView({ schedules, onConfirm }: { schedules: MySchedule[]; onCo
                           <p className="text-xs text-muted-foreground italic">Nenhum voluntário escalado.</p>
                         )}
                       </div>
-
-                      {/* Songs section */}
-                      {(vols as any)?.songs && (vols as any).songs.length > 0 && (
+                      {vols?.songs?.length > 0 && (
                         <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                            🎵 Louvores do dia
-                          </p>
+                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">🎵 Louvores do dia</p>
                           <div className="space-y-1.5">
-                            {((vols as any).songs as any[]).map((ss: any, idx: number) => (
+                            {(vols.songs as any[]).map((ss: any, idx: number) => (
                               <div key={ss.id} className="flex items-center gap-2 text-sm p-1.5 rounded-md bg-muted/50">
                                 <span className="text-xs text-muted-foreground w-4">{idx + 1}.</span>
                                 <div className="flex-1 min-w-0">
                                   <span className="text-xs font-medium truncate block">{ss.song?.title || "?"}</span>
                                   <div className="flex items-center gap-1">
-                                    {ss.song?.key_signature && (
-                                      <Badge variant="secondary" className="text-[10px] py-0 h-4">{ss.song.key_signature}</Badge>
-                                    )}
-                                    {ss.song?.artist && (
-                                      <span className="text-[10px] text-muted-foreground">{ss.song.artist}</span>
-                                    )}
+                                    {ss.song?.key_signature && <Badge variant="secondary" className="text-[10px] py-0 h-4">{ss.song.key_signature}</Badge>}
+                                    {ss.song?.artist && <span className="text-[10px] text-muted-foreground">{ss.song.artist}</span>}
                                   </div>
                                 </div>
                                 <div className="flex gap-1">
-                                  {ss.song?.chord_url && (
-                                    <a href={ss.song.chord_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary underline">Cifra</a>
-                                  )}
-                                  {ss.song?.audio_url && (
-                                    <a href={ss.song.audio_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary underline">Áudio</a>
-                                  )}
+                                  {ss.song?.chord_url && <a href={ss.song.chord_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary underline">Cifra</a>}
+                                  {ss.song?.audio_url && <a href={ss.song.audio_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary underline">Áudio</a>}
                                 </div>
                               </div>
                             ))}
@@ -327,23 +219,21 @@ function SchedulesView({ schedules, onConfirm }: { schedules: MySchedule[]; onCo
   );
 }
 
+// ─── Contribuição View ──────────────────────────────────
 function ContribuicaoView({ churchId }: { churchId: string }) {
   const [data, setData] = useState<ContribuicaoData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    const load = async () => {
+    (async () => {
       setIsLoading(true);
-      const { data: settings } = await supabase
-        .from("church_settings" as any)
+      const { data: settings } = await supabase.from("church_settings" as any)
         .select("pix_key, pix_key_type, pix_holder_name, bank_name, bank_agency, bank_account, bank_account_type")
-        .eq("church_id", churchId)
-        .maybeSingle();
+        .eq("church_id", churchId).maybeSingle();
       setData(settings as ContribuicaoData | null);
       setIsLoading(false);
-    };
-    load();
+    })();
   }, [churchId]);
 
   const copyToClipboard = (text: string) => {
@@ -355,74 +245,39 @@ function ContribuicaoView({ churchId }: { churchId: string }) {
 
   if (!data || (!data.pix_key && !data.bank_name)) {
     return (
-      <Card>
-        <CardContent className="py-8 text-center">
-          <DollarSign className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">Dados de contribuição ainda não foram configurados.</p>
-          <p className="text-xs text-muted-foreground mt-1">Peça ao pastor/admin para cadastrar as informações.</p>
-        </CardContent>
-      </Card>
+      <Card><CardContent className="py-8 text-center">
+        <DollarSign className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground">Dados de contribuição ainda não foram configurados.</p>
+      </CardContent></Card>
     );
   }
 
-  const pixTypeLabels: Record<string, string> = {
-    cpf: "CPF", cnpj: "CNPJ", email: "E-mail", telefone: "Telefone", aleatoria: "Chave Aleatória",
-  };
+  const pixTypeLabels: Record<string, string> = { cpf: "CPF", cnpj: "CNPJ", email: "E-mail", telefone: "Telefone", aleatoria: "Chave Aleatória" };
 
   return (
     <div className="space-y-4">
       {data.pix_key && (
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <QrCode className="w-5 h-5 text-primary" /> Pix
-            </CardTitle>
-          </CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-lg flex items-center gap-2"><QrCode className="w-5 h-5 text-primary" /> Pix</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            {data.pix_key_type && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Tipo:</span>
-                <span className="font-medium">{pixTypeLabels[data.pix_key_type] || data.pix_key_type}</span>
-              </div>
-            )}
+            {data.pix_key_type && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Tipo:</span><span className="font-medium">{pixTypeLabels[data.pix_key_type] || data.pix_key_type}</span></div>}
             <div className="flex justify-between items-center text-sm">
               <span className="text-muted-foreground">Chave:</span>
               <div className="flex items-center gap-2">
                 <span className="font-mono font-medium">{data.pix_key}</span>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(data.pix_key!)}>
-                  <Copy className="w-3 h-3" />
-                </Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(data.pix_key!)}><Copy className="w-3 h-3" /></Button>
               </div>
             </div>
-            {data.pix_holder_name && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Favorecido:</span>
-                <span className="font-medium">{data.pix_holder_name}</span>
-              </div>
-            )}
+            {data.pix_holder_name && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Favorecido:</span><span className="font-medium">{data.pix_holder_name}</span></div>}
           </CardContent>
         </Card>
       )}
-
       {data.bank_name && (
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-primary" /> Dados Bancários
-            </CardTitle>
-          </CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-lg flex items-center gap-2"><DollarSign className="w-5 h-5 text-primary" /> Dados Bancários</CardTitle></CardHeader>
           <CardContent className="space-y-2">
-            {[
-              ["Banco", data.bank_name],
-              ["Agência", data.bank_agency],
-              ["Conta", data.bank_account],
-              ["Tipo", data.bank_account_type],
-              ["Favorecido", data.pix_holder_name],
-            ].filter(([, v]) => v).map(([label, value]) => (
-              <div key={label} className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{label}:</span>
-                <span className="font-medium">{value}</span>
-              </div>
+            {[["Banco", data.bank_name], ["Agência", data.bank_agency], ["Conta", data.bank_account], ["Tipo", data.bank_account_type], ["Favorecido", data.pix_holder_name]].filter(([, v]) => v).map(([label, value]) => (
+              <div key={label} className="flex justify-between text-sm"><span className="text-muted-foreground">{label}:</span><span className="font-medium">{value}</span></div>
             ))}
           </CardContent>
         </Card>
@@ -431,7 +286,7 @@ function ContribuicaoView({ churchId }: { churchId: string }) {
   );
 }
 
-// ─── Campanhas App View ──────────────────────────────────
+// ─── Campanhas View ──────────────────────────────────
 function CampanhasAppView({ churchId }: { churchId: string }) {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -440,12 +295,9 @@ function CampanhasAppView({ churchId }: { churchId: string }) {
     if (!churchId) return;
     (async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("financial_campaigns")
+      const { data } = await supabase.from("financial_campaigns")
         .select("id, name, description, goal_amount, current_amount, start_date, end_date")
-        .eq("church_id", churchId)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false });
+        .eq("church_id", churchId).eq("is_active", true).order("created_at", { ascending: false });
       setCampaigns(data || []);
       setLoading(false);
     })();
@@ -454,21 +306,11 @@ function CampanhasAppView({ churchId }: { churchId: string }) {
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
   if (campaigns.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-8 text-center">
-          <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">Nenhuma campanha ativa no momento.</p>
-        </CardContent>
-      </Card>
-    );
+    return <Card><CardContent className="py-8 text-center"><Heart className="w-12 h-12 text-muted-foreground mx-auto mb-4" /><p className="text-muted-foreground">Nenhuma campanha ativa no momento.</p></CardContent></Card>;
   }
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold flex items-center gap-2">
-        <Heart className="w-5 h-5 text-primary" /> Campanhas
-      </h3>
       {campaigns.map((c: any) => {
         const progress = c.goal_amount ? Math.min(100, ((c.current_amount || 0) / c.goal_amount) * 100) : 0;
         return (
@@ -482,18 +324,9 @@ function CampanhasAppView({ churchId }: { churchId: string }) {
                     <span>R$ {Number(c.current_amount || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                     <span>Meta: R$ {Number(c.goal_amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                   </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progress}%` }} />
-                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progress}%` }} /></div>
                   <p className="text-xs text-muted-foreground text-right mt-1">{progress.toFixed(0)}%</p>
                 </div>
-              )}
-              {(c.start_date || c.end_date) && (
-                <p className="text-xs text-muted-foreground">
-                  {c.start_date && `Início: ${new Date(c.start_date + "T12:00:00").toLocaleDateString("pt-BR")}`}
-                  {c.start_date && c.end_date && " · "}
-                  {c.end_date && `Fim: ${new Date(c.end_date + "T12:00:00").toLocaleDateString("pt-BR")}`}
-                </p>
               )}
             </CardContent>
           </Card>
@@ -503,6 +336,22 @@ function CampanhasAppView({ churchId }: { churchId: string }) {
   );
 }
 
+// ─── Quick Action Shortcut ──────────────────────────────────
+function QuickAction({ icon: Icon, label, onClick, color = "text-primary" }: { icon: any; label: string; onClick: () => void; color?: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-card border border-border hover:border-primary/30 hover:shadow-md transition-all group"
+    >
+      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+        <Icon className={`w-6 h-6 ${color}`} />
+      </div>
+      <span className="text-xs font-medium text-foreground/80 text-center leading-tight">{label}</span>
+    </button>
+  );
+}
+
+// ─── Main Page ──────────────────────────────────
 export default function MeuApp() {
   const { profile, church, user } = useAuth();
   const navigate = useNavigate();
@@ -512,6 +361,7 @@ export default function MeuApp() {
   const [events, setEvents] = useState<UpcomingEvent[]>([]);
   const [schedules, setSchedules] = useState<MySchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeView, setActiveView] = useState<string>("home");
 
   useEffect(() => {
     if (profile?.church_id) fetchData();
@@ -521,372 +371,240 @@ export default function MeuApp() {
     if (!profile?.church_id) return;
     setIsLoading(true);
     try {
-      const { data: announcementsData } = await supabase
-        .from("announcements")
-        .select("id, title, content, created_at")
-        .eq("church_id", profile.church_id)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(5);
+      const { data: announcementsData } = await supabase.from("announcements")
+        .select("id, title, content, created_at").eq("church_id", profile.church_id)
+        .eq("is_active", true).order("created_at", { ascending: false }).limit(5);
       setAnnouncements((announcementsData as Announcement[]) || []);
 
       const now = new Date();
       const currentMonth = (now.getMonth() + 1).toString().padStart(2, "0");
-      const { data: birthdayData } = await supabase
-        .from("members")
-        .select("id, full_name, birth_date")
-        .eq("church_id", profile.church_id)
-        .eq("is_active", true)
-        .not("birth_date", "is", null);
-      const monthBirthdays = (birthdayData || []).filter((m: any) => {
-        if (!m.birth_date) return false;
-        return m.birth_date.split("-")[1] === currentMonth;
-      });
-      setBirthdays(monthBirthdays as BirthdayMember[]);
+      const { data: birthdayData } = await supabase.from("members")
+        .select("id, full_name, birth_date").eq("church_id", profile.church_id)
+        .eq("is_active", true).not("birth_date", "is", null);
+      setBirthdays(((birthdayData || []) as BirthdayMember[]).filter(m => m.birth_date?.split("-")[1] === currentMonth));
 
       const today = now.toISOString().split("T")[0];
-      const { data: eventsData } = await supabase
-        .from("events")
-        .select("id, title, event_date, event_time, location")
-        .eq("church_id", profile.church_id)
-        .gte("event_date", today)
-        .order("event_date", { ascending: true })
-        .limit(5);
+      const { data: eventsData } = await supabase.from("events")
+        .select("id, title, event_date, event_time, location").eq("church_id", profile.church_id)
+        .gte("event_date", today).order("event_date", { ascending: true }).limit(5);
       setEvents((eventsData as UpcomingEvent[]) || []);
 
-      // ======= SCHEDULE LOOKUP =======
+      // Schedule lookup
       let memberId = profile.member_id;
-      console.log("[MeuApp] Schedule lookup — profile.member_id:", memberId, "user_id:", user?.id);
-
       if (!memberId && profile.email) {
-        const { data: memberByEmail } = await supabase
-          .from("members")
-          .select("id")
-          .eq("church_id", profile.church_id!)
-          .ilike("email", profile.email.trim())
-          .limit(1);
-        if (memberByEmail && memberByEmail.length > 0) {
-          memberId = memberByEmail[0].id;
-          console.log("[MeuApp] Found member_id via email fallback:", memberId);
-        }
+        const { data: memberByEmail } = await supabase.from("members").select("id")
+          .eq("church_id", profile.church_id!).ilike("email", profile.email.trim()).limit(1);
+        if (memberByEmail?.length) memberId = memberByEmail[0].id;
       }
-
       if (!memberId && profile.full_name) {
-        const { data: memberByName } = await supabase
-          .from("members")
-          .select("id")
-          .eq("church_id", profile.church_id!)
-          .ilike("full_name", profile.full_name.trim())
-          .limit(1);
-        if (memberByName && memberByName.length > 0) {
-          memberId = memberByName[0].id;
-          console.log("[MeuApp] Found member_id via name fallback:", memberId);
-        }
+        const { data: memberByName } = await supabase.from("members").select("id")
+          .eq("church_id", profile.church_id!).ilike("full_name", profile.full_name.trim()).limit(1);
+        if (memberByName?.length) memberId = memberByName[0].id;
       }
-
       if (memberId) {
-        const { data: svData, error: svError } = await supabase
-          .from("schedule_volunteers")
-          .select(`
-            id, schedule_id, role, confirmed, member_id,
-            schedule:ministry_schedules!inner(
-              id, event_name, event_date, notes, ministry_id,
-              ministry:ministries(name)
-            )
-          `)
+        const { data: svData } = await supabase.from("schedule_volunteers")
+          .select(`id, schedule_id, role, confirmed, member_id, schedule:ministry_schedules!inner(id, event_name, event_date, notes, ministry_id, ministry:ministries(name))`)
           .eq("member_id", memberId);
-
-        console.log("[MeuApp] schedule_volunteers query:", { count: svData?.length, error: svError?.message });
-
-        if (svData && svData.length > 0) {
-          const { data: churchMinistries } = await supabase
-            .from("ministries")
-            .select("id")
-            .eq("church_id", profile.church_id!);
+        if (svData?.length) {
+          const { data: churchMinistries } = await supabase.from("ministries").select("id").eq("church_id", profile.church_id!);
           const churchMinistryIds = new Set((churchMinistries || []).map((m: any) => m.id));
-
-          const allSchedules: MySchedule[] = svData
-            .map((sv: any) => {
-              const sched = Array.isArray(sv.schedule) ? sv.schedule[0] : sv.schedule;
-              if (!sched) return null;
-              if (!churchMinistryIds.has(sched.ministry_id)) return null;
-              return {
-                id: sv.id,
-                schedule_id: sv.schedule_id,
-                role: sv.role,
-                confirmed: sv.confirmed,
-                schedule: {
-                  id: sched.id,
-                  event_name: sched.event_name,
-                  event_date: sched.event_date,
-                  notes: sched.notes,
-                  ministry: Array.isArray(sched.ministry) ? sched.ministry[0] : sched.ministry,
-                },
-              };
-            })
-            .filter(Boolean) as MySchedule[];
+          const allSchedules = svData.map((sv: any) => {
+            const sched = Array.isArray(sv.schedule) ? sv.schedule[0] : sv.schedule;
+            if (!sched || !churchMinistryIds.has(sched.ministry_id)) return null;
+            return { id: sv.id, schedule_id: sv.schedule_id, role: sv.role, confirmed: sv.confirmed, schedule: { id: sched.id, event_name: sched.event_name, event_date: sched.event_date, notes: sched.notes, ministry: Array.isArray(sched.ministry) ? sched.ministry[0] : sched.ministry } };
+          }).filter(Boolean) as MySchedule[];
           allSchedules.sort((a, b) => (a.schedule?.event_date || "").localeCompare(b.schedule?.event_date || ""));
           setSchedules(allSchedules);
-          console.log("[MeuApp] Final schedules loaded:", allSchedules.length);
-        } else {
-          setSchedules([]);
-        }
-      } else {
-        console.log("[MeuApp] No member_id resolved — cannot load schedules");
-        setSchedules([]);
-      }
+        } else { setSchedules([]); }
+      } else { setSchedules([]); }
     } catch (error) {
       console.error("[MeuApp] Error fetching data:", error);
-      toast({ title: "Erro", description: "Não foi possível carregar os dados.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
+    } finally { setIsLoading(false); }
   };
 
   const handleConfirmSchedule = async (sv: MySchedule) => {
     try {
-      const { error } = await supabase
-        .from("schedule_volunteers")
-        .update({ confirmed: true })
-        .eq("id", sv.id);
+      const { error } = await supabase.from("schedule_volunteers").update({ confirmed: true }).eq("id", sv.id);
       if (error) throw error;
       setSchedules(prev => prev.map(s => s.id === sv.id ? { ...s, confirmed: true } : s));
       toast({ title: "Confirmado!", description: `Presença confirmada para "${sv.schedule?.event_name}".` });
     } catch (err: any) {
-      console.error("[MeuApp] Error confirming schedule:", err);
       toast({ title: "Erro", description: "Não foi possível confirmar.", variant: "destructive" });
     }
   };
 
   const initials = profile?.full_name?.split(" ").map((n) => n[0]).join("").slice(0, 2) || "?";
+  const churchId = profile?.church_id;
+
+  const renderContent = () => {
+    switch (activeView) {
+      case "courses": return <CoursesTab />;
+      case "schedules": return <SchedulesView schedules={schedules} onConfirm={handleConfirmSchedule} />;
+      case "contribuicao": return churchId ? <><h3 className="text-lg font-semibold flex items-center gap-2 mb-4"><DollarSign className="w-5 h-5 text-primary" /> Contribuição</h3><ContribuicaoView churchId={churchId} /></> : null;
+      case "campanhas": return <CampanhasAppView churchId={churchId || ""} />;
+      case "events": return (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2"><CalendarIcon className="w-5 h-5 text-primary" /> Eventos</h3>
+          {events.length === 0 ? <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Nenhum evento próximo.</p></CardContent></Card> : (
+            <div className="space-y-3">{events.map((evt) => (
+              <Card key={evt.id}><CardContent className="p-4">
+                <h4 className="font-semibold">{evt.title}</h4>
+                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                  <CalendarIcon className="w-4 h-4" />{new Date(evt.event_date + "T12:00:00").toLocaleDateString("pt-BR")}
+                  {evt.event_time && <span>• {evt.event_time}</span>}
+                </div>
+                {evt.location && <div className="flex items-center gap-1 mt-1 text-sm text-muted-foreground"><MapPin className="w-4 h-4" />{evt.location}</div>}
+              </CardContent></Card>
+            ))}</div>
+          )}
+        </div>
+      );
+      case "prayer": return (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2"><MessageSquare className="w-5 h-5 text-primary" /> Pedidos de Oração</h3>
+          <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Em breve você poderá enviar e acompanhar pedidos de oração.</p></CardContent></Card>
+        </div>
+      );
+      case "profile": return <ProfileEditTab />;
+      default: return renderHome();
+    }
+  };
+
+  const renderHome = () => (
+    <div className="space-y-6">
+      {/* Quick Actions Grid */}
+      <div>
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Acesso Rápido</h3>
+        <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+          <QuickAction icon={Church} label="Igreja" onClick={() => setActiveView("home")} />
+          <QuickAction icon={Heart} label="Ministérios" onClick={() => navigate("/ministerios")} color="text-secondary" />
+          <QuickAction icon={Newspaper} label="Notícias" onClick={() => setActiveView("home")} />
+          <QuickAction icon={MessageSquare} label="Mensagens" onClick={() => setActiveView("prayer")} />
+          <QuickAction icon={HandHeart} label="Contribuir" onClick={() => setActiveView("contribuicao")} color="text-success" />
+          <QuickAction icon={Heart} label="Campanhas" onClick={() => setActiveView("campanhas")} color="text-secondary" />
+          <QuickAction icon={CalendarIcon} label="Eventos" onClick={() => setActiveView("events")} />
+          <QuickAction icon={GraduationCap} label="Cursos" onClick={() => setActiveView("courses")} color="text-info" />
+          <QuickAction icon={Clock} label="Escalas" onClick={() => setActiveView("schedules")} />
+          <QuickAction icon={User} label="Perfil" onClick={() => setActiveView("profile")} />
+        </div>
+      </div>
+
+      {/* Announcements */}
+      {announcements.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2"><Bell className="w-4 h-4 text-secondary" /> Avisos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {announcements.map((item) => (
+                <div key={item.id} className="p-3 rounded-xl bg-muted/50">
+                  <h4 className="font-medium text-sm mb-1">{item.title}</h4>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{item.content}</p>
+                  <span className="text-xs text-muted-foreground mt-1 block">{new Date(item.created_at).toLocaleDateString("pt-BR")}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Upcoming Events */}
+      {events.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-primary" /> Próximos Eventos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {events.slice(0, 3).map((evt) => (
+                <div key={evt.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+                  <div className="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-primary/10 flex-shrink-0">
+                    <span className="text-sm font-bold text-primary">{new Date(evt.event_date + "T12:00:00").getDate()}</span>
+                    <span className="text-[9px] text-muted-foreground uppercase">{format(new Date(evt.event_date + "T12:00:00"), "MMM", { locale: ptBR })}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{evt.title}</p>
+                    {evt.event_time && <p className="text-xs text-muted-foreground">{evt.event_time}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Birthdays */}
+      {birthdays.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2"><Heart className="w-4 h-4 text-secondary" /> Aniversariantes do Mês</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {birthdays.slice(0, 8).map((m) => (
+                <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50">
+                  <Avatar className="w-6 h-6"><AvatarFallback className="text-[9px] bg-secondary/10 text-secondary">{m.full_name.split(" ").map(n => n[0]).join("").slice(0, 2)}</AvatarFallback></Avatar>
+                  <span className="text-xs font-medium">{m.full_name.split(" ")[0]}</span>
+                  <span className="text-[10px] text-muted-foreground">{m.birth_date ? new Date(m.birth_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : ""}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        {/* Church Brand Header */}
-        <Card className="gradient-hero text-primary-foreground overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex flex-col items-center text-center gap-4">
-              {/* Church logo - prominent */}
-              {church?.logo_url ? (
-                <img
-                  src={church.logo_url}
-                  alt={church.name || "Logo"}
-                  className="w-24 h-24 md:w-28 md:h-28 rounded-2xl object-contain bg-primary-foreground/10 p-2"
-                />
-              ) : (
-                <div className="w-24 h-24 md:w-28 md:h-28 rounded-2xl bg-primary-foreground/10 flex items-center justify-center">
-                  <span className="text-3xl font-bold text-primary-foreground/60">
-                    {(church?.name || "I").charAt(0)}
-                  </span>
-                </div>
-              )}
-              <div>
-                <h2 className="text-xl md:text-2xl font-bold">{church?.name || "Minha Igreja"}</h2>
-                {(church as any)?.ministry_name && (
-                  <p className="text-sm opacity-70 mt-1">{(church as any).ministry_name}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* User profile strip */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="w-12 h-12 border-2 border-primary/20 flex-shrink-0">
+      <div className="space-y-0">
+        {/* Hero Header with Church Branding */}
+        <div className="gradient-hero -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 px-4 sm:px-6 pt-6 pb-8 rounded-b-3xl mb-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Avatar className="w-10 h-10 border-2 border-primary-foreground/20">
                 <AvatarImage src={profile?.avatar_url || ""} className="object-cover" />
-                <AvatarFallback className="text-lg bg-primary/10 text-primary">{initials}</AvatarFallback>
+                <AvatarFallback className="text-sm bg-primary-foreground/10 text-primary-foreground">{initials}</AvatarFallback>
               </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold truncate">{profile?.full_name || "Membro"}</h3>
-                  <Badge variant="secondary" className="text-xs flex-shrink-0">Membro</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground truncate">{profile?.email || ""}</p>
+              <div>
+                <p className="text-primary-foreground/70 text-xs">Olá,</p>
+                <p className="text-primary-foreground font-semibold text-sm">{profile?.full_name?.split(" ")[0] || "Membro"}</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <Button variant="ghost" size="icon" className="text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10" onClick={() => setActiveView("profile")}>
+              <Settings className="w-5 h-5" />
+            </Button>
+          </div>
+
+          {/* Church Logo & Name */}
+          <div className="flex flex-col items-center text-center gap-3">
+            {church?.logo_url ? (
+              <img src={church.logo_url} alt={church.name || "Logo"} className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-contain bg-primary-foreground/10 p-2 shadow-lg" />
+            ) : (
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-primary-foreground/10 flex items-center justify-center shadow-lg">
+                <Church className="w-10 h-10 text-primary-foreground/60" />
+              </div>
+            )}
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-primary-foreground">{church?.name || "Minha Igreja"}</h1>
+              {(church as any)?.ministry_name && <p className="text-sm text-primary-foreground/60 mt-0.5">{(church as any).ministry_name}</p>}
+            </div>
+          </div>
+        </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
+          <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
         ) : (
-          <Tabs defaultValue="overview">
-            <TabsList className="w-full md:w-auto flex-wrap h-auto gap-1">
-              <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-              <TabsTrigger value="courses">Cursos</TabsTrigger>
-              <TabsTrigger value="schedules">Escalas</TabsTrigger>
-              <TabsTrigger value="contribuicao">Contribuição</TabsTrigger>
-              <TabsTrigger value="campanhas">Campanhas</TabsTrigger>
-              <TabsTrigger value="events">Eventos</TabsTrigger>
-              <TabsTrigger value="prayer">Oração</TabsTrigger>
-              <TabsTrigger value="profile">Perfil</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview" className="space-y-6 mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Announcements */}
-                <Card className="md:col-span-2 lg:col-span-1">
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Bell className="w-5 h-5 text-secondary" />Avisos
-                    </CardTitle>
-                    {announcements.length > 0 && <Badge variant="secondary">{announcements.length}</Badge>}
-                  </CardHeader>
-                  <CardContent>
-                    {announcements.length === 0 ? (
-                      <p className="text-center text-muted-foreground py-4">Nenhum aviso no momento.</p>
-                    ) : (
-                      <div className="space-y-4">
-                        {announcements.map((item) => (
-                          <div key={item.id} className="p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                            <h4 className="font-medium text-sm mb-1">{item.title}</h4>
-                            <p className="text-xs text-muted-foreground line-clamp-2">{item.content}</p>
-                            <span className="text-xs text-muted-foreground mt-1 block">{new Date(item.created_at).toLocaleDateString("pt-BR")}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Birthdays */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Heart className="w-5 h-5 text-secondary" />Aniversariantes
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {birthdays.length === 0 ? (
-                      <p className="text-center text-muted-foreground py-4">Nenhum aniversariante este mês.</p>
-                    ) : (
-                      <div className="space-y-3">
-                        {birthdays.slice(0, 5).map((m) => (
-                          <div key={m.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                            <Avatar className="w-8 h-8">
-                              <AvatarFallback className="bg-secondary/10 text-secondary text-xs">
-                                {m.full_name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">{m.full_name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {m.birth_date ? new Date(m.birth_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : ""}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Upcoming Events */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <CalendarIcon className="w-5 h-5 text-secondary" />Próximos Eventos
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {events.length === 0 ? (
-                      <p className="text-center text-muted-foreground py-4">Nenhum evento próximo.</p>
-                    ) : (
-                      <div className="space-y-3">
-                        {events.slice(0, 4).map((evt) => (
-                          <div key={evt.id} className="p-3 rounded-lg bg-muted/50">
-                            <h4 className="font-medium text-sm">{evt.title}</h4>
-                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                              <CalendarIcon className="w-3 h-3" />
-                              {new Date(evt.event_date + "T12:00:00").toLocaleDateString("pt-BR")}
-                              {evt.event_time && <span>• {evt.event_time}</span>}
-                            </div>
-                            {evt.location && (
-                              <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                                <MapPin className="w-3 h-3" />{evt.location}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="courses" className="mt-6">
-              <CoursesTab />
-            </TabsContent>
-
-            <TabsContent value="schedules" className="mt-6">
-              <SchedulesView schedules={schedules} onConfirm={handleConfirmSchedule} />
-            </TabsContent>
-
-            <TabsContent value="contribuicao" className="mt-6">
-              <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-                <DollarSign className="w-5 h-5 text-primary" /> Contribuição
-              </h3>
-              {profile?.church_id ? (
-                <ContribuicaoView churchId={profile.church_id} />
-              ) : (
-                <p className="text-muted-foreground">Igreja não identificada.</p>
-              )}
-            </TabsContent>
-
-            <TabsContent value="campanhas" className="mt-6">
-              <CampanhasAppView churchId={profile?.church_id || ""} />
-            </TabsContent>
-
-            <TabsContent value="events" className="space-y-6 mt-6">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5 text-primary" /> Eventos
-              </h3>
-              {events.length === 0 ? (
-                <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Nenhum evento próximo.</p></CardContent></Card>
-              ) : (
-                <div className="space-y-3">
-                  {events.map((evt) => (
-                    <Card key={evt.id}>
-                      <CardContent className="p-4">
-                        <h4 className="font-semibold">{evt.title}</h4>
-                        <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                          <CalendarIcon className="w-4 h-4" />
-                          {new Date(evt.event_date + "T12:00:00").toLocaleDateString("pt-BR")}
-                          {evt.event_time && <span>• {evt.event_time}</span>}
-                        </div>
-                        {evt.location && (
-                          <div className="flex items-center gap-1 mt-1 text-sm text-muted-foreground">
-                            <MapPin className="w-4 h-4" />{evt.location}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="prayer" className="space-y-6 mt-6">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-primary" /> Pedidos de Oração
-              </h3>
-              <Card>
-                <CardContent className="py-8">
-                  <p className="text-center text-muted-foreground">Em breve você poderá enviar e acompanhar pedidos de oração.</p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="profile" className="mt-6">
-              <ProfileEditTab />
-            </TabsContent>
-          </Tabs>
+          <>
+            {/* Back button when not on home */}
+            {activeView !== "home" && (
+              <Button variant="ghost" size="sm" className="mb-4" onClick={() => setActiveView("home")}>
+                ← Voltar
+              </Button>
+            )}
+            {renderContent()}
+          </>
         )}
       </div>
     </AppLayout>

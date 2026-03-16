@@ -31,6 +31,8 @@ interface Member {
   gender: string | null;
   congregation_id: string | null;
   photo_url: string | null;
+  baptism_date: string | null;
+  is_active: boolean;
 }
 
 interface Alert {
@@ -60,11 +62,14 @@ export function useDashboardStats(congregationId?: string | null) {
     const fetchData = async () => {
       setIsLoading(true);
       try {
+        // Fetch ALL members (same as useMembers / Secretaria) - no is_active filter at query level
+        // so we can filter client-side exactly like Secretaria does
         let membersQuery = supabase
           .from("members")
-          .select("id, full_name, birth_date, wedding_date, spiritual_status, network, gender, congregation_id, photo_url, baptism_date")
-          .eq("is_active", true)
-          .eq("church_id", currentChurchId);
+          .select("id, full_name, birth_date, wedding_date, spiritual_status, network, gender, congregation_id, photo_url, baptism_date, is_active")
+          .eq("church_id", currentChurchId)
+          .order("full_name")
+          .limit(5000); // Avoid default 1000 limit
         
         if (congregationId) {
           membersQuery = membersQuery.eq("congregation_id", congregationId);
@@ -83,7 +88,7 @@ export function useDashboardStats(congregationId?: string | null) {
         
         setAlerts((alertsData as Alert[]) || []);
 
-        // Consolidation count (active records: contato + acompanhamento + integracao)
+        // Consolidation count (active records)
         const { count: consolCount } = await supabase
           .from("consolidation_records")
           .select("id", { count: "exact", head: true })
@@ -107,61 +112,62 @@ export function useDashboardStats(congregationId?: string | null) {
     const currentDate = now.getDate();
     const currentDay = now.getDay();
     
-    // Week boundaries (Sunday to Saturday)
     const weekStart = new Date(now);
     weekStart.setDate(currentDate - currentDay);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
 
-    // Match Secretaria exactly: membros = membro + lider + discipulador
-    const totalMembers = members.filter(m => 
+    // Filter active members EXACTLY like Secretaria does (line 106 of Secretaria.tsx)
+    const activeMembers = members.filter(m => m.is_active);
+
+    // Match Secretaria exactly (lines 109-116 of Secretaria.tsx)
+    const totalMembers = activeMembers.filter(m => 
       m.spiritual_status === "membro" || m.spiritual_status === "lider" || 
       m.spiritual_status === "discipulador"
     ).length;
-    const totalDecididos = members.filter(m => m.spiritual_status === "novo_convertido").length;
-    const totalVisitantes = members.filter(m => m.spiritual_status === "visitante").length;
-    const totalBaptized = members.filter(m => (m as any).baptism_date !== null).length;
+    const totalDecididos = activeMembers.filter(m => m.spiritual_status === "novo_convertido").length;
+    const totalVisitantes = activeMembers.filter(m => m.spiritual_status === "visitante").length;
+    const totalBaptized = activeMembers.filter(m => m.baptism_date !== null).length;
 
-    // Network stats - match Secretaria: use only the network field
+    // Network stats - match Secretaria (lines 117-122)
     const networkStats = {
-      homens: members.filter(m => m.network === "homens").length,
-      mulheres: members.filter(m => m.network === "mulheres").length,
-      jovens: members.filter(m => m.network === "jovens").length,
-      kids: members.filter(m => m.network === "kids").length,
+      homens: activeMembers.filter(m => m.network === "homens").length,
+      mulheres: activeMembers.filter(m => m.network === "mulheres").length,
+      jovens: activeMembers.filter(m => m.network === "jovens").length,
+      kids: activeMembers.filter(m => m.network === "kids").length,
     };
 
     // Birthday calculations
-    const birthdaysThisMonth = members.filter(m => {
+    const birthdaysThisMonth = activeMembers.filter(m => {
       if (!m.birth_date) return false;
-      const bd = new Date(m.birth_date);
+      const bd = new Date(m.birth_date + "T12:00:00");
       return bd.getMonth() === currentMonth;
     }).sort((a, b) => {
-      const dayA = new Date(a.birth_date!).getDate();
-      const dayB = new Date(b.birth_date!).getDate();
+      const dayA = new Date(a.birth_date! + "T12:00:00").getDate();
+      const dayB = new Date(b.birth_date! + "T12:00:00").getDate();
       return dayA - dayB;
     });
 
-    const birthdaysThisWeek = members.filter(m => {
+    const birthdaysThisWeek = activeMembers.filter(m => {
       if (!m.birth_date) return false;
-      const bd = new Date(m.birth_date);
+      const bd = new Date(m.birth_date + "T12:00:00");
       const thisYearBd = new Date(now.getFullYear(), bd.getMonth(), bd.getDate());
       return thisYearBd >= weekStart && thisYearBd <= weekEnd;
     });
 
-    // Wedding anniversary calculations
-    const weddingAnniversariesThisMonth = members.filter(m => {
+    const weddingAnniversariesThisMonth = activeMembers.filter(m => {
       if (!m.wedding_date) return false;
-      const wd = new Date(m.wedding_date);
+      const wd = new Date(m.wedding_date + "T12:00:00");
       return wd.getMonth() === currentMonth;
     }).sort((a, b) => {
-      const dayA = new Date(a.wedding_date!).getDate();
-      const dayB = new Date(b.wedding_date!).getDate();
+      const dayA = new Date(a.wedding_date! + "T12:00:00").getDate();
+      const dayB = new Date(b.wedding_date! + "T12:00:00").getDate();
       return dayA - dayB;
     });
 
-    const weddingAnniversariesThisWeek = members.filter(m => {
+    const weddingAnniversariesThisWeek = activeMembers.filter(m => {
       if (!m.wedding_date) return false;
-      const wd = new Date(m.wedding_date);
+      const wd = new Date(m.wedding_date + "T12:00:00");
       const thisYearWd = new Date(now.getFullYear(), wd.getMonth(), wd.getDate());
       return thisYearWd >= weekStart && thisYearWd <= weekEnd;
     });

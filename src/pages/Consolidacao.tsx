@@ -164,6 +164,16 @@ export default function Consolidacao() {
     setEditingRecord(null);
   };
 
+  const handleRegisterReturn = async (record: ConsolidationRecord) => {
+    const currentCount = (record as any).visit_count || 1;
+    const today = new Date().toISOString().split("T")[0];
+    await updateRecord(record.id, {
+      visit_count: currentCount + 1,
+      last_visit_date: today,
+      notes: `${record.notes || ""}\n[${today}] Retorno registrado (visita #${currentCount + 1})`.trim(),
+    } as any);
+  };
+
   if (!churchId) return null;
 
   const funnelSteps = [
@@ -368,6 +378,7 @@ export default function Consolidacao() {
                         <TableHead className="hidden md:table-cell">Consolidador</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="hidden md:table-cell">Data Contato</TableHead>
+                        <TableHead className="hidden md:table-cell">Visitas</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -421,6 +432,9 @@ export default function Consolidacao() {
                           <TableCell className="hidden md:table-cell">
                             {record.contact_date ? new Date(record.contact_date).toLocaleDateString("pt-BR") : "—"}
                           </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <span className="text-sm font-medium">{(record as any).visit_count || 1}x</span>
+                          </TableCell>
                           <TableCell>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -431,6 +445,9 @@ export default function Consolidacao() {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleEditRecord(record)}>
                                   Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleRegisterReturn(record)}>
+                                  <Eye className="w-4 h-4 mr-2" /> Registrar Retorno
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="text-destructive" onClick={() => deleteRecord(record.id)}>
                                   Excluir
