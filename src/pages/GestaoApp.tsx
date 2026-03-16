@@ -607,7 +607,7 @@ export default function GestaoApp() {
             <BrandingSection churchId={churchId} />
           </TabsContent>
           <TabsContent value="modulos" className="mt-6">
-            <ModulosSection />
+            <ModulosSection churchId={churchId} />
           </TabsContent>
           <TabsContent value="contribuicao" className="mt-6">
             <ContribuicaoSection churchId={churchId} />
