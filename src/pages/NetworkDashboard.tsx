@@ -10,14 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Loader2, Building2, Users, Grid3X3, TrendingUp, TrendingDown,
   PiggyBank, AlertTriangle, UserPlus, Network, ArrowLeft,
   BarChart3, DollarSign, ChevronDown, ChevronUp, Wallet,
-  Megaphone, Plus, Edit2, Trash2, GraduationCap,
+  Megaphone, Plus, Edit2, Trash2, GraduationCap, Save,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -56,8 +56,14 @@ export default function NetworkDashboard() {
   const [netAnnouncements, setNetAnnouncements] = useState<any[]>([]);
   const [announcementModal, setAnnouncementModal] = useState(false);
   const [editingAnn, setEditingAnn] = useState<any>(null);
-  const [annForm, setAnnForm] = useState({ title: "", content: "" });
+  const [annForm, setAnnForm] = useState({ title: "", content: "", start_date: "", end_date: "", image_url: "" });
   const [activeTab, setActiveTab] = useState("dashboard");
+  // Courses
+  const [netCourses, setNetCourses] = useState<any[]>([]);
+  const [courseModal, setCourseModal] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<any>(null);
+  const [courseForm, setCourseForm] = useState({ name: "", description: "", track: "", start_date: "", end_date: "" });
+  const [savingCourse, setSavingCourse] = useState(false);
   const { toast } = useToast();
 
   const userRoles = roles.map(r => r.role);
@@ -198,6 +204,7 @@ export default function NetworkDashboard() {
     return items;
   }, [churches]);
 
+  // ─── Announcements ─────────────────────────
   const loadAnnouncements = async () => {
     if (!networkId) return;
     const { data } = await supabase.from("network_announcements" as any)
@@ -208,15 +215,22 @@ export default function NetworkDashboard() {
   const saveAnnouncement = async () => {
     if (!annForm.title.trim() || !networkId) return;
     try {
+      const payload: any = {
+        title: annForm.title,
+        content: annForm.content,
+        start_date: annForm.start_date || null,
+        end_date: annForm.end_date || null,
+        image_url: annForm.image_url || null,
+      };
       if (editingAnn) {
-        await supabase.from("network_announcements" as any).update({ title: annForm.title, content: annForm.content } as any).eq("id", editingAnn.id);
+        await supabase.from("network_announcements" as any).update(payload).eq("id", editingAnn.id);
       } else {
-        await supabase.from("network_announcements" as any).insert({ network_id: networkId, title: annForm.title, content: annForm.content, created_by: user?.id } as any);
+        await supabase.from("network_announcements" as any).insert({ ...payload, network_id: networkId, created_by: user?.id } as any);
       }
       toast({ title: editingAnn ? "Informe atualizado!" : "Informe criado!" });
       setAnnouncementModal(false);
       setEditingAnn(null);
-      setAnnForm({ title: "", content: "" });
+      setAnnForm({ title: "", content: "", start_date: "", end_date: "", image_url: "" });
       loadAnnouncements();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -229,7 +243,64 @@ export default function NetworkDashboard() {
     loadAnnouncements();
   };
 
-  useEffect(() => { if (hasAccess && networkId) loadAnnouncements(); }, [hasAccess, networkId]);
+  // ─── Network Courses ─────────────────────────
+  const loadNetCourses = async () => {
+    if (!networkId) return;
+    const { data } = await supabase.from("courses")
+      .select("*")
+      .eq("network_id", networkId)
+      .order("created_at", { ascending: false });
+    setNetCourses(data || []);
+  };
+
+  const saveCourse = async () => {
+    if (!courseForm.name.trim() || !networkId) return;
+    setSavingCourse(true);
+    try {
+      const payload: any = {
+        name: courseForm.name,
+        description: courseForm.description || null,
+        track: courseForm.track || null,
+        start_date: courseForm.start_date || null,
+        end_date: courseForm.end_date || null,
+      };
+      if (editingCourse) {
+        const { error } = await supabase.from("courses").update(payload).eq("id", editingCourse.id);
+        if (error) throw error;
+      } else {
+        // Network courses need a church_id too; use first church in network as placeholder
+        const firstChurch = churches[0];
+        if (!firstChurch) throw new Error("Nenhuma igreja na rede");
+        const { error } = await supabase.from("courses").insert({
+          ...payload,
+          church_id: firstChurch.id,
+          network_id: networkId,
+          is_active: true,
+        });
+        if (error) throw error;
+      }
+      toast({ title: editingCourse ? "Curso atualizado!" : "Curso criado!" });
+      setCourseModal(false);
+      setEditingCourse(null);
+      setCourseForm({ name: "", description: "", track: "", start_date: "", end_date: "" });
+      loadNetCourses();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally { setSavingCourse(false); }
+  };
+
+  const deleteCourse = async (id: string) => {
+    await supabase.from("courses").delete().eq("id", id);
+    toast({ title: "Curso removido" });
+    loadNetCourses();
+  };
+
+  useEffect(() => {
+    if (hasAccess && networkId) {
+      loadAnnouncements();
+      loadNetCourses();
+    }
+  }, [hasAccess, networkId]);
 
   if (isChecking) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   if (!user) return <Navigate to="/login" replace />;
@@ -287,7 +358,6 @@ export default function NetworkDashboard() {
           <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
         ) : (
           <>
-            {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
               {[
                 { icon: Building2, label: "Igrejas", value: totals.churches, color: "text-primary" },
@@ -325,7 +395,6 @@ export default function NetworkDashboard() {
               ))}
             </div>
 
-            {/* Charts - Collapsible, starts minimized */}
             {displayChurches.length > 1 && (
               <Collapsible open={chartsOpen} onOpenChange={setChartsOpen}>
                 <CollapsibleTrigger asChild>
@@ -381,7 +450,6 @@ export default function NetworkDashboard() {
               </Collapsible>
             )}
 
-            {/* Church Table */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Building2 className="w-5 h-5" /> Detalhamento por Igreja</CardTitle>
@@ -433,7 +501,6 @@ export default function NetworkDashboard() {
               </CardContent>
             </Card>
 
-            {/* Alerts */}
             {alerts.length > 0 && (
               <Card className="border-amber-500/30">
                 <CardHeader>
@@ -456,19 +523,34 @@ export default function NetworkDashboard() {
         )}
           </TabsContent>
 
+          {/* ─── Informes Tab ───────────────────── */}
           <TabsContent value="informes" className="mt-4 space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-bold flex items-center gap-2"><Megaphone className="w-5 h-5 text-primary" /> Informes da Rede</h2>
-              <Button onClick={() => { setEditingAnn(null); setAnnForm({ title: "", content: "" }); setAnnouncementModal(true); }}><Plus className="w-4 h-4 mr-1" /> Novo Informe</Button>
+              <Button onClick={() => { setEditingAnn(null); setAnnForm({ title: "", content: "", start_date: "", end_date: "", image_url: "" }); setAnnouncementModal(true); }}><Plus className="w-4 h-4 mr-1" /> Novo Informe</Button>
             </div>
+            <p className="text-sm text-muted-foreground">Informes criados aqui aparecem no Meu App de todas as igrejas da rede.</p>
             {netAnnouncements.length === 0 ? (
               <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum informe cadastrado.</CardContent></Card>
             ) : netAnnouncements.map((a: any) => (
               <Card key={a.id}>
                 <CardContent className="p-4 flex items-start justify-between gap-4">
-                  <div><h4 className="font-semibold">{a.title}</h4><p className="text-sm text-muted-foreground mt-1">{a.content}</p><span className="text-xs text-muted-foreground">{new Date(a.created_at).toLocaleDateString("pt-BR")}</span></div>
+                  <div className="flex-1 min-w-0">
+                    {a.image_url && <img src={a.image_url} alt="" className="w-full h-32 object-cover rounded-lg mb-2" />}
+                    <h4 className="font-semibold">{a.title}</h4>
+                    <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">{a.content}</p>
+                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                      {a.start_date && <span>📅 {new Date(a.start_date + "T12:00:00").toLocaleDateString("pt-BR")}</span>}
+                      {a.end_date && <span>→ {new Date(a.end_date + "T12:00:00").toLocaleDateString("pt-BR")}</span>}
+                      {!a.start_date && <span>{new Date(a.created_at).toLocaleDateString("pt-BR")}</span>}
+                    </div>
+                  </div>
                   <div className="flex gap-1 flex-shrink-0">
-                    <Button variant="ghost" size="icon" onClick={() => { setEditingAnn(a); setAnnForm({ title: a.title, content: a.content }); setAnnouncementModal(true); }}><Edit2 className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => {
+                      setEditingAnn(a);
+                      setAnnForm({ title: a.title, content: a.content, start_date: a.start_date || "", end_date: a.end_date || "", image_url: a.image_url || "" });
+                      setAnnouncementModal(true);
+                    }}><Edit2 className="w-4 h-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => deleteAnnouncement(a.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                   </div>
                 </CardContent>
@@ -476,10 +558,18 @@ export default function NetworkDashboard() {
             ))}
             <Dialog open={announcementModal} onOpenChange={setAnnouncementModal}>
               <DialogContent>
-                <DialogHeader><DialogTitle>{editingAnn ? "Editar Informe" : "Novo Informe"}</DialogTitle></DialogHeader>
+                <DialogHeader>
+                  <DialogTitle>{editingAnn ? "Editar Informe" : "Novo Informe"}</DialogTitle>
+                  <DialogDescription>Este informe será exibido no App de todas as igrejas da rede.</DialogDescription>
+                </DialogHeader>
                 <div className="space-y-4">
-                  <div className="space-y-2"><Label>Título *</Label><Input value={annForm.title} onChange={e => setAnnForm(f => ({ ...f, title: e.target.value }))} /></div>
-                  <div className="space-y-2"><Label>Conteúdo</Label><Textarea value={annForm.content} onChange={e => setAnnForm(f => ({ ...f, content: e.target.value }))} rows={4} /></div>
+                  <div className="space-y-2"><Label>Título *</Label><Input value={annForm.title} onChange={e => setAnnForm(f => ({ ...f, title: e.target.value }))} placeholder="Título do informe 📢" /></div>
+                  <div className="space-y-2"><Label>Conteúdo</Label><Textarea value={annForm.content} onChange={e => setAnnForm(f => ({ ...f, content: e.target.value }))} rows={4} placeholder="Detalhes do informe... use emojis à vontade! 🙏✨" /></div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2"><Label>Data Início</Label><Input type="date" value={annForm.start_date} onChange={e => setAnnForm(f => ({ ...f, start_date: e.target.value }))} /></div>
+                    <div className="space-y-2"><Label>Data Fim</Label><Input type="date" value={annForm.end_date} onChange={e => setAnnForm(f => ({ ...f, end_date: e.target.value }))} /></div>
+                  </div>
+                  <div className="space-y-2"><Label>URL da Imagem (opcional)</Label><Input value={annForm.image_url} onChange={e => setAnnForm(f => ({ ...f, image_url: e.target.value }))} placeholder="https://..." /></div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setAnnouncementModal(false)}>Cancelar</Button>
@@ -489,12 +579,72 @@ export default function NetworkDashboard() {
             </Dialog>
           </TabsContent>
 
-          <TabsContent value="cursos" className="mt-4">
-            <Card><CardContent className="py-8 text-center text-muted-foreground">
-              <GraduationCap className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <p>Gerenciamento de cursos da rede em breve.</p>
-              <p className="text-xs mt-1">Os cursos criados aqui serão disponibilizados para todas as igrejas da rede.</p>
-            </CardContent></Card>
+          {/* ─── Cursos Tab ───────────────────── */}
+          <TabsContent value="cursos" className="mt-4 space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold flex items-center gap-2"><GraduationCap className="w-5 h-5 text-primary" /> Cursos da Rede</h2>
+              <Button onClick={() => { setEditingCourse(null); setCourseForm({ name: "", description: "", track: "", start_date: "", end_date: "" }); setCourseModal(true); }}>
+                <Plus className="w-4 h-4 mr-1" /> Novo Curso
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">Cursos criados aqui são disponibilizados para todas as igrejas da rede no Meu App.</p>
+
+            {netCourses.length === 0 ? (
+              <Card><CardContent className="py-8 text-center text-muted-foreground">
+                <GraduationCap className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p>Nenhum curso da rede cadastrado.</p>
+              </CardContent></Card>
+            ) : (
+              <div className="space-y-3">
+                {netCourses.map((c: any) => (
+                  <Card key={c.id}>
+                    <CardContent className="p-4 flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold">{c.name}</h4>
+                        {c.description && <p className="text-sm text-muted-foreground mt-1">{c.description}</p>}
+                        <div className="flex items-center gap-2 mt-2">
+                          {c.track && <Badge variant="secondary">{c.track}</Badge>}
+                          <Badge variant={c.is_active ? "default" : "outline"}>{c.is_active ? "Ativo" : "Inativo"}</Badge>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button variant="ghost" size="icon" onClick={() => {
+                          setEditingCourse(c);
+                          setCourseForm({ name: c.name, description: c.description || "", track: c.track || "", start_date: c.start_date || "", end_date: c.end_date || "" });
+                          setCourseModal(true);
+                        }}><Edit2 className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => deleteCourse(c.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            <Dialog open={courseModal} onOpenChange={setCourseModal}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editingCourse ? "Editar Curso" : "Novo Curso da Rede"}</DialogTitle>
+                  <DialogDescription>Este curso será disponibilizado para todas as igrejas da rede.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2"><Label>Nome *</Label><Input value={courseForm.name} onChange={e => setCourseForm(f => ({ ...f, name: e.target.value }))} placeholder="Nome do curso" /></div>
+                  <div className="space-y-2"><Label>Descrição</Label><Textarea value={courseForm.description} onChange={e => setCourseForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="Sobre o curso..." /></div>
+                  <div className="space-y-2"><Label>Trilha / Categoria</Label><Input value={courseForm.track} onChange={e => setCourseForm(f => ({ ...f, track: e.target.value }))} placeholder="Ex: Fundamentos, Liderança" /></div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2"><Label>Início</Label><Input type="date" value={courseForm.start_date} onChange={e => setCourseForm(f => ({ ...f, start_date: e.target.value }))} /></div>
+                    <div className="space-y-2"><Label>Fim</Label><Input type="date" value={courseForm.end_date} onChange={e => setCourseForm(f => ({ ...f, end_date: e.target.value }))} /></div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setCourseModal(false)}>Cancelar</Button>
+                  <Button onClick={saveCourse} disabled={!courseForm.name.trim() || savingCourse}>
+                    {savingCourse ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                    {editingCourse ? "Salvar" : "Criar"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
         </Tabs>
       </main>

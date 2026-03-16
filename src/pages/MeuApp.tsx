@@ -10,7 +10,7 @@ import {
   Clock, MapPin, Plus, Loader2, Camera, GraduationCap, Settings,
   List, CalendarDays, Check, X, DollarSign, QrCode, Copy,
   Church, Mic, Video, Newspaper, HandHeart, Grid3X3, Flame,
-  Cake, HeartHandshake,
+  Cake, HeartHandshake, Megaphone,
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,6 +26,16 @@ interface Announcement {
   id: string;
   title: string;
   content: string;
+  created_at: string;
+}
+
+interface NetworkAnnouncement {
+  id: string;
+  title: string;
+  content: string;
+  start_date: string | null;
+  end_date: string | null;
+  image_url: string | null;
   created_at: string;
 }
 
@@ -464,7 +474,7 @@ function IgrejaView({ churchId, church }: { churchId: string; church: any }) {
         <CardContent className="p-4 space-y-3">
           {church?.logo_url && (
             <div className="flex justify-center">
-              <img src={church.logo_url} alt="" className="w-24 h-24 object-contain rounded-xl" />
+              <img src={church.logo_url} alt="" className="w-24 h-24 object-contain rounded-xl" style={{ imageRendering: "auto" }} />
             </div>
           )}
           <h4 className="text-lg font-bold text-center">{church?.name || "Igreja"}</h4>
@@ -614,6 +624,7 @@ export default function MeuApp() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [networkAnnouncements, setNetworkAnnouncements] = useState<NetworkAnnouncement[]>([]);
   const [birthdays, setBirthdays] = useState<BirthdayMember[]>([]);
   const [weddingAnniversaries, setWeddingAnniversaries] = useState<WeddingMember[]>([]);
   const [events, setEvents] = useState<UpcomingEvent[]>([]);
@@ -633,6 +644,21 @@ export default function MeuApp() {
         .select("id, title, content, created_at").eq("church_id", profile.church_id)
         .eq("is_active", true).order("created_at", { ascending: false }).limit(5);
       setAnnouncements((announcementsData as Announcement[]) || []);
+
+      // Load network announcements
+      const { data: churchData } = await supabase.from("churches")
+        .select("ministry_network_id").eq("id", profile.church_id).maybeSingle();
+      if ((churchData as any)?.ministry_network_id) {
+        const today = new Date().toISOString().split("T")[0];
+        const { data: netAnns } = await supabase.from("network_announcements" as any)
+          .select("id, title, content, start_date, end_date, image_url, created_at")
+          .eq("network_id", (churchData as any).ministry_network_id)
+          .eq("is_active", true)
+          .or(`end_date.is.null,end_date.gte.${today}`)
+          .order("created_at", { ascending: false })
+          .limit(10);
+        setNetworkAnnouncements((netAnns as NetworkAnnouncement[]) || []);
+      }
 
       const now = new Date();
       const currentMonth = (now.getMonth() + 1).toString().padStart(2, "0");
@@ -724,7 +750,7 @@ export default function MeuApp() {
       case "devocional": return (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold flex items-center gap-2"><Flame className="w-5 h-5 text-primary" /> Devocional</h3>
-          <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Em breve devocioanais diários estarão disponíveis aqui.</p></CardContent></Card>
+          <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Em breve devocionais diários estarão disponíveis aqui.</p></CardContent></Card>
         </div>
       );
       case "youtube": return churchId ? <YoutubeView churchId={churchId} /> : null;
@@ -756,7 +782,6 @@ export default function MeuApp() {
       default: return null;
     }
   };
-
 
   // If a sub-view is active, show ONLY that content (full page, no hero)
   if (activeView !== "home") {
@@ -794,14 +819,20 @@ export default function MeuApp() {
             </button>
           </div>
 
-          {/* Centered Logo - BIGGER and more prominent */}
+          {/* Centered Logo - BIGGER, crisp, prominent */}
           <div className="flex flex-col items-center text-center gap-4 relative z-10 py-8">
             {church?.logo_url ? (
-              <div className="w-40 h-40 md:w-52 md:h-52 rounded-[2.5rem] bg-white/15 backdrop-blur-lg p-5 shadow-2xl border-2 border-white/25 ring-4 ring-white/10">
-                <img src={church.logo_url} alt={church.name || "Logo"} className="w-full h-full rounded-2xl object-contain drop-shadow-lg" />
+              <div className="w-44 h-44 md:w-56 md:h-56 rounded-[2.5rem] bg-white/20 backdrop-blur-lg p-4 shadow-2xl border-2 border-white/30 ring-4 ring-white/15">
+                <img
+                  src={church.logo_url}
+                  alt={church.name || "Logo"}
+                  className="w-full h-full rounded-2xl object-contain drop-shadow-lg"
+                  style={{ imageRendering: "auto", WebkitFontSmoothing: "antialiased" }}
+                  loading="eager"
+                />
               </div>
             ) : (
-              <div className="w-40 h-40 md:w-52 md:h-52 rounded-[2.5rem] bg-primary-foreground/10 flex items-center justify-center shadow-2xl backdrop-blur-lg border-2 border-white/25 ring-4 ring-white/10">
+              <div className="w-44 h-44 md:w-56 md:h-56 rounded-[2.5rem] bg-primary-foreground/10 flex items-center justify-center shadow-2xl backdrop-blur-lg border-2 border-white/25 ring-4 ring-white/10">
                 <Church className="w-20 h-20 text-primary-foreground/70" />
               </div>
             )}
@@ -842,13 +873,46 @@ export default function MeuApp() {
           </div>
         </div>
 
-        {/* Fixed Sections: Avisos, Aniversariantes, Aniversário de Casamento */}
+        {/* Fixed Sections: Informes da Rede, Avisos, Aniversariantes, Aniversário de Casamento */}
         <div className="px-0 py-6 space-y-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
           ) : (
             <>
-              {/* Avisos - Always visible */}
+              {/* Informes da Rede - Before announcements */}
+              {networkAnnouncements.length > 0 && (
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2"><Megaphone className="w-4 h-4 text-primary" /> Informes da Rede</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {networkAnnouncements.map((item) => (
+                        <div key={item.id} className="p-3 rounded-xl bg-card border border-border">
+                          {item.image_url && (
+                            <img src={item.image_url} alt="" className="w-full h-32 object-cover rounded-lg mb-2" />
+                          )}
+                          <h4 className="font-medium text-sm mb-1">{item.title}</h4>
+                          <p className="text-xs text-muted-foreground whitespace-pre-line">{item.content}</p>
+                          <div className="flex items-center gap-2 mt-2 text-[10px] text-muted-foreground">
+                            {item.start_date && (
+                              <span>📅 {new Date(item.start_date + "T12:00:00").toLocaleDateString("pt-BR")}</span>
+                            )}
+                            {item.end_date && (
+                              <span>→ {new Date(item.end_date + "T12:00:00").toLocaleDateString("pt-BR")}</span>
+                            )}
+                            {!item.start_date && (
+                              <span>{new Date(item.created_at).toLocaleDateString("pt-BR")}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Avisos da Igreja */}
               {announcements.length > 0 && (
                 <Card className="border-secondary/30 bg-secondary/5">
                   <CardHeader className="pb-2">
@@ -868,7 +932,7 @@ export default function MeuApp() {
                 </Card>
               )}
 
-              {/* Aniversariantes - Always visible */}
+              {/* Aniversariantes */}
               {birthdays.length > 0 && (
                 <Card>
                   <CardHeader className="pb-2">
@@ -888,7 +952,7 @@ export default function MeuApp() {
                 </Card>
               )}
 
-              {/* Aniversários de Casamento - Always visible */}
+              {/* Aniversários de Casamento */}
               {weddingAnniversaries.length > 0 && (
                 <Card>
                   <CardHeader className="pb-2">
