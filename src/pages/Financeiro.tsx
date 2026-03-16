@@ -65,9 +65,45 @@ export default function Financeiro() {
   const { accounts } = useFinancialAccounts(churchId || undefined);
 
   const {
-    tithers, months, monthlyTotals,
-    stats: titherStats, isLoading: loadingTithers,
+    tithers: allTithers, rawData: titherRawData, months, monthlyTotals: allMonthlyTotals,
+    stats: allTitherStats, isLoading: loadingTithers,
   } = useTithers(churchId || undefined);
+
+  // ─── Dizimistas period filters ───
+  const [titherPeriodMode, setTitherPeriodMode] = useState<PeriodMode>("month");
+  const [titherMonth, setTitherMonth] = useState(now.getMonth());
+  const [titherYear, setTitherYear] = useState(now.getFullYear());
+
+  // Filter tithers by selected period
+  const filteredTitherData = useMemo(() => {
+    if (titherPeriodMode === "all") return titherRawData;
+    return titherRawData.filter(d => {
+      if (titherPeriodMode === "year") return d.year === titherYear;
+      return d.year === titherYear && d.monthNum === titherMonth;
+    });
+  }, [titherRawData, titherPeriodMode, titherMonth, titherYear]);
+
+  const filteredTithers = useMemo(() => {
+    const memberMap = new Map<string, { member_id: string; member_name: string; total_year: number; months_paid: number; monthly_data: Record<string, number> }>();
+    filteredTitherData.forEach((item) => {
+      if (!memberMap.has(item.member_id)) {
+        memberMap.set(item.member_id, { member_id: item.member_id, member_name: item.member_name, total_year: 0, months_paid: 0, monthly_data: {} });
+      }
+      const member = memberMap.get(item.member_id)!;
+      member.total_year += item.total;
+      if (!member.monthly_data[item.month]) { member.monthly_data[item.month] = 0; member.months_paid++; }
+      member.monthly_data[item.month] += item.total;
+    });
+    return Array.from(memberMap.values()).sort((a, b) => b.total_year - a.total_year);
+  }, [filteredTitherData]);
+
+  const titherStats = useMemo(() => {
+    const totalTithers = filteredTithers.length;
+    const totalAmount = filteredTithers.reduce((sum, t) => sum + t.total_year, 0);
+    const averagePerTither = totalTithers > 0 ? totalAmount / totalTithers : 0;
+    const regularTithers = filteredTithers.filter((t) => t.months_paid >= 3).length;
+    return { totalTithers, totalAmount, averagePerTither, regularTithers };
+  }, [filteredTithers]);
 
   // Filter transactions by period + account
   const filteredTransactions = useMemo(() => {
