@@ -198,17 +198,6 @@ export default function NetworkDashboard() {
     return items;
   }, [churches]);
 
-  if (isChecking) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
-  if (!user) return <Navigate to="/login" replace />;
-  if (!hasAccess) return <Navigate to="/app" replace />;
-
-  // Network announcements state
-  const [netAnnouncements, setNetAnnouncements] = useState<any[]>([]);
-  const [announcementModal, setAnnouncementModal] = useState(false);
-  const [editingAnn, setEditingAnn] = useState<any>(null);
-  const [annForm, setAnnForm] = useState({ title: "", content: "" });
-  const [activeTab, setActiveTab] = useState("dashboard");
-
   const loadAnnouncements = async () => {
     if (!networkId) return;
     const { data } = await supabase.from("network_announcements" as any)
@@ -241,6 +230,10 @@ export default function NetworkDashboard() {
   };
 
   useEffect(() => { if (hasAccess && networkId) loadAnnouncements(); }, [hasAccess, networkId]);
+
+  if (isChecking) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!hasAccess) return <Navigate to="/app" replace />;
 
   return (
     <div className="min-h-screen bg-background">
