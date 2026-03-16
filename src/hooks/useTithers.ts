@@ -60,12 +60,16 @@ export function useTithers(churchId?: string) {
 
       // Transform data - parse date as local to avoid timezone issues
       const transformed: TitherData[] = tithes.map((tx: any) => {
-        // Parse date as local (YYYY-MM-DD format)
-        const [year, month] = tx.transaction_date.split('-');
+        // Parse date as local (YYYY-MM-DD format) - avoid UTC conversion
+        const parts = tx.transaction_date.split('-');
+        const year = parts[0];
+        const month = parts[1];
         return {
           member_id: tx.member_id,
           member_name: tx.member?.full_name || "Membro desconhecido",
           month: `${year}-${month}`,
+          year: parseInt(year),
+          monthNum: parseInt(month) - 1, // 0-indexed
           total: Number(tx.amount),
         };
       });
