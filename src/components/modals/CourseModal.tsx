@@ -306,6 +306,18 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
               </FormItem>
             )} />
 
+            <FormField control={form.control} name="show_in_app" render={({ field }) => (
+              <FormItem className="flex items-center gap-3 space-y-0 rounded-lg border p-3">
+                <FormControl>
+                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+                <div>
+                  <FormLabel className="text-sm font-medium">Exibir no Meu App</FormLabel>
+                  <p className="text-xs text-muted-foreground">Se desmarcado, o curso só aparecerá na área administrativa.</p>
+                </div>
+              </FormItem>
+            )} />
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
               <Button type="submit" disabled={isSubmitting}>
