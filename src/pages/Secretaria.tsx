@@ -47,7 +47,7 @@ const statusConfig = {
   discipulador: { label: "Discipulador", color: "bg-info/20 text-info" },
 };
 
-const networkConfig = {
+const networkConfig: Record<string, { label: string; icon: any; color: string }> = {
   homens: { label: "Homens", icon: Users, color: "text-primary" },
   mulheres: { label: "Mulheres", icon: UserCheck, color: "text-secondary" },
   jovens: { label: "Jovens", icon: UserPlus, color: "text-info" },
