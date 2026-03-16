@@ -241,7 +241,7 @@ export default function Secretaria() {
         {/* Network Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {Object.entries(stats.networks).map(([network, count]) => {
-            const config = networkConfig[network as keyof typeof networkConfig];
+            const config = networkConfig[network] || { label: network.charAt(0).toUpperCase() + network.slice(1), icon: Users, color: "text-muted-foreground" };
             return (
               <button
                 key={network}
@@ -258,6 +258,20 @@ export default function Secretaria() {
               </button>
             );
           })}
+          {stats.withoutNetwork > 0 && (
+            <button
+              onClick={() => setNetworkFilter(networkFilter === "__none" ? "all" : "__none")}
+              className={`flex items-center gap-2 p-3 rounded-lg border transition-all min-w-0 ${
+                networkFilter === "__none" 
+                  ? "border-primary bg-primary/5" 
+                  : "border-border hover:border-primary/50"
+              }`}
+            >
+              <Users className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+              <span className="text-sm font-medium truncate">Sem rede</span>
+              <Badge variant="secondary" className="ml-auto flex-shrink-0">{stats.withoutNetwork}</Badge>
+            </button>
+          )}
         </div>
 
         {/* Tabs by Person Type */}
