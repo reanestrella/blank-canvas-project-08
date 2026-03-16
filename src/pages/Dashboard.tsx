@@ -205,23 +205,20 @@ function MemberDashboard() {
 export default function Dashboard() {
   const { roles, isAdmin, hasRole, hasAnyRole } = useAuth();
 
-  const isOnlyCellLeader = hasRole("lider_celula") && !hasRole("pastor") && !hasRole("secretario") && !hasRole("tesoureiro") && !hasRole("consolidacao");
+  // Only pastor/admin sees the full dashboard
+  const isPastor = isAdmin() || hasRole("pastor");
 
-  const dashboardSections = useMemo(() => {
-    if (isOnlyCellLeader) return []; // will redirect
-    if (isAdmin() || hasRole("pastor")) return [PastorDashboard];
-    const sections: React.FC[] = [];
-    if (hasRole("secretario")) sections.push(SecretaryDashboard);
-    if (hasRole("tesoureiro")) sections.push(TreasurerDashboard);
-    if (hasRole("lider_ministerio")) sections.push(MinistryLeaderDashboard);
-    if (hasRole("consolidacao")) sections.push(ConsolidationDashboard);
-    if (sections.length === 0) sections.push(MemberDashboard);
-    return sections;
-  }, [roles, isAdmin, hasRole, isOnlyCellLeader]);
-
-  if (isOnlyCellLeader) {
-    return <Navigate to="/celulas" replace />;
+  if (!isPastor) {
+    // Redirect non-pastors to their appropriate page
+    if (hasRole("tesoureiro")) return <Navigate to="/financeiro" replace />;
+    if (hasRole("secretario")) return <Navigate to="/secretaria" replace />;
+    if (hasRole("consolidacao")) return <Navigate to="/consolidacao" replace />;
+    if (hasRole("lider_celula")) return <Navigate to="/celulas" replace />;
+    if (hasRole("lider_ministerio")) return <Navigate to="/ministerios" replace />;
+    return <Navigate to="/meu-app" replace />;
   }
+
+  const dashboardSections = [PastorDashboard];
 
   return (
     <AppLayout>
