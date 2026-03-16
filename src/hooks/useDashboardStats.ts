@@ -50,6 +50,7 @@ export function useDashboardStats(congregationId?: string | null) {
   const [consolidationCount, setConsolidationCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [hasFetched, setHasFetched] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<Record<string, any>>({});
   const { currentChurchId } = useAuth();
 
   useEffect(() => {
@@ -102,30 +103,37 @@ export function useDashboardStats(congregationId?: string | null) {
 
         if (cancelled) return;
 
+        // DIAGNOSTIC: Log errors if any
+        if (membersRes.error) {
+          console.error("[Dashboard] Members query ERROR:", membersRes.error);
+        }
+
         const fetchedMembers = (membersRes.data as Member[]) || [];
         setMembers(fetchedMembers);
         setAlerts((alertsRes.data as Alert[]) || []);
         setConsolidationCount(consolRes.count || 0);
         setHasFetched(true);
 
-        // Debug: log counts so we can verify they match Secretaria
+        // Debug info for UI display
         const active = fetchedMembers.filter(m => m.is_active);
-        console.log("[Dashboard Stats]", {
-          churchId: currentChurchId,
-          totalFetched: fetchedMembers.length,
-          active: active.length,
-          membros: active.filter(m => m.spiritual_status === "membro" || m.spiritual_status === "lider" || m.spiritual_status === "discipulador").length,
-          decididos: active.filter(m => m.spiritual_status === "novo_convertido").length,
-          visitantes: active.filter(m => m.spiritual_status === "visitante").length,
-          batizados: active.filter(m => m.baptism_date !== null).length,
-          consolidacao: consolRes.count || 0,
+        const diag = {
+          currentChurchId,
+          totalMembersFetched: fetchedMembers.length,
+          membersError: membersRes.error?.message || null,
+          membrosCount: active.filter(m => m.spiritual_status === "membro" || m.spiritual_status === "lider" || m.spiritual_status === "discipulador").length,
+          decididosCount: active.filter(m => m.spiritual_status === "novo_convertido").length,
+          visitantesCount: active.filter(m => m.spiritual_status === "visitante").length,
+          batizadosCount: active.filter(m => m.baptism_date !== null).length,
+          consolidacaoCount: consolRes.count || 0,
           redes: {
             homens: active.filter(m => m.network === "homens").length,
             mulheres: active.filter(m => m.network === "mulheres").length,
             jovens: active.filter(m => m.network === "jovens").length,
             kids: active.filter(m => m.network === "kids").length,
           },
-        });
+        };
+        setDebugInfo(diag);
+        console.log("[Dashboard Stats DEBUG]", diag);
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);
       } finally {
@@ -222,5 +230,6 @@ export function useDashboardStats(congregationId?: string | null) {
     stats,
     isLoading,
     members,
+    debugInfo,
   };
 }
