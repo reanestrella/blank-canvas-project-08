@@ -39,6 +39,7 @@ const Master = lazy(() => import("./pages/Master"));
 const Assistente = lazy(() => import("./pages/Assistente"));
 const NetworkDashboard = lazy(() => import("./pages/NetworkDashboard"));
 const GestaoApp = lazy(() => import("./pages/GestaoApp"));
+const Patrimonio = lazy(() => import("./pages/Patrimonio"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 function PageLoader() {
