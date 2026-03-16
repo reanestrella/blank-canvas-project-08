@@ -328,7 +328,7 @@ export default function Financeiro() {
                           <div>
                             <p className="font-medium text-sm">{tx.description}</p>
                             <p className="text-xs text-muted-foreground">
-                              {new Date(tx.transaction_date).toLocaleDateString("pt-BR")}
+                              {new Date(tx.transaction_date + "T12:00:00").toLocaleDateString("pt-BR")}
                             </p>
                           </div>
                         </div>
