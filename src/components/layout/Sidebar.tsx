@@ -46,10 +46,11 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { church, signOut, roles, isAdmin, currentChurchId } = useAuth();
+  const { church, signOut, roles, isAdmin, currentChurchId, profile } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
 
   const userRoles = useMemo(() => roles.map(r => r.role), [roles]);
+  const isNetworkUser = userRoles.includes("network_admin" as any) || userRoles.includes("network_finance" as any);
 
   const menuItems = useMemo(() => {
     if (isAdmin()) return allMenuItems;
