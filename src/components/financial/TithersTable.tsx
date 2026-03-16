@@ -1,6 +1,4 @@
 import { useState, useMemo } from "react";
-import { format, subMonths } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { Search, CheckCircle2, XCircle } from "lucide-react";
 import {
   Table,
@@ -26,10 +24,14 @@ export function TithersTable({ tithers, months }: TithersTableProps) {
   const [search, setSearch] = useState("");
 
   const displayMonths = useMemo(() => {
-    return months.slice(-6).map((m) => ({
-      key: m,
-      label: format(new Date(m + "-01"), "MMM", { locale: ptBR }),
-    }));
+    return months.slice(-6).map((m) => {
+      const [y, mo] = m.split("-");
+      const monthNames = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+      return {
+        key: m,
+        label: monthNames[parseInt(mo) - 1],
+      };
+    });
   }, [months]);
 
   const filteredTithers = useMemo(() => {
@@ -123,14 +125,14 @@ export function TithersTable({ tithers, months }: TithersTableProps) {
                       <Badge
                         variant="outline"
                         className={cn(
-                          tither.months_paid >= 10
+                          tither.months_paid >= 6
                             ? "text-success border-success/30 bg-success/10"
-                            : tither.months_paid >= 6
+                            : tither.months_paid >= 3
                             ? "text-amber-600 border-amber-500/30 bg-amber-500/10"
                             : "text-muted-foreground"
                         )}
                       >
-                        {tither.months_paid}/12 meses
+                        {tither.months_paid} meses
                       </Badge>
                     </TableCell>
                   </TableRow>

@@ -65,9 +65,45 @@ export default function Financeiro() {
   const { accounts } = useFinancialAccounts(churchId || undefined);
 
   const {
-    tithers, months, monthlyTotals,
-    stats: titherStats, isLoading: loadingTithers,
+    tithers: allTithers, rawData: titherRawData, months, monthlyTotals: allMonthlyTotals,
+    stats: allTitherStats, isLoading: loadingTithers,
   } = useTithers(churchId || undefined);
+
+  // ─── Dizimistas period filters ───
+  const [titherPeriodMode, setTitherPeriodMode] = useState<PeriodMode>("month");
+  const [titherMonth, setTitherMonth] = useState(now.getMonth());
+  const [titherYear, setTitherYear] = useState(now.getFullYear());
+
+  // Filter tithers by selected period
+  const filteredTitherData = useMemo(() => {
+    if (titherPeriodMode === "all") return titherRawData;
+    return titherRawData.filter(d => {
+      if (titherPeriodMode === "year") return d.year === titherYear;
+      return d.year === titherYear && d.monthNum === titherMonth;
+    });
+  }, [titherRawData, titherPeriodMode, titherMonth, titherYear]);
+
+  const filteredTithers = useMemo(() => {
+    const memberMap = new Map<string, { member_id: string; member_name: string; total_year: number; months_paid: number; monthly_data: Record<string, number> }>();
+    filteredTitherData.forEach((item) => {
+      if (!memberMap.has(item.member_id)) {
+        memberMap.set(item.member_id, { member_id: item.member_id, member_name: item.member_name, total_year: 0, months_paid: 0, monthly_data: {} });
+      }
+      const member = memberMap.get(item.member_id)!;
+      member.total_year += item.total;
+      if (!member.monthly_data[item.month]) { member.monthly_data[item.month] = 0; member.months_paid++; }
+      member.monthly_data[item.month] += item.total;
+    });
+    return Array.from(memberMap.values()).sort((a, b) => b.total_year - a.total_year);
+  }, [filteredTitherData]);
+
+  const titherStats = useMemo(() => {
+    const totalTithers = filteredTithers.length;
+    const totalAmount = filteredTithers.reduce((sum, t) => sum + t.total_year, 0);
+    const averagePerTither = totalTithers > 0 ? totalAmount / totalTithers : 0;
+    const regularTithers = filteredTithers.filter((t) => t.months_paid >= 3).length;
+    return { totalTithers, totalAmount, averagePerTither, regularTithers };
+  }, [filteredTithers]);
 
   // Filter transactions by period + account
   const filteredTransactions = useMemo(() => {
@@ -77,11 +113,14 @@ export default function Financeiro() {
 
       if (periodMode === "all") return true;
 
-      const d = new Date(tx.transaction_date);
-      if (periodMode === "year") return d.getFullYear() === filterYear;
+      // Parse date as local to avoid timezone shift
+      const parts = tx.transaction_date.split("-");
+      const txYear = parseInt(parts[0]);
+      const txMonth = parseInt(parts[1]) - 1; // 0-indexed
+      if (periodMode === "year") return txYear === filterYear;
 
       // month
-      return d.getFullYear() === filterYear && d.getMonth() === filterMonth;
+      return txYear === filterYear && txMonth === filterMonth;
     });
   }, [transactions, periodMode, filterMonth, filterYear, accountFilter]);
 
@@ -289,7 +328,7 @@ export default function Financeiro() {
                           <div>
                             <p className="font-medium text-sm">{tx.description}</p>
                             <p className="text-xs text-muted-foreground">
-                              {new Date(tx.transaction_date).toLocaleDateString("pt-BR")}
+                              {new Date(tx.transaction_date + "T12:00:00").toLocaleDateString("pt-BR")}
                             </p>
                           </div>
                         </div>
@@ -342,7 +381,7 @@ export default function Financeiro() {
                       {filteredTransactions.map((tx) => (
                         <TableRow key={tx.id}>
                           <TableCell>
-                            {new Date(tx.transaction_date).toLocaleDateString("pt-BR")}
+                            {new Date(tx.transaction_date + "T12:00:00").toLocaleDateString("pt-BR")}
                           </TableCell>
                           <TableCell className="font-medium">{tx.description}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">
@@ -409,13 +448,23 @@ export default function Financeiro() {
 
           {/* Tithers Tab */}
           <TabsContent value="tithers" className="space-y-6 mt-6">
+            {/* Tither Period Filters */}
+            <FinancialFilters
+              mode={titherPeriodMode}
+              month={titherMonth}
+              year={titherYear}
+              onModeChange={setTitherPeriodMode}
+              onMonthChange={setTitherMonth}
+              onYearChange={setTitherYear}
+            />
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="stat-card">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Total Dizimistas</p>
                     <p className="text-2xl font-bold mt-1">{titherStats.totalTithers}</p>
-                    <p className="text-xs mt-1 text-muted-foreground">Nos últimos 12 meses</p>
+                    <p className="text-xs mt-1 text-muted-foreground">No período selecionado</p>
                   </div>
                   <div className="p-3 rounded-xl bg-primary/10 text-primary">
                     <Users className="w-5 h-5" />
@@ -429,7 +478,7 @@ export default function Financeiro() {
                     <p className="text-2xl font-bold mt-1">
                       R$ {titherStats.totalAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </p>
-                    <p className="text-xs mt-1 text-success">Acumulado do ano</p>
+                    <p className="text-xs mt-1 text-success">Acumulado do período</p>
                   </div>
                   <div className="p-3 rounded-xl bg-success/10 text-success">
                     <Heart className="w-5 h-5" />
@@ -443,7 +492,7 @@ export default function Financeiro() {
                     <p className="text-2xl font-bold mt-1">
                       R$ {titherStats.averagePerTither.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </p>
-                    <p className="text-xs mt-1 text-muted-foreground">Anual</p>
+                    <p className="text-xs mt-1 text-muted-foreground">No período</p>
                   </div>
                   <div className="p-3 rounded-xl bg-secondary/10 text-secondary">
                     <Target className="w-5 h-5" />
@@ -455,7 +504,7 @@ export default function Financeiro() {
                   <div>
                     <p className="text-sm text-muted-foreground">Dizimistas Regulares</p>
                     <p className="text-2xl font-bold mt-1">{titherStats.regularTithers}</p>
-                    <p className="text-xs mt-1 text-muted-foreground">6+ meses de contribuição</p>
+                    <p className="text-xs mt-1 text-muted-foreground">3+ meses de contribuição</p>
                   </div>
                   <div className="p-3 rounded-xl bg-accent/10 text-accent-foreground">
                     <TrendingUp className="w-5 h-5" />
@@ -470,8 +519,8 @@ export default function Financeiro() {
               </div>
             ) : (
               <>
-                <TithersChart data={monthlyTotals} />
-                <TithersTable tithers={tithers} months={months} />
+                <TithersChart data={allMonthlyTotals} />
+                <TithersTable tithers={filteredTithers} months={months} />
               </>
             )}
           </TabsContent>

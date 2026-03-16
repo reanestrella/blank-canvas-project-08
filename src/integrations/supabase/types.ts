@@ -1340,6 +1340,7 @@ export type Database = {
           is_active: boolean
           name: string
           network_id: string | null
+          show_in_app: boolean
           start_date: string | null
           teacher_id: string | null
           track: string | null
@@ -1354,6 +1355,7 @@ export type Database = {
           is_active?: boolean
           name: string
           network_id?: string | null
+          show_in_app?: boolean
           start_date?: string | null
           teacher_id?: string | null
           track?: string | null
@@ -1368,6 +1370,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           network_id?: string | null
+          show_in_app?: boolean
           start_date?: string | null
           teacher_id?: string | null
           track?: string | null

@@ -47,7 +47,7 @@ const statusConfig = {
   discipulador: { label: "Discipulador", color: "bg-info/20 text-info" },
 };
 
-const networkConfig = {
+const networkConfig: Record<string, { label: string; icon: any; color: string }> = {
   homens: { label: "Homens", icon: Users, color: "text-primary" },
   mulheres: { label: "Mulheres", icon: UserCheck, color: "text-secondary" },
   jovens: { label: "Jovens", icon: UserPlus, color: "text-info" },
@@ -90,7 +90,7 @@ export default function Secretaria() {
       }
 
       // Network filter
-      const matchesNetwork = networkFilter === "all" || member.network === networkFilter;
+      const matchesNetwork = networkFilter === "all" || (networkFilter === "__none" ? !member.network : member.network === networkFilter);
 
       // Congregation filter
       const matchesCongregation = !selectedCongregation || 
@@ -104,6 +104,17 @@ export default function Secretaria() {
   // Stats by type
   const stats = useMemo(() => {
     const activeMembers = members.filter(m => m.is_active);
+    
+    // Build dynamic network counts from actual data
+    const networkCounts: Record<string, number> = {};
+    activeMembers.forEach(m => {
+      if (m.network) {
+        networkCounts[m.network] = (networkCounts[m.network] || 0) + 1;
+      }
+    });
+    // Also count members without a network
+    const withoutNetwork = activeMembers.filter(m => !m.network).length;
+    
     return {
       total: activeMembers.length,
       membros: activeMembers.filter(m => 
@@ -114,12 +125,8 @@ export default function Secretaria() {
       decididos: activeMembers.filter(m => m.spiritual_status === "novo_convertido").length,
       visitantes: activeMembers.filter(m => m.spiritual_status === "visitante").length,
       batizados: activeMembers.filter(m => m.baptism_date !== null).length,
-      networks: {
-        homens: activeMembers.filter(m => m.network === "homens").length,
-        mulheres: activeMembers.filter(m => m.network === "mulheres").length,
-        jovens: activeMembers.filter(m => m.network === "jovens").length,
-        kids: activeMembers.filter(m => m.network === "kids").length,
-      }
+      networks: networkCounts,
+      withoutNetwork,
     };
   }, [members]);
 
@@ -234,7 +241,7 @@ export default function Secretaria() {
         {/* Network Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {Object.entries(stats.networks).map(([network, count]) => {
-            const config = networkConfig[network as keyof typeof networkConfig];
+            const config = networkConfig[network] || { label: network.charAt(0).toUpperCase() + network.slice(1), icon: Users, color: "text-muted-foreground" };
             return (
               <button
                 key={network}
@@ -251,6 +258,20 @@ export default function Secretaria() {
               </button>
             );
           })}
+          {stats.withoutNetwork > 0 && (
+            <button
+              onClick={() => setNetworkFilter(networkFilter === "__none" ? "all" : "__none")}
+              className={`flex items-center gap-2 p-3 rounded-lg border transition-all min-w-0 ${
+                networkFilter === "__none" 
+                  ? "border-primary bg-primary/5" 
+                  : "border-border hover:border-primary/50"
+              }`}
+            >
+              <Users className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+              <span className="text-sm font-medium truncate">Sem rede</span>
+              <Badge variant="secondary" className="ml-auto flex-shrink-0">{stats.withoutNetwork}</Badge>
+            </button>
+          )}
         </div>
 
         {/* Tabs by Person Type */}

@@ -15,6 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Upload, X } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Member } from "@/hooks/useMembers";
@@ -36,6 +37,7 @@ const courseSchema = z.object({
   start_date: z.string().optional(),
   end_date: z.string().optional(),
   cover_image_url: z.string().optional(),
+  show_in_app: z.boolean().optional(),
 });
 
 type CourseFormData = z.infer<typeof courseSchema>;
@@ -50,6 +52,7 @@ interface Course {
   end_date: string | null;
   is_active: boolean;
   cover_image_url?: string | null;
+  show_in_app?: boolean;
 }
 
 interface CourseModalProps {
@@ -69,7 +72,7 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
   const form = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
     defaultValues: {
-      name: "", description: "", track: "", teacher_id: "", start_date: "", end_date: "", cover_image_url: "",
+      name: "", description: "", track: "", teacher_id: "", start_date: "", end_date: "", cover_image_url: "", show_in_app: true,
     },
   });
 
@@ -83,6 +86,7 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
         start_date: course?.start_date || "",
         end_date: course?.end_date || "",
         cover_image_url: course?.cover_image_url || "",
+        show_in_app: course?.show_in_app !== undefined ? course.show_in_app : true,
       });
     }
   }, [open, course, form]);
@@ -135,6 +139,7 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
         start_date: data.start_date || null,
         end_date: data.end_date || null,
         cover_image_url: data.cover_image_url || null,
+        show_in_app: data.show_in_app !== undefined ? data.show_in_app : true,
       };
       
       const result = await onSubmit(cleanedData);
@@ -298,6 +303,18 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
                   )}
                 </div>
                 <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="show_in_app" render={({ field }) => (
+              <FormItem className="flex items-center gap-3 space-y-0 rounded-lg border p-3">
+                <FormControl>
+                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+                <div>
+                  <FormLabel className="text-sm font-medium">Exibir no Meu App</FormLabel>
+                  <p className="text-xs text-muted-foreground">Se desmarcado, o curso só aparecerá na área administrativa.</p>
+                </div>
               </FormItem>
             )} />
 

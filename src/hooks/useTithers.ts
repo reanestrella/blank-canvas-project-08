@@ -6,6 +6,8 @@ export interface TitherData {
   member_id: string;
   member_name: string;
   month: string;
+  year: number;
+  monthNum: number; // 0-indexed
   total: number;
 }
 
@@ -30,8 +32,8 @@ export function useTithers(churchId?: string) {
     try {
       setIsLoading(true);
 
-      // Fetch tithe transactions with member info from the last 12 months
-      const startDate = format(subMonths(startOfMonth(new Date()), 11), "yyyy-MM-dd");
+      // Fetch ALL tithe transactions (not just last 12 months) so we can filter by any period
+      const startDate = "2000-01-01";
 
       const { data, error } = await supabase
         .from("financial_transactions")
@@ -60,12 +62,16 @@ export function useTithers(churchId?: string) {
 
       // Transform data - parse date as local to avoid timezone issues
       const transformed: TitherData[] = tithes.map((tx: any) => {
-        // Parse date as local (YYYY-MM-DD format)
-        const [year, month] = tx.transaction_date.split('-');
+        // Parse date as local (YYYY-MM-DD format) - avoid UTC conversion
+        const parts = tx.transaction_date.split('-');
+        const year = parts[0];
+        const month = parts[1];
         return {
           member_id: tx.member_id,
           member_name: tx.member?.full_name || "Membro desconhecido",
           month: `${year}-${month}`,
+          year: parseInt(year),
+          monthNum: parseInt(month) - 1, // 0-indexed
           total: Number(tx.amount),
         };
       });
@@ -123,9 +129,12 @@ export function useTithers(churchId?: string) {
       const total = rawData
         .filter((d) => d.month === month)
         .reduce((sum, d) => sum + d.total, 0);
+      // Parse month string as local date to avoid timezone issues
+      const [y, m] = month.split("-");
+      const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
       return {
         month,
-        label: format(new Date(month + "-01"), "MMM"),
+        label: monthNames[parseInt(m) - 1],
         total,
       };
     });
@@ -136,7 +145,7 @@ export function useTithers(churchId?: string) {
     const totalTithers = tithers.length;
     const totalAmount = tithers.reduce((sum, t) => sum + t.total_year, 0);
     const averagePerTither = totalTithers > 0 ? totalAmount / totalTithers : 0;
-    const regularTithers = tithers.filter((t) => t.months_paid >= 6).length;
+    const regularTithers = tithers.filter((t) => t.months_paid >= 3).length;
 
     return {
       totalTithers,
@@ -152,6 +161,7 @@ export function useTithers(churchId?: string) {
 
   return {
     tithers,
+    rawData,
     months,
     monthlyTotals,
     stats,

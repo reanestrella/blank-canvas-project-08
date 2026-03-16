@@ -802,12 +802,17 @@ export default function MeuApp() {
       <div className="space-y-0">
         {/* Hero Header - Immersive Church Branding */}
         <div className="gradient-hero -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 px-4 sm:px-6 pt-4 pb-6 mb-0 relative overflow-hidden">
-          {/* Decorative circles */}
-          <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-primary-foreground/5 -translate-y-1/2 translate-x-1/4" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full bg-primary-foreground/5 translate-y-1/2 -translate-x-1/4" />
+          {/* Animated decorative elements */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute top-[-20%] right-[-10%] w-72 h-72 rounded-full bg-primary-foreground/[0.07] blur-3xl" />
+            <div className="absolute bottom-[-30%] left-[-15%] w-80 h-80 rounded-full bg-primary-foreground/[0.05] blur-3xl" />
+            <div className="absolute top-[20%] left-[50%] w-40 h-40 rounded-full bg-primary-foreground/[0.04] blur-2xl" />
+            {/* Subtle grid pattern overlay */}
+            <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)", backgroundSize: "24px 24px" }} />
+          </div>
           
           {/* Top bar: settings + avatar */}
-          <div className="flex items-center justify-between mb-4 relative z-10">
+          <div className="flex items-center justify-between mb-2 relative z-10">
             <Button variant="ghost" size="icon" className="text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10" onClick={() => navigate("/configuracoes")}>
               <Settings className="w-5 h-5" />
             </Button>
@@ -819,24 +824,31 @@ export default function MeuApp() {
             </button>
           </div>
 
-          {/* Centered Logo - BIGGER, crisp, prominent */}
-          <div className="flex flex-col items-center text-center gap-4 relative z-10 py-8">
+          {/* Centered Logo - Premium, crisp, prominent */}
+          <div className="flex flex-col items-center text-center gap-3 relative z-10 py-6">
             {church?.logo_url ? (
-              <div className="w-44 h-44 md:w-56 md:h-56 rounded-[2.5rem] bg-white/20 backdrop-blur-lg p-4 shadow-2xl border-2 border-white/30 ring-4 ring-white/15">
-                <img
-                  src={church.logo_url}
-                  alt={church.name || "Logo"}
-                  className="w-full h-full rounded-2xl object-contain drop-shadow-lg"
-                  style={{ imageRendering: "auto", WebkitFontSmoothing: "antialiased" }}
-                  loading="eager"
-                />
+              <div className="relative group">
+                {/* Glow effect behind logo */}
+                <div className="absolute inset-0 bg-white/20 rounded-[2rem] blur-xl scale-110 group-hover:scale-125 transition-transform duration-700" />
+                <div className="relative w-48 h-48 md:w-60 md:h-60 rounded-[2rem] bg-white p-3 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-white/50">
+                  <img
+                    src={church.logo_url}
+                    alt={church.name || "Logo"}
+                    className="w-full h-full rounded-2xl object-contain"
+                    style={{ imageRendering: "auto" }}
+                    loading="eager"
+                  />
+                </div>
               </div>
             ) : (
-              <div className="w-44 h-44 md:w-56 md:h-56 rounded-[2.5rem] bg-primary-foreground/10 flex items-center justify-center shadow-2xl backdrop-blur-lg border-2 border-white/25 ring-4 ring-white/10">
-                <Church className="w-20 h-20 text-primary-foreground/70" />
+              <div className="relative">
+                <div className="absolute inset-0 bg-white/10 rounded-[2rem] blur-xl scale-110" />
+                <div className="relative w-48 h-48 md:w-60 md:h-60 rounded-[2rem] bg-primary-foreground/10 flex items-center justify-center shadow-2xl backdrop-blur-lg border border-white/20">
+                  <Church className="w-20 h-20 text-primary-foreground/70" />
+                </div>
               </div>
             )}
-            <div>
+            <div className="mt-2">
               <h1 className="text-3xl md:text-4xl font-extrabold text-primary-foreground tracking-tight drop-shadow-md">
                 {(church as any)?.ministry_name || church?.name || "Minha Igreja"}
               </h1>
@@ -847,7 +859,7 @@ export default function MeuApp() {
           </div>
 
           {/* Top Row Shortcuts (light variant, inside gradient) */}
-          <div className="grid grid-cols-3 gap-2 mt-4 relative z-10">
+          <div className="grid grid-cols-3 gap-2 mt-2 relative z-10">
             <ShortcutButton icon={Church} label="Igreja" onClick={() => setActiveView("igreja")} variant="light" />
             <ShortcutButton icon={Flame} label="Ministérios" onClick={() => setActiveView("ministries")} variant="light" />
             <ShortcutButton icon={BookOpen} label="Devocional" onClick={() => setActiveView("devocional")} variant="light" />
