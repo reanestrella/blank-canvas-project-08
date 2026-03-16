@@ -562,10 +562,36 @@ export default function MeuApp() {
     switch (activeView) {
       case "courses": return <CoursesTab />;
       case "schedules": return <SchedulesView schedules={schedules} onConfirm={handleConfirmSchedule} />;
-      case "contribuicao": return churchId ? <><h3 className="text-lg font-semibold flex items-center gap-2 mb-4"><DollarSign className="w-5 h-5 text-primary" /> Contribuição</h3><ContribuicaoView churchId={churchId} /></> : null;
-      case "campanhas": return <CampanhasAppView churchId={churchId || ""} />;
+      case "contribuicao": return churchId ? (
+        <>
+          <h3 className="text-lg font-semibold flex items-center gap-2 mb-4"><DollarSign className="w-5 h-5 text-primary" /> Doação</h3>
+          <ContribuicaoView churchId={churchId} />
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold flex items-center gap-2 mb-4"><Heart className="w-5 h-5 text-primary" /> Campanhas</h3>
+            <CampanhasAppView churchId={churchId} />
+          </div>
+        </>
+      ) : null;
       case "ministries": return churchId ? <MinistriesView churchId={churchId} /> : null;
       case "cells": return churchId ? <CellsView churchId={churchId} /> : null;
+      case "devocional": return (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2"><Flame className="w-5 h-5 text-primary" /> Devocional</h3>
+          <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Em breve devocioanais diários estarão disponíveis aqui.</p></CardContent></Card>
+        </div>
+      );
+      case "youtube": return (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2"><Video className="w-5 h-5 text-primary" /> YouTube</h3>
+          <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Em breve os vídeos do canal da igreja estarão disponíveis aqui.</p></CardContent></Card>
+        </div>
+      );
+      case "redes-sociais": return (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2"><Users className="w-5 h-5 text-primary" /> Redes Sociais</h3>
+          <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Em breve as redes sociais da igreja estarão integradas aqui.</p></CardContent></Card>
+        </div>
+      );
       case "events": return (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold flex items-center gap-2"><CalendarIcon className="w-5 h-5 text-primary" /> Eventos</h3>
@@ -590,98 +616,24 @@ export default function MeuApp() {
         </div>
       );
       case "profile": return <ProfileEditTab />;
-      default: return renderHome();
+      default: return null;
     }
   };
 
-  const renderHome = () => (
-    <div className="space-y-6">
-      {/* Announcements */}
-      {announcements.length > 0 && (
-        <Card className="border-secondary/30 bg-secondary/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2"><Bell className="w-4 h-4 text-secondary" /> Avisos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {announcements.map((item) => (
-                <div key={item.id} className="p-3 rounded-xl bg-card border border-border">
-                  <h4 className="font-medium text-sm mb-1">{item.title}</h4>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{item.content}</p>
-                  <span className="text-xs text-muted-foreground mt-1 block">{new Date(item.created_at).toLocaleDateString("pt-BR")}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Upcoming Events */}
-      {events.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-primary" /> Próximos Eventos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {events.slice(0, 3).map((evt) => (
-                <div key={evt.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                  <div className="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-primary/10 flex-shrink-0">
-                    <span className="text-sm font-bold text-primary">{new Date(evt.event_date + "T12:00:00").getDate()}</span>
-                    <span className="text-[9px] text-muted-foreground uppercase">{format(new Date(evt.event_date + "T12:00:00"), "MMM", { locale: ptBR })}</span>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{evt.title}</p>
-                    {evt.event_time && <p className="text-xs text-muted-foreground">{evt.event_time}</p>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Birthdays */}
-      {birthdays.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2"><Cake className="w-4 h-4 text-secondary" /> Aniversariantes do Mês</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {birthdays.slice(0, 10).map((m) => (
-                <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border">
-                  <Avatar className="w-6 h-6"><AvatarImage src={m.photo_url || ""} /><AvatarFallback className="text-[9px] bg-secondary/10 text-secondary">{m.full_name.split(" ").map(n => n[0]).join("").slice(0, 2)}</AvatarFallback></Avatar>
-                  <span className="text-xs font-medium">{m.full_name.split(" ")[0]}</span>
-                  <span className="text-[10px] text-muted-foreground">{m.birth_date ? new Date(m.birth_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : ""}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Wedding Anniversaries */}
-      {weddingAnniversaries.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2"><HeartHandshake className="w-4 h-4 text-primary" /> Aniversários de Casamento</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {weddingAnniversaries.slice(0, 10).map((m) => (
-                <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border">
-                  <Avatar className="w-6 h-6"><AvatarImage src={m.photo_url || ""} /><AvatarFallback className="text-[9px] bg-primary/10 text-primary">{m.full_name.split(" ").map(n => n[0]).join("").slice(0, 2)}</AvatarFallback></Avatar>
-                  <span className="text-xs font-medium">{m.full_name.split(" ")[0]}</span>
-                  <span className="text-[10px] text-muted-foreground">{m.wedding_date ? new Date(m.wedding_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : ""}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+  // If a sub-view is active, show ONLY that content (full page, no hero)
+  if (activeView !== "home") {
+    return (
+      <AppLayout>
+        <div className="space-y-4">
+          <Button variant="ghost" size="sm" onClick={() => setActiveView("home")}>
+            ← Voltar
+          </Button>
+          {renderContent()}
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -693,7 +645,7 @@ export default function MeuApp() {
           <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full bg-primary-foreground/5 translate-y-1/2 -translate-x-1/4" />
           
           {/* Top bar: settings + avatar */}
-          <div className="flex items-center justify-between mb-6 relative z-10">
+          <div className="flex items-center justify-between mb-4 relative z-10">
             <Button variant="ghost" size="icon" className="text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10" onClick={() => navigate("/configuracoes")}>
               <Settings className="w-5 h-5" />
             </Button>
@@ -705,13 +657,15 @@ export default function MeuApp() {
             </button>
           </div>
 
-          {/* Centered Logo */}
-          <div className="flex flex-col items-center text-center gap-3 relative z-10 py-4">
+          {/* Centered Logo - BIGGER and more prominent */}
+          <div className="flex flex-col items-center text-center gap-4 relative z-10 py-6">
             {church?.logo_url ? (
-              <img src={church.logo_url} alt={church.name || "Logo"} className="w-24 h-24 md:w-28 md:h-28 rounded-3xl object-contain bg-primary-foreground/10 p-3 shadow-xl backdrop-blur-sm" />
+              <div className="w-32 h-32 md:w-40 md:h-40 rounded-[2rem] bg-white/10 backdrop-blur-md p-4 shadow-2xl border border-white/20">
+                <img src={church.logo_url} alt={church.name || "Logo"} className="w-full h-full rounded-2xl object-contain" />
+              </div>
             ) : (
-              <div className="w-24 h-24 md:w-28 md:h-28 rounded-3xl bg-primary-foreground/10 flex items-center justify-center shadow-xl backdrop-blur-sm">
-                <Church className="w-12 h-12 text-primary-foreground/70" />
+              <div className="w-32 h-32 md:w-40 md:h-40 rounded-[2rem] bg-primary-foreground/10 flex items-center justify-center shadow-2xl backdrop-blur-md border border-white/20">
+                <Church className="w-16 h-16 text-primary-foreground/70" />
               </div>
             )}
             <div>
@@ -728,41 +682,94 @@ export default function MeuApp() {
           <div className="grid grid-cols-3 gap-2 mt-4 relative z-10">
             <ShortcutButton icon={Church} label="Igreja" onClick={() => setActiveView("home")} variant="light" />
             <ShortcutButton icon={Flame} label="Ministérios" onClick={() => setActiveView("ministries")} variant="light" />
-            <ShortcutButton icon={BookOpen} label="Notícias" onClick={() => setActiveView("home")} variant="light" />
+            <ShortcutButton icon={BookOpen} label="Devocional" onClick={() => setActiveView("devocional")} variant="light" />
           </div>
         </div>
 
         {/* Bottom Section Shortcuts (dark variant, outside gradient) */}
         <div className="bg-card border-b border-border px-4 sm:px-6 py-4">
           <div className="grid grid-cols-3 gap-2">
-            <ShortcutButton icon={Video} label="Mensagens" onClick={() => setActiveView("prayer")} variant="dark" />
+            <ShortcutButton icon={Video} label="YouTube" onClick={() => setActiveView("youtube")} variant="dark" />
             <ShortcutButton icon={HandHeart} label="Doação" onClick={() => setActiveView("contribuicao")} variant="dark" />
-            <ShortcutButton icon={Mic} label="Ao Vivo" onClick={() => setActiveView("home")} variant="dark" />
+            <ShortcutButton icon={Users} label="Redes Sociais" onClick={() => setActiveView("redes-sociais")} variant="dark" />
           </div>
           <div className="grid grid-cols-3 gap-2 mt-2">
             <ShortcutButton icon={CalendarIcon} label="Eventos" onClick={() => setActiveView("events")} variant="dark" />
             <ShortcutButton icon={MessageSquare} label="Mural de Orações" onClick={() => setActiveView("prayer")} variant="dark" />
-            <ShortcutButton icon={Heart} label="Campanhas" onClick={() => setActiveView("campanhas")} variant="dark" />
+            <ShortcutButton icon={GraduationCap} label="Cursos" onClick={() => setActiveView("courses")} variant="dark" />
           </div>
           <div className="grid grid-cols-3 gap-2 mt-2">
-            <ShortcutButton icon={GraduationCap} label="Cursos" onClick={() => setActiveView("courses")} variant="dark" />
             <ShortcutButton icon={Clock} label="Escalas" onClick={() => setActiveView("schedules")} variant="dark" />
             <ShortcutButton icon={Grid3X3} label="Células" onClick={() => setActiveView("cells")} variant="dark" />
+            <ShortcutButton icon={User} label="Meu Perfil" onClick={() => setActiveView("profile")} variant="dark" />
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="px-0 py-6">
+        {/* Fixed Sections: Avisos, Aniversariantes, Aniversário de Casamento */}
+        <div className="px-0 py-6 space-y-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
           ) : (
             <>
-              {activeView !== "home" && (
-                <Button variant="ghost" size="sm" className="mb-4" onClick={() => setActiveView("home")}>
-                  ← Voltar
-                </Button>
+              {/* Avisos - Always visible */}
+              {announcements.length > 0 && (
+                <Card className="border-secondary/30 bg-secondary/5">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2"><Bell className="w-4 h-4 text-secondary" /> Avisos</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {announcements.map((item) => (
+                        <div key={item.id} className="p-3 rounded-xl bg-card border border-border">
+                          <h4 className="font-medium text-sm mb-1">{item.title}</h4>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{item.content}</p>
+                          <span className="text-xs text-muted-foreground mt-1 block">{new Date(item.created_at).toLocaleDateString("pt-BR")}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               )}
-              {renderContent()}
+
+              {/* Aniversariantes - Always visible */}
+              {birthdays.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2"><Cake className="w-4 h-4 text-secondary" /> Aniversariantes do Mês</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {birthdays.slice(0, 10).map((m) => (
+                        <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border">
+                          <Avatar className="w-6 h-6"><AvatarImage src={m.photo_url || ""} /><AvatarFallback className="text-[9px] bg-secondary/10 text-secondary">{m.full_name.split(" ").map(n => n[0]).join("").slice(0, 2)}</AvatarFallback></Avatar>
+                          <span className="text-xs font-medium">{m.full_name.split(" ")[0]}</span>
+                          <span className="text-[10px] text-muted-foreground">{m.birth_date ? new Date(m.birth_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : ""}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Aniversários de Casamento - Always visible */}
+              {weddingAnniversaries.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2"><HeartHandshake className="w-4 h-4 text-primary" /> Aniversários de Casamento</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {weddingAnniversaries.slice(0, 10).map((m) => (
+                        <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border">
+                          <Avatar className="w-6 h-6"><AvatarImage src={m.photo_url || ""} /><AvatarFallback className="text-[9px] bg-primary/10 text-primary">{m.full_name.split(" ").map(n => n[0]).join("").slice(0, 2)}</AvatarFallback></Avatar>
+                          <span className="text-xs font-medium">{m.full_name.split(" ")[0]}</span>
+                          <span className="text-[10px] text-muted-foreground">{m.wedding_date ? new Date(m.wedding_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : ""}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </>
           )}
         </div>

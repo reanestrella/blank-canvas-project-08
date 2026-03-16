@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Users, Heart, Grid3X3, TrendingUp, Eye, Loader2, DollarSign, ChevronDown, ChevronUp, Sparkles, Brain, UserCheck, Droplets } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -28,7 +28,7 @@ function PastorDashboard() {
   const { profile } = useAuth();
   const churchId = profile?.church_id;
   const { congregations, selectedCongregation, setSelectedCongregation } = useCongregations(churchId || undefined);
-  const { stats, isLoading, members, debugInfo } = useDashboardStats(selectedCongregation);
+  const { stats, isLoading, members } = useDashboardStats(selectedCongregation);
   const [aiOpen, setAiOpen] = useState(false);
 
   const statCards = [
@@ -59,21 +59,8 @@ function PastorDashboard() {
         ))}
       </div>
 
-      {/* DEBUG PANEL - temporary diagnostic */}
-      <div className="p-4 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/50 text-xs font-mono space-y-1">
-        <p className="font-bold text-sm mb-2">🔍 Dashboard Debug</p>
-        <p>currentChurchId: {debugInfo?.currentChurchId || "null"}</p>
-        <p>totalMembersFetched: {debugInfo?.totalMembersFetched ?? "?"}</p>
-        <p>membersError: {debugInfo?.membersError || "none"}</p>
-        <p>membrosCount: {debugInfo?.membrosCount ?? "?"}</p>
-        <p>decididosCount: {debugInfo?.decididosCount ?? "?"}</p>
-        <p>visitantesCount: {debugInfo?.visitantesCount ?? "?"}</p>
-        <p>batizadosCount: {debugInfo?.batizadosCount ?? "?"}</p>
-        <p>consolidacaoCount: {debugInfo?.consolidacaoCount ?? "?"}</p>
-        <p>redes: H={debugInfo?.redes?.homens ?? "?"} M={debugInfo?.redes?.mulheres ?? "?"} J={debugInfo?.redes?.jovens ?? "?"} K={debugInfo?.redes?.kids ?? "?"}</p>
-        <p className="mt-1">stats.totalMembers: {stats.totalMembers} | stats.totalDecididos: {stats.totalDecididos} | stats.totalVisitantes: {stats.totalVisitantes} | stats.totalBaptized: {stats.totalBaptized} | stats.totalConsolidacao: {stats.totalConsolidacao}</p>
-        <p>members array length: {members?.length ?? 0}</p>
-      </div>
+
+
 
       {stats.recentAlerts.length > 0 && <AlertsCard alerts={stats.recentAlerts} />}
 
@@ -205,23 +192,20 @@ function MemberDashboard() {
 export default function Dashboard() {
   const { roles, isAdmin, hasRole, hasAnyRole } = useAuth();
 
-  const isOnlyCellLeader = hasRole("lider_celula") && !hasRole("pastor") && !hasRole("secretario") && !hasRole("tesoureiro") && !hasRole("consolidacao");
+  // Only pastor/admin sees the full dashboard
+  const isPastor = isAdmin() || hasRole("pastor");
 
-  const dashboardSections = useMemo(() => {
-    if (isOnlyCellLeader) return []; // will redirect
-    if (isAdmin() || hasRole("pastor")) return [PastorDashboard];
-    const sections: React.FC[] = [];
-    if (hasRole("secretario")) sections.push(SecretaryDashboard);
-    if (hasRole("tesoureiro")) sections.push(TreasurerDashboard);
-    if (hasRole("lider_ministerio")) sections.push(MinistryLeaderDashboard);
-    if (hasRole("consolidacao")) sections.push(ConsolidationDashboard);
-    if (sections.length === 0) sections.push(MemberDashboard);
-    return sections;
-  }, [roles, isAdmin, hasRole, isOnlyCellLeader]);
-
-  if (isOnlyCellLeader) {
-    return <Navigate to="/celulas" replace />;
+  if (!isPastor) {
+    // Redirect non-pastors to their appropriate page
+    if (hasRole("tesoureiro")) return <Navigate to="/financeiro" replace />;
+    if (hasRole("secretario")) return <Navigate to="/secretaria" replace />;
+    if (hasRole("consolidacao")) return <Navigate to="/consolidacao" replace />;
+    if (hasRole("lider_celula")) return <Navigate to="/celulas" replace />;
+    if (hasRole("lider_ministerio")) return <Navigate to="/ministerios" replace />;
+    return <Navigate to="/meu-app" replace />;
   }
+
+  const dashboardSections = [PastorDashboard];
 
   return (
     <AppLayout>

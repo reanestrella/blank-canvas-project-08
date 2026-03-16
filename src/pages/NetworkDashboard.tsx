@@ -11,11 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Loader2, Building2, Users, Grid3X3, TrendingUp, TrendingDown,
   PiggyBank, AlertTriangle, UserPlus, Network, ArrowLeft,
-  BarChart3, DollarSign,
+  BarChart3, DollarSign, ChevronDown, ChevronUp, Wallet,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface NetworkChurchData {
   id: string;
@@ -29,6 +30,9 @@ interface NetworkChurchData {
   consolidation_count: number;
   income: number;
   expense: number;
+  all_time_income: number;
+  all_time_expense: number;
+  prev_month_balance: number;
 }
 
 export default function NetworkDashboard() {
@@ -41,6 +45,7 @@ export default function NetworkDashboard() {
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [filterMonth, setFilterMonth] = useState<string>("all");
   const [filterChurch, setFilterChurch] = useState<string>("all");
+  const [chartsOpen, setChartsOpen] = useState(false);
 
   const userRoles = roles.map(r => r.role);
   const isNetworkUser = userRoles.includes("network_admin" as any) || userRoles.includes("network_finance" as any);
@@ -78,16 +83,36 @@ export default function NetworkDashboard() {
         dateTo = `${filterYear}-${String(m).padStart(2, "0")}-${lastDay}`;
       }
 
+      // Calculate prev month end date for "Saldo Mês Anterior"
+      let prevMonthEnd: string | null = null;
+      if (filterMonth !== "all") {
+        const m = parseInt(filterMonth); // 0-indexed
+        const prevDate = new Date(filterYear, m, 0); // last day of previous month
+        prevMonthEnd = prevDate.toISOString().split("T")[0];
+      }
+
       const enriched: NetworkChurchData[] = await Promise.all(
         (churchesRaw as any[]).map(async (ch) => {
-          const [membersData, cells, transactions, consolidation] = await Promise.all([
+          const [membersData, cells, transactions, allTransactions, consolidation] = await Promise.all([
             supabase.from("members").select("id, spiritual_status, baptism_date, is_active").eq("church_id", ch.id),
             supabase.from("cells").select("id", { count: "exact", head: true }).eq("church_id", ch.id).eq("is_active", true),
             supabase.from("financial_transactions").select("type, amount").eq("church_id", ch.id).gte("transaction_date", dateFrom).lte("transaction_date", dateTo),
+            supabase.from("financial_transactions").select("type, amount, transaction_date").eq("church_id", ch.id),
             supabase.from("consolidation_records").select("id", { count: "exact", head: true }).eq("church_id", ch.id).in("status", ["contato", "acompanhamento", "integracao"]),
           ]);
           const activeMembers = ((membersData.data || []) as any[]).filter(m => m.is_active);
           const txs = (transactions.data || []) as any[];
+          const allTxs = (allTransactions.data || []) as any[];
+
+          const allTimeIncome = allTxs.filter(t => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0);
+          const allTimeExpense = allTxs.filter(t => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
+
+          let prevBalance = 0;
+          if (prevMonthEnd) {
+            const prevTxs = allTxs.filter(t => t.transaction_date <= prevMonthEnd);
+            prevBalance = prevTxs.reduce((s, t) => s + (t.type === "receita" ? Number(t.amount) : -Number(t.amount)), 0);
+          }
+
           return {
             id: ch.id, name: ch.name, is_active: ch.is_active,
             member_count: activeMembers.filter(m => m.spiritual_status === "membro" || m.spiritual_status === "lider" || m.spiritual_status === "discipulador").length,
@@ -98,6 +123,9 @@ export default function NetworkDashboard() {
             consolidation_count: consolidation.count || 0,
             income: txs.filter(t => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0),
             expense: txs.filter(t => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0),
+            all_time_income: allTimeIncome,
+            all_time_expense: allTimeExpense,
+            prev_month_balance: prevBalance,
           };
         })
       );
@@ -121,9 +149,13 @@ export default function NetworkDashboard() {
     consolidation: displayChurches.reduce((s, c) => s + c.consolidation_count, 0),
     income: displayChurches.reduce((s, c) => s + c.income, 0),
     expense: displayChurches.reduce((s, c) => s + c.expense, 0),
+    allTimeIncome: displayChurches.reduce((s, c) => s + c.all_time_income, 0),
+    allTimeExpense: displayChurches.reduce((s, c) => s + c.all_time_expense, 0),
+    prevMonthBalance: displayChurches.reduce((s, c) => s + c.prev_month_balance, 0),
   }), [displayChurches]);
 
   const balance = totals.income - totals.expense;
+  const totalBalance = totals.allTimeIncome - totals.allTimeExpense;
   const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
   const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
@@ -219,13 +251,15 @@ export default function NetworkDashboard() {
                 </Card>
               ))}
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
               {[
-                { icon: UserPlus, label: "Em Consolidação", value: totals.consolidation, color: "text-secondary" },
-                { icon: UserPlus, label: "Batizados", value: totals.baptized, color: "text-info" },
+                { icon: UserPlus, label: "Em Consolidação", value: String(totals.consolidation), color: "text-secondary" },
+                { icon: UserPlus, label: "Batizados", value: String(totals.baptized), color: "text-info" },
                 { icon: TrendingUp, label: "Entradas", value: fmt(totals.income), color: "text-emerald-600" },
                 { icon: TrendingDown, label: "Saídas", value: fmt(totals.expense), color: "text-destructive" },
                 { icon: PiggyBank, label: "Saldo", value: fmt(balance), color: balance >= 0 ? "text-emerald-600" : "text-destructive" },
+                ...(filterMonth !== "all" ? [{ icon: TrendingDown, label: "Saldo Mês Anterior", value: fmt(totals.prevMonthBalance), color: totals.prevMonthBalance >= 0 ? "text-emerald-600" : "text-destructive" }] : []),
+                { icon: Wallet, label: "Saldo Total", value: fmt(totalBalance), color: totalBalance >= 0 ? "text-emerald-600" : "text-destructive" },
               ].map((s, i) => (
                 <Card key={i}>
                   <CardContent className="pt-4 pb-3 px-4">
@@ -237,47 +271,60 @@ export default function NetworkDashboard() {
               ))}
             </div>
 
-            {/* Charts */}
+            {/* Charts - Collapsible, starts minimized */}
             {displayChurches.length > 1 && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2"><BarChart3 className="w-4 h-4" /> Membros, Células e Visitantes</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                        <YAxis tick={{ fontSize: 11 }} />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="Membros" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Células" fill="hsl(var(--secondary))" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Visitantes" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2"><DollarSign className="w-4 h-4" /> Financeiro por Igreja</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={financeChartData}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                        <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `R$${(v / 1000).toFixed(0)}k`} />
-                        <Tooltip formatter={(v: number) => fmt(v)} />
-                        <Legend />
-                        <Bar dataKey="Entradas" fill="#16a34a" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Saídas" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-              </div>
+              <Collapsible open={chartsOpen} onOpenChange={setChartsOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" className="w-full flex items-center justify-between gap-2 py-3">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium">Gráficos por Igreja</span>
+                    </div>
+                    {chartsOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2"><BarChart3 className="w-4 h-4" /> Membros, Células e Visitantes</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ResponsiveContainer width="100%" height={280}>
+                          <BarChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                            <YAxis tick={{ fontSize: 11 }} />
+                            <Tooltip />
+                            <Legend />
+                            <Bar dataKey="Membros" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Células" fill="hsl(var(--secondary))" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Visitantes" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2"><DollarSign className="w-4 h-4" /> Financeiro por Igreja</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ResponsiveContainer width="100%" height={280}>
+                          <BarChart data={financeChartData}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                            <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `R$${(v / 1000).toFixed(0)}k`} />
+                            <Tooltip formatter={(v: number) => fmt(v)} />
+                            <Legend />
+                            <Bar dataKey="Entradas" fill="#16a34a" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Saídas" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             )}
 
             {/* Church Table */}
@@ -298,12 +345,15 @@ export default function NetworkDashboard() {
                         <TableHead className="text-right">Entradas</TableHead>
                         <TableHead className="text-right">Saídas</TableHead>
                         <TableHead className="text-right">Saldo</TableHead>
+                        {filterMonth !== "all" && <TableHead className="text-right">Saldo Mês Ant.</TableHead>}
+                        <TableHead className="text-right">Saldo Total</TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {displayChurches.map(c => {
                         const bal = c.income - c.expense;
+                        const totalBal = c.all_time_income - c.all_time_expense;
                         return (
                           <TableRow key={c.id} className={!c.is_active ? "opacity-50" : ""}>
                             <TableCell className="font-medium">{c.name}</TableCell>
@@ -313,6 +363,12 @@ export default function NetworkDashboard() {
                             <TableCell className="text-right text-emerald-600">{fmt(c.income)}</TableCell>
                             <TableCell className="text-right text-destructive">{fmt(c.expense)}</TableCell>
                             <TableCell className={`text-right font-medium ${bal >= 0 ? "text-emerald-600" : "text-destructive"}`}>{fmt(bal)}</TableCell>
+                            {filterMonth !== "all" && (
+                              <TableCell className={`text-right font-medium ${c.prev_month_balance >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                                {fmt(c.prev_month_balance)}
+                              </TableCell>
+                            )}
+                            <TableCell className={`text-right font-medium ${totalBal >= 0 ? "text-emerald-600" : "text-destructive"}`}>{fmt(totalBal)}</TableCell>
                             <TableCell><Badge variant={c.is_active ? "default" : "destructive"}>{c.is_active ? "Ativa" : "Inativa"}</Badge></TableCell>
                           </TableRow>
                         );
