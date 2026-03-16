@@ -2,6 +2,7 @@
  * Given an array of user role strings, returns the best dashboard route.
  */
 export function getRoleBasedRedirect(roles: string[]): string {
+  if (roles.includes("network_admin") || roles.includes("network_finance")) return "/rede";
   if (roles.includes("admin") || roles.includes("pastor")) return "/app";
   if (roles.includes("tesoureiro")) return "/financeiro";
   if (roles.includes("secretario")) return "/secretaria";
