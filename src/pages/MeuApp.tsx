@@ -817,7 +817,7 @@ export default function MeuApp() {
 
           {/* Top Row Shortcuts (light variant, inside gradient) */}
           <div className="grid grid-cols-3 gap-2 mt-4 relative z-10">
-            <ShortcutButton icon={Church} label="Igreja" onClick={() => setActiveView("home")} variant="light" />
+            <ShortcutButton icon={Church} label="Igreja" onClick={() => setActiveView("igreja")} variant="light" />
             <ShortcutButton icon={Flame} label="Ministérios" onClick={() => setActiveView("ministries")} variant="light" />
             <ShortcutButton icon={BookOpen} label="Devocional" onClick={() => setActiveView("devocional")} variant="light" />
           </div>
