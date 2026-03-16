@@ -417,7 +417,60 @@ function BrandingSection({ churchId }: { churchId: string }) {
   );
 }
 
-// ─── Main Page ──────────────────────────────────────────────
+// ─── Módulos do App ──────────────────────────────────────────
+function ModulosSection() {
+  const modules = [
+    { key: "igreja", label: "Igreja", icon: "🏠", enabled: true },
+    { key: "ministerios", label: "Ministérios", icon: "🔥", enabled: true },
+    { key: "devocional", label: "Devocional", icon: "📖", enabled: true },
+    { key: "youtube", label: "YouTube", icon: "▶️", enabled: true },
+    { key: "doacao", label: "Doação", icon: "🤲", enabled: true },
+    { key: "redes_sociais", label: "Redes Sociais", icon: "👥", enabled: true },
+    { key: "eventos", label: "Eventos", icon: "📅", enabled: true },
+    { key: "mural_oracoes", label: "Mural de Orações", icon: "🙏", enabled: true },
+    { key: "cursos", label: "Cursos", icon: "🎓", enabled: true },
+    { key: "escalas", label: "Escalas", icon: "⏰", enabled: true },
+    { key: "celulas", label: "Células", icon: "⬛", enabled: true },
+    { key: "perfil", label: "Meu Perfil", icon: "👤", enabled: true },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+        <div className="flex items-center gap-2 text-sm">
+          <Smartphone className="w-4 h-4 text-primary" />
+          <span className="font-medium">Gerencie os módulos visíveis no App dos membros</span>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Módulos do App</CardTitle>
+          <CardDescription>Ative ou desative os módulos que aparecem para os membros</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {modules.map(m => (
+              <div key={m.key} className="flex items-center justify-between p-3 rounded-lg border border-border">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{m.icon}</span>
+                  <span className="font-medium text-sm">{m.label}</span>
+                </div>
+                <Switch checked={m.enabled} />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <p className="text-xs text-muted-foreground">
+        Em breve: adicionar ícones personalizados e reordenar módulos.
+      </p>
+    </div>
+  );
+}
+
+
 export default function GestaoApp() {
   const { profile } = useAuth();
   const churchId = profile?.church_id;
