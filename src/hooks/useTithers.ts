@@ -30,8 +30,8 @@ export function useTithers(churchId?: string) {
     try {
       setIsLoading(true);
 
-      // Fetch tithe transactions with member info from the last 12 months
-      const startDate = format(subMonths(startOfMonth(new Date()), 11), "yyyy-MM-dd");
+      // Fetch ALL tithe transactions (not just last 12 months) so we can filter by any period
+      const startDate = "2000-01-01";
 
       const { data, error } = await supabase
         .from("financial_transactions")
