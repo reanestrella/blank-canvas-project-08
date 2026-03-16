@@ -138,6 +138,7 @@ export function CourseModal({ open, onOpenChange, course, members, onSubmit }: C
         start_date: data.start_date || null,
         end_date: data.end_date || null,
         cover_image_url: data.cover_image_url || null,
+        show_in_app: data.show_in_app !== undefined ? data.show_in_app : true,
       };
       
       const result = await onSubmit(cleanedData);

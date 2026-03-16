@@ -67,13 +67,38 @@ export function CoursesTab() {
 
   const fetchCourses = async () => {
     setIsLoading(true);
-    const { data } = await supabase
+    
+    // Fetch church-specific courses that are visible in app
+    const { data: churchCourses } = await supabase
       .from("courses")
-      .select("id, name, description, track, is_active, cover_image_url")
+      .select("id, name, description, track, is_active, cover_image_url, show_in_app")
       .eq("church_id", churchId!)
       .eq("is_active", true)
+      .eq("show_in_app", true)
       .order("name");
-    setCourses((data as Course[]) || []);
+
+    // Also fetch network courses
+    const { data: churchData } = await supabase
+      .from("churches")
+      .select("ministry_network_id")
+      .eq("id", churchId!)
+      .maybeSingle();
+
+    let networkCourses: Course[] = [];
+    if ((churchData as any)?.ministry_network_id) {
+      const { data: netCourses } = await supabase
+        .from("courses")
+        .select("id, name, description, track, is_active, cover_image_url")
+        .eq("network_id", (churchData as any).ministry_network_id)
+        .eq("is_active", true)
+        .order("name");
+      networkCourses = (netCourses as Course[]) || [];
+    }
+
+    // Merge and deduplicate
+    const allCourses = [...((churchCourses as Course[]) || []), ...networkCourses];
+    const uniqueCourses = Array.from(new Map(allCourses.map(c => [c.id, c])).values());
+    setCourses(uniqueCourses);
 
     if (user) {
       const { data: enrollData } = await supabase
