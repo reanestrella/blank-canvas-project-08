@@ -24,6 +24,9 @@ interface NetworkChurchData {
   member_count: number;
   cell_count: number;
   visitor_count: number;
+  decidido_count: number;
+  baptized_count: number;
+  consolidation_count: number;
   income: number;
   expense: number;
 }
@@ -77,16 +80,22 @@ export default function NetworkDashboard() {
 
       const enriched: NetworkChurchData[] = await Promise.all(
         (churchesRaw as any[]).map(async (ch) => {
-          const [members, cells, visitors, transactions] = await Promise.all([
-            supabase.from("members").select("id", { count: "exact", head: true }).eq("church_id", ch.id).eq("is_active", true),
+          const [membersData, cells, transactions, consolidation] = await Promise.all([
+            supabase.from("members").select("id, spiritual_status, baptism_date, is_active").eq("church_id", ch.id),
             supabase.from("cells").select("id", { count: "exact", head: true }).eq("church_id", ch.id).eq("is_active", true),
-            supabase.from("cell_visitors").select("id", { count: "exact", head: true }).eq("church_id", ch.id).gte("visit_date", dateFrom).lte("visit_date", dateTo),
             supabase.from("financial_transactions").select("type, amount").eq("church_id", ch.id).gte("transaction_date", dateFrom).lte("transaction_date", dateTo),
+            supabase.from("consolidation_records").select("id", { count: "exact", head: true }).eq("church_id", ch.id).in("status", ["contato", "acompanhamento", "integracao"]),
           ]);
+          const activeMembers = ((membersData.data || []) as any[]).filter(m => m.is_active);
           const txs = (transactions.data || []) as any[];
           return {
             id: ch.id, name: ch.name, is_active: ch.is_active,
-            member_count: members.count || 0, cell_count: cells.count || 0, visitor_count: visitors.count || 0,
+            member_count: activeMembers.filter(m => m.spiritual_status === "membro" || m.spiritual_status === "lider" || m.spiritual_status === "discipulador").length,
+            cell_count: cells.count || 0,
+            visitor_count: activeMembers.filter(m => m.spiritual_status === "visitante").length,
+            decidido_count: activeMembers.filter(m => m.spiritual_status === "novo_convertido").length,
+            baptized_count: activeMembers.filter(m => m.baptism_date !== null).length,
+            consolidation_count: consolidation.count || 0,
             income: txs.filter(t => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0),
             expense: txs.filter(t => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0),
           };
@@ -107,6 +116,9 @@ export default function NetworkDashboard() {
     members: displayChurches.reduce((s, c) => s + c.member_count, 0),
     cells: displayChurches.reduce((s, c) => s + c.cell_count, 0),
     visitors: displayChurches.reduce((s, c) => s + c.visitor_count, 0),
+    decididos: displayChurches.reduce((s, c) => s + c.decidido_count, 0),
+    baptized: displayChurches.reduce((s, c) => s + c.baptized_count, 0),
+    consolidation: displayChurches.reduce((s, c) => s + c.consolidation_count, 0),
     income: displayChurches.reduce((s, c) => s + c.income, 0),
     expense: displayChurches.reduce((s, c) => s + c.expense, 0),
   }), [displayChurches]);
@@ -190,12 +202,27 @@ export default function NetworkDashboard() {
         ) : (
           <>
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
               {[
                 { icon: Building2, label: "Igrejas", value: totals.churches, color: "text-primary" },
                 { icon: Users, label: "Membros", value: totals.members, color: "text-primary" },
-                { icon: Grid3X3, label: "Células", value: totals.cells, color: "text-primary" },
+                { icon: UserPlus, label: "Decididos", value: totals.decididos, color: "text-emerald-600" },
                 { icon: UserPlus, label: "Visitantes", value: totals.visitors, color: "text-secondary" },
+                { icon: Grid3X3, label: "Células", value: totals.cells, color: "text-primary" },
+              ].map((s, i) => (
+                <Card key={i}>
+                  <CardContent className="pt-4 pb-3 px-4">
+                    <s.icon className={`w-5 h-5 ${s.color} mb-1`} />
+                    <p className="text-lg font-bold">{s.value}</p>
+                    <p className="text-xs text-muted-foreground">{s.label}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              {[
+                { icon: UserPlus, label: "Em Consolidação", value: totals.consolidation, color: "text-secondary" },
+                { icon: UserPlus, label: "Batizados", value: totals.baptized, color: "text-info" },
                 { icon: TrendingUp, label: "Entradas", value: fmt(totals.income), color: "text-emerald-600" },
                 { icon: TrendingDown, label: "Saídas", value: fmt(totals.expense), color: "text-destructive" },
                 { icon: PiggyBank, label: "Saldo", value: fmt(balance), color: balance >= 0 ? "text-emerald-600" : "text-destructive" },

@@ -46,10 +46,11 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { church, signOut, roles, isAdmin, currentChurchId } = useAuth();
+  const { church, signOut, roles, isAdmin, currentChurchId, profile } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
 
   const userRoles = useMemo(() => roles.map(r => r.role), [roles]);
+  const isNetworkUser = userRoles.includes("network_admin" as any) || userRoles.includes("network_finance" as any);
 
   const menuItems = useMemo(() => {
     if (isAdmin()) return allMenuItems;
@@ -63,14 +64,19 @@ export function Sidebar() {
     const items = [...bottomItems];
     if (isSuperAdmin) {
       items.unshift({ icon: Shield, label: "Painel Master", path: "/master" });
-      items.unshift({ icon: Network, label: "Painel Rede", path: "/rede" });
+    }
+    if (isSuperAdmin || isNetworkUser) {
+      // Only add if not already present
+      if (!items.some(i => i.path === "/rede")) {
+        items.unshift({ icon: Network, label: "Painel Rede", path: "/rede" });
+      }
     }
     if (isAdmin()) return items;
     return items.filter(item => {
       if (!item.allowedRoles) return true;
       return item.allowedRoles.some(role => userRoles.includes(role));
     });
-  }, [userRoles, isAdmin, isSuperAdmin]);
+  }, [userRoles, isAdmin, isSuperAdmin, isNetworkUser]);
 
   const handleSignOut = async () => {
     await signOut();
