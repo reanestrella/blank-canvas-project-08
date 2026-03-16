@@ -36,7 +36,6 @@ import type { FinancialAccount } from "@/hooks/useFinancialAccounts";
 const transactionSchema = z.object({
   type: z.enum(["receita", "despesa"]),
   amount: z.string().min(1, "Valor é obrigatório"),
-  description: z.string().min(2, "Descrição deve ter pelo menos 2 caracteres").max(200),
   transaction_date: z.string().min(1, "Data é obrigatória"),
   category_id: z.string().optional().or(z.literal("")),
   member_id: z.string().optional().or(z.literal("")),
