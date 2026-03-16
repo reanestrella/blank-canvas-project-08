@@ -82,7 +82,8 @@ export function useDashboardStats(congregationId?: string | null) {
           .limit(5000);
         
         if (congregationId) {
-          membersQuery = membersQuery.eq("congregation_id", congregationId);
+          // Include members assigned to this congregation OR members with no congregation assigned
+          membersQuery = membersQuery.or(`congregation_id.eq.${congregationId},congregation_id.is.null`);
         }
         
         const [membersRes, alertsRes, consolRes] = await Promise.all([
