@@ -1,6 +1,4 @@
 import { useState, useMemo } from "react";
-import { format, subMonths } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { Search, CheckCircle2, XCircle } from "lucide-react";
 import {
   Table,
