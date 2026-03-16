@@ -1002,10 +1002,12 @@ export type Database = {
           created_by: string | null
           first_visit_date: string | null
           id: string
+          last_visit_date: string | null
           member_id: string
           notes: string | null
           status: string | null
           updated_at: string | null
+          visit_count: number
         }
         Insert: {
           cell_integration_date?: string | null
@@ -1016,10 +1018,12 @@ export type Database = {
           created_by?: string | null
           first_visit_date?: string | null
           id?: string
+          last_visit_date?: string | null
           member_id: string
           notes?: string | null
           status?: string | null
           updated_at?: string | null
+          visit_count?: number
         }
         Update: {
           cell_integration_date?: string | null
@@ -1030,10 +1034,12 @@ export type Database = {
           created_by?: string | null
           first_visit_date?: string | null
           id?: string
+          last_visit_date?: string | null
           member_id?: string
           notes?: string | null
           status?: string | null
           updated_at?: string | null
+          visit_count?: number
         }
         Relationships: [
           {
