@@ -53,6 +53,12 @@ export default function NetworkDashboard() {
   const [filterMonth, setFilterMonth] = useState<string>("all");
   const [filterChurch, setFilterChurch] = useState<string>("all");
   const [chartsOpen, setChartsOpen] = useState(false);
+  const [netAnnouncements, setNetAnnouncements] = useState<any[]>([]);
+  const [announcementModal, setAnnouncementModal] = useState(false);
+  const [editingAnn, setEditingAnn] = useState<any>(null);
+  const [annForm, setAnnForm] = useState({ title: "", content: "" });
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const { toast } = useToast();
 
   const userRoles = roles.map(r => r.role);
   const isNetworkUser = userRoles.includes("network_admin" as any) || userRoles.includes("network_finance" as any);
