@@ -202,12 +202,27 @@ export default function NetworkDashboard() {
         ) : (
           <>
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
               {[
                 { icon: Building2, label: "Igrejas", value: totals.churches, color: "text-primary" },
                 { icon: Users, label: "Membros", value: totals.members, color: "text-primary" },
-                { icon: Grid3X3, label: "Células", value: totals.cells, color: "text-primary" },
+                { icon: UserPlus, label: "Decididos", value: totals.decididos, color: "text-emerald-600" },
                 { icon: UserPlus, label: "Visitantes", value: totals.visitors, color: "text-secondary" },
+                { icon: Grid3X3, label: "Células", value: totals.cells, color: "text-primary" },
+              ].map((s, i) => (
+                <Card key={i}>
+                  <CardContent className="pt-4 pb-3 px-4">
+                    <s.icon className={`w-5 h-5 ${s.color} mb-1`} />
+                    <p className="text-lg font-bold">{s.value}</p>
+                    <p className="text-xs text-muted-foreground">{s.label}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              {[
+                { icon: UserPlus, label: "Em Consolidação", value: totals.consolidation, color: "text-secondary" },
+                { icon: UserPlus, label: "Batizados", value: totals.baptized, color: "text-info" },
                 { icon: TrendingUp, label: "Entradas", value: fmt(totals.income), color: "text-emerald-600" },
                 { icon: TrendingDown, label: "Saídas", value: fmt(totals.expense), color: "text-destructive" },
                 { icon: PiggyBank, label: "Saldo", value: fmt(balance), color: balance >= 0 ? "text-emerald-600" : "text-destructive" },
