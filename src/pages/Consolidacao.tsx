@@ -368,6 +368,7 @@ export default function Consolidacao() {
                         <TableHead className="hidden md:table-cell">Consolidador</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="hidden md:table-cell">Data Contato</TableHead>
+                        <TableHead className="hidden md:table-cell">Visitas</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
