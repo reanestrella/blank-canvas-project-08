@@ -31,6 +31,7 @@ const allMenuItems: MenuItem[] = [
   { icon: HeartHandshake, label: "Gestão Pastoral", path: "/gestao-pastoral", allowedRoles: ["pastor"] },
   { icon: Bell, label: "Lembretes", path: "/lembretes", allowedRoles: ["pastor", "secretario"] },
   { icon: Sparkles, label: "Meu Assistente", path: "/assistente", allowedRoles: ["pastor", "lider_celula", "lider_ministerio"] },
+  { icon: Package, label: "Patrimônio", path: "/patrimonio", allowedRoles: ["pastor", "tesoureiro"] },
   { icon: User, label: "Meu App", path: "/meu-app" },
   { icon: Smartphone, label: "Gestão App", path: "/gestao-app", allowedRoles: ["pastor"] as AppRole[] },
 ];
