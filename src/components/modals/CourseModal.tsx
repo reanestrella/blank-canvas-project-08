@@ -51,6 +51,7 @@ interface Course {
   end_date: string | null;
   is_active: boolean;
   cover_image_url?: string | null;
+  show_in_app?: boolean;
 }
 
 interface CourseModalProps {
