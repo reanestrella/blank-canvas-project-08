@@ -105,15 +105,20 @@ export default function Secretaria() {
   const stats = useMemo(() => {
     const activeMembers = members.filter(m => m.is_active);
     
-    // Build dynamic network counts from actual data
+    // Build dynamic network counts from MEMBROS only (matching Dashboard logic)
+    const membrosForNetwork = activeMembers.filter(m =>
+      m.spiritual_status === "membro" || 
+      m.spiritual_status === "lider" || 
+      m.spiritual_status === "discipulador"
+    );
     const networkCounts: Record<string, number> = {};
-    activeMembers.forEach(m => {
+    membrosForNetwork.forEach(m => {
       if (m.network) {
         networkCounts[m.network] = (networkCounts[m.network] || 0) + 1;
       }
     });
     // Also count members without a network
-    const withoutNetwork = activeMembers.filter(m => !m.network).length;
+    const withoutNetwork = membrosForNetwork.filter(m => !m.network).length;
     
     return {
       total: activeMembers.length,
