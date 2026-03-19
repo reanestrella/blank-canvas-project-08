@@ -1399,6 +1399,56 @@ export type Database = {
           },
         ]
       }
+      devotionals: {
+        Row: {
+          application: string | null
+          bible_reference: string | null
+          church_id: string
+          content: string
+          created_at: string
+          created_by: string | null
+          devotional_date: string
+          id: string
+          prayer: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          application?: string | null
+          bible_reference?: string | null
+          church_id: string
+          content: string
+          created_at?: string
+          created_by?: string | null
+          devotional_date: string
+          id?: string
+          prayer?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          application?: string | null
+          bible_reference?: string | null
+          church_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          devotional_date?: string
+          id?: string
+          prayer?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devotionals_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discipleships: {
         Row: {
           church_id: string
@@ -2621,33 +2671,51 @@ export type Database = {
       }
       prayer_requests: {
         Row: {
+          category: string | null
           church_id: string
+          contact: string | null
           created_at: string
+          description: string | null
           id: string
-          is_answered: boolean
-          is_public: boolean
-          member_id: string | null
-          request: string
+          is_anonymous: boolean | null
+          is_public: boolean | null
+          member_name: string | null
+          status: string | null
+          title: string
+          updated_at: string
+          urgency: string | null
           user_id: string | null
         }
         Insert: {
+          category?: string | null
           church_id: string
+          contact?: string | null
           created_at?: string
+          description?: string | null
           id?: string
-          is_answered?: boolean
-          is_public?: boolean
-          member_id?: string | null
-          request: string
+          is_anonymous?: boolean | null
+          is_public?: boolean | null
+          member_name?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string
+          urgency?: string | null
           user_id?: string | null
         }
         Update: {
+          category?: string | null
           church_id?: string
+          contact?: string | null
           created_at?: string
+          description?: string | null
           id?: string
-          is_answered?: boolean
-          is_public?: boolean
-          member_id?: string | null
-          request?: string
+          is_anonymous?: boolean | null
+          is_public?: boolean | null
+          member_name?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string
+          urgency?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -2656,13 +2724,6 @@ export type Database = {
             columns: ["church_id"]
             isOneToOne: false
             referencedRelation: "churches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "prayer_requests_member_id_fkey"
-            columns: ["member_id"]
-            isOneToOne: false
-            referencedRelation: "members"
             referencedColumns: ["id"]
           },
         ]
