@@ -10,13 +10,16 @@ import {
   Clock, MapPin, Plus, Loader2, Camera, GraduationCap, Settings,
   List, CalendarDays, Check, X, DollarSign, QrCode, Copy,
   Church, Mic, Video, Newspaper, HandHeart, Grid3X3, Flame,
-  Cake, HeartHandshake, Megaphone,
+  Cake, HeartHandshake, Megaphone, Upload, Book,
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileEditTab } from "@/components/meuapp/ProfileEditTab";
 import { CoursesTab } from "@/components/meuapp/CoursesTab";
+import { BibleReader } from "@/components/meuapp/BibleReader";
+import { DevotionalView } from "@/components/meuapp/DevotionalView";
+import { PrayerRequestView } from "@/components/meuapp/PrayerRequestView";
 import { useNavigate } from "react-router-dom";
 import { ptBR } from "date-fns/locale";
 import { format, isSameDay } from "date-fns";
@@ -597,23 +600,13 @@ function RedesSociaisView({ churchId }: { churchId: string }) {
 }
 
 // ─── Shortcut Button ──────────────────────────────────
-function ShortcutButton({ icon: Icon, label, onClick, variant = "dark" }: { icon: any; label: string; onClick: () => void; variant?: "light" | "dark" }) {
-  if (variant === "light") {
-    return (
-      <button onClick={onClick} className="flex flex-col items-center gap-2 py-3">
-        <div className="w-14 h-14 rounded-2xl bg-primary-foreground/15 backdrop-blur-sm flex items-center justify-center border border-primary-foreground/20 hover:bg-primary-foreground/25 transition-all">
-          <Icon className="w-7 h-7 text-primary-foreground" />
-        </div>
-        <span className="text-[11px] font-bold text-primary-foreground uppercase tracking-wider leading-tight text-center">{label}</span>
-      </button>
-    );
-  }
+function ShortcutButton({ icon: Icon, label, onClick }: { icon: any; label: string; onClick: () => void }) {
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-2 py-3">
-      <div className="w-14 h-14 rounded-2xl bg-card/90 backdrop-blur-sm flex items-center justify-center border border-border shadow-sm hover:shadow-md transition-all">
-        <Icon className="w-7 h-7 text-primary" />
+      <div className="w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center border border-white/20 hover:bg-white/25 transition-all shadow-lg">
+        <Icon className="w-6 h-6 text-white" />
       </div>
-      <span className="text-[11px] font-bold text-foreground/80 uppercase tracking-wider leading-tight text-center">{label}</span>
+      <span className="text-[10px] font-semibold text-white/90 uppercase tracking-wider leading-tight text-center max-w-[70px]">{label}</span>
     </button>
   );
 }
@@ -631,6 +624,7 @@ export default function MeuApp() {
   const [schedules, setSchedules] = useState<MySchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeView, setActiveView] = useState<string>("home");
+  const [heroBgUrl, setHeroBgUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile?.church_id) fetchData();
@@ -640,6 +634,13 @@ export default function MeuApp() {
     if (!profile?.church_id) return;
     setIsLoading(true);
     try {
+      // Fetch hero background from app_module_configs
+      const { data: heroBgConfig } = await supabase.from("app_module_configs" as any)
+        .select("config").eq("church_id", profile.church_id).eq("module_key", "hero_bg").maybeSingle();
+      if ((heroBgConfig as any)?.config?.bg_url) {
+        setHeroBgUrl((heroBgConfig as any).config.bg_url);
+      }
+
       const { data: announcementsData } = await supabase.from("announcements")
         .select("id, title, content, created_at").eq("church_id", profile.church_id)
         .eq("is_active", true).order("created_at", { ascending: false }).limit(5);
@@ -663,14 +664,12 @@ export default function MeuApp() {
       const now = new Date();
       const currentMonth = (now.getMonth() + 1).toString().padStart(2, "0");
       
-      // Birthdays
       const { data: birthdayData } = await supabase.from("members")
         .select("id, full_name, birth_date, photo_url").eq("church_id", profile.church_id)
         .eq("is_active", true).not("birth_date", "is", null);
       setBirthdays(((birthdayData || []) as BirthdayMember[]).filter(m => m.birth_date?.split("-")[1] === currentMonth)
         .sort((a, b) => parseInt(a.birth_date.split("-")[2]) - parseInt(b.birth_date.split("-")[2])));
 
-      // Wedding anniversaries
       const { data: weddingData } = await supabase.from("members")
         .select("id, full_name, wedding_date, photo_url").eq("church_id", profile.church_id)
         .eq("is_active", true).not("wedding_date", "is", null);
@@ -683,7 +682,7 @@ export default function MeuApp() {
         .gte("event_date", today).order("event_date", { ascending: true }).limit(5);
       setEvents((eventsData as UpcomingEvent[]) || []);
 
-      // Schedule lookup
+      // Schedule lookup - try multiple approaches to find member_id
       let memberId = profile.member_id;
       if (!memberId && profile.email) {
         const { data: memberByEmail } = await supabase.from("members").select("id")
@@ -695,10 +694,13 @@ export default function MeuApp() {
           .eq("church_id", profile.church_id!).ilike("full_name", profile.full_name.trim()).limit(1);
         if (memberByName?.length) memberId = memberByName[0].id;
       }
+
       if (memberId) {
+        // Also check via ministry_volunteers if schedule_volunteers has no direct match
         const { data: svData } = await supabase.from("schedule_volunteers")
           .select(`id, schedule_id, role, confirmed, member_id, schedule:ministry_schedules!inner(id, event_name, event_date, notes, ministry_id, ministry:ministries(name))`)
           .eq("member_id", memberId);
+        
         if (svData?.length) {
           const { data: churchMinistries } = await supabase.from("ministries").select("id").eq("church_id", profile.church_id!);
           const churchMinistryIds = new Set((churchMinistries || []).map((m: any) => m.id));
@@ -710,7 +712,10 @@ export default function MeuApp() {
           allSchedules.sort((a, b) => (a.schedule?.event_date || "").localeCompare(b.schedule?.event_date || ""));
           setSchedules(allSchedules);
         } else { setSchedules([]); }
-      } else { setSchedules([]); }
+      } else { 
+        console.warn("[MeuApp] Could not find member_id for user. Schedules will be empty.");
+        setSchedules([]); 
+      }
     } catch (error) {
       console.error("[MeuApp] Error fetching data:", error);
     } finally { setIsLoading(false); }
@@ -747,12 +752,8 @@ export default function MeuApp() {
       case "ministries": return churchId ? <MinistriesView churchId={churchId} /> : null;
       case "cells": return churchId ? <CellsView churchId={churchId} /> : null;
       case "igreja": return churchId ? <IgrejaView churchId={churchId} church={church} /> : null;
-      case "devocional": return (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold flex items-center gap-2"><Flame className="w-5 h-5 text-primary" /> Devocional</h3>
-          <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Em breve devocionais diários estarão disponíveis aqui.</p></CardContent></Card>
-        </div>
-      );
+      case "devocional": return churchId ? <DevotionalView churchId={churchId} /> : null;
+      case "bible": return <BibleReader />;
       case "youtube": return churchId ? <YoutubeView churchId={churchId} /> : null;
       case "redes-sociais": return churchId ? <RedesSociaisView churchId={churchId} /> : null;
       case "events": return (
@@ -772,12 +773,7 @@ export default function MeuApp() {
           )}
         </div>
       );
-      case "prayer": return (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold flex items-center gap-2"><MessageSquare className="w-5 h-5 text-primary" /> Mural de Oração</h3>
-          <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">Em breve você poderá enviar e acompanhar pedidos de oração.</p></CardContent></Card>
-        </div>
-      );
+      case "prayer": return churchId ? <PrayerRequestView churchId={churchId} /> : null;
       case "profile": return <ProfileEditTab />;
       default: return null;
     }
@@ -800,37 +796,37 @@ export default function MeuApp() {
   return (
     <AppLayout>
       <div className="space-y-0">
-        {/* Hero Header - Immersive Church Branding */}
-        <div className="gradient-hero -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 px-4 sm:px-6 pt-4 pb-6 mb-0 relative overflow-hidden">
-          {/* Animated decorative elements */}
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute top-[-20%] right-[-10%] w-72 h-72 rounded-full bg-primary-foreground/[0.07] blur-3xl" />
-            <div className="absolute bottom-[-30%] left-[-15%] w-80 h-80 rounded-full bg-primary-foreground/[0.05] blur-3xl" />
-            <div className="absolute top-[20%] left-[50%] w-40 h-40 rounded-full bg-primary-foreground/[0.04] blur-2xl" />
-            {/* Subtle grid pattern overlay */}
-            <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)", backgroundSize: "24px 24px" }} />
-          </div>
+        {/* Hero Header - Dark immersive design like reference app */}
+        <div
+          className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6 px-4 sm:px-6 pt-4 pb-6 mb-0 relative overflow-hidden"
+          style={{
+            background: heroBgUrl
+              ? `linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url(${heroBgUrl}) center/cover no-repeat`
+              : `linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 50%, hsl(var(--primary) / 0.6) 100%)`,
+          }}
+        >
+          {/* Subtle overlay pattern */}
+          <div className="absolute inset-0 bg-black/20" />
           
           {/* Top bar: settings + avatar */}
           <div className="flex items-center justify-between mb-2 relative z-10">
-            <Button variant="ghost" size="icon" className="text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10" onClick={() => navigate("/configuracoes")}>
+            <Button variant="ghost" size="icon" className="text-white/70 hover:text-white hover:bg-white/10" onClick={() => navigate("/configuracoes")}>
               <Settings className="w-5 h-5" />
             </Button>
             <button onClick={() => setActiveView("profile")} className="relative">
-              <Avatar className="w-9 h-9 border-2 border-primary-foreground/30">
+              <Avatar className="w-9 h-9 border-2 border-white/30">
                 <AvatarImage src={profile?.avatar_url || ""} className="object-cover" />
-                <AvatarFallback className="text-xs bg-primary-foreground/15 text-primary-foreground">{initials}</AvatarFallback>
+                <AvatarFallback className="text-xs bg-white/15 text-white">{initials}</AvatarFallback>
               </Avatar>
             </button>
           </div>
 
-          {/* Centered Logo - Premium, crisp, prominent */}
-          <div className="flex flex-col items-center text-center gap-3 relative z-10 py-6">
+          {/* Centered Logo - Premium and crisp */}
+          <div className="flex flex-col items-center text-center gap-3 relative z-10 py-4">
             {church?.logo_url ? (
-              <div className="relative group">
-                {/* Glow effect behind logo */}
-                <div className="absolute inset-0 bg-white/20 rounded-[2rem] blur-xl scale-110 group-hover:scale-125 transition-transform duration-700" />
-                <div className="relative w-48 h-48 md:w-60 md:h-60 rounded-[2rem] bg-white p-3 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-white/50">
+              <div className="relative">
+                <div className="absolute inset-0 bg-white/20 rounded-3xl blur-xl scale-110" />
+                <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-3xl bg-white p-2 shadow-2xl">
                   <img
                     src={church.logo_url}
                     alt={church.name || "Logo"}
@@ -842,56 +838,52 @@ export default function MeuApp() {
               </div>
             ) : (
               <div className="relative">
-                <div className="absolute inset-0 bg-white/10 rounded-[2rem] blur-xl scale-110" />
-                <div className="relative w-48 h-48 md:w-60 md:h-60 rounded-[2rem] bg-primary-foreground/10 flex items-center justify-center shadow-2xl backdrop-blur-lg border border-white/20">
-                  <Church className="w-20 h-20 text-primary-foreground/70" />
+                <div className="absolute inset-0 bg-white/10 rounded-3xl blur-xl scale-110" />
+                <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-3xl bg-white/10 flex items-center justify-center shadow-2xl backdrop-blur-lg border border-white/20">
+                  <Church className="w-16 h-16 text-white/70" />
                 </div>
               </div>
             )}
-            <div className="mt-2">
-              <h1 className="text-3xl md:text-4xl font-extrabold text-primary-foreground tracking-tight drop-shadow-md">
+            <div className="mt-1">
+              <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight drop-shadow-lg">
                 {(church as any)?.ministry_name || church?.name || "Minha Igreja"}
               </h1>
               {(church as any)?.ministry_name && church?.name && (
-                <p className="text-sm text-primary-foreground/60 mt-0.5">{church.name}</p>
+                <p className="text-sm text-white/60 mt-0.5">{church.name}</p>
               )}
             </div>
           </div>
 
-          {/* Top Row Shortcuts (light variant, inside gradient) */}
-          <div className="grid grid-cols-3 gap-2 mt-2 relative z-10">
-            <ShortcutButton icon={Church} label="Igreja" onClick={() => setActiveView("igreja")} variant="light" />
-            <ShortcutButton icon={Flame} label="Ministérios" onClick={() => setActiveView("ministries")} variant="light" />
-            <ShortcutButton icon={BookOpen} label="Devocional" onClick={() => setActiveView("devocional")} variant="light" />
+          {/* Icon Grid - Row 1 (inside hero) */}
+          <div className="grid grid-cols-3 gap-x-4 gap-y-1 mt-4 relative z-10">
+            <ShortcutButton icon={Church} label="Igreja" onClick={() => setActiveView("igreja")} />
+            <ShortcutButton icon={Flame} label="Ministérios" onClick={() => setActiveView("ministries")} />
+            <ShortcutButton icon={Video} label="Mensagens" onClick={() => setActiveView("youtube")} />
+          </div>
+          <div className="grid grid-cols-3 gap-x-4 gap-y-1 mt-1 relative z-10">
+            <ShortcutButton icon={HandHeart} label="Doação" onClick={() => setActiveView("contribuicao")} />
+            <ShortcutButton icon={BookOpen} label="Devocional" onClick={() => setActiveView("devocional")} />
+            <ShortcutButton icon={Grid3X3} label="Células" onClick={() => setActiveView("cells")} />
+          </div>
+          <div className="grid grid-cols-3 gap-x-4 gap-y-1 mt-1 relative z-10">
+            <ShortcutButton icon={CalendarIcon} label="Eventos" onClick={() => setActiveView("events")} />
+            <ShortcutButton icon={Book} label="Bíblia" onClick={() => setActiveView("bible")} />
+            <ShortcutButton icon={MessageSquare} label="Oração" onClick={() => setActiveView("prayer")} />
+          </div>
+          <div className="grid grid-cols-3 gap-x-4 gap-y-1 mt-1 relative z-10">
+            <ShortcutButton icon={GraduationCap} label="Cursos" onClick={() => setActiveView("courses")} />
+            <ShortcutButton icon={Clock} label="Escalas" onClick={() => setActiveView("schedules")} />
+            <ShortcutButton icon={Users} label="Redes Sociais" onClick={() => setActiveView("redes-sociais")} />
           </div>
         </div>
 
-        {/* Bottom Section Shortcuts (dark variant, outside gradient) */}
-        <div className="bg-card border-b border-border px-4 sm:px-6 py-4">
-          <div className="grid grid-cols-3 gap-2">
-            <ShortcutButton icon={Video} label="YouTube" onClick={() => setActiveView("youtube")} variant="dark" />
-            <ShortcutButton icon={HandHeart} label="Doação" onClick={() => setActiveView("contribuicao")} variant="dark" />
-            <ShortcutButton icon={Users} label="Redes Sociais" onClick={() => setActiveView("redes-sociais")} variant="dark" />
-          </div>
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            <ShortcutButton icon={CalendarIcon} label="Eventos" onClick={() => setActiveView("events")} variant="dark" />
-            <ShortcutButton icon={MessageSquare} label="Mural de Orações" onClick={() => setActiveView("prayer")} variant="dark" />
-            <ShortcutButton icon={GraduationCap} label="Cursos" onClick={() => setActiveView("courses")} variant="dark" />
-          </div>
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            <ShortcutButton icon={Clock} label="Escalas" onClick={() => setActiveView("schedules")} variant="dark" />
-            <ShortcutButton icon={Grid3X3} label="Células" onClick={() => setActiveView("cells")} variant="dark" />
-            <ShortcutButton icon={User} label="Meu Perfil" onClick={() => setActiveView("profile")} variant="dark" />
-          </div>
-        </div>
-
-        {/* Fixed Sections: Informes da Rede, Avisos, Aniversariantes, Aniversário de Casamento */}
+        {/* Fixed Sections Below */}
         <div className="px-0 py-6 space-y-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
           ) : (
             <>
-              {/* Informes da Rede - Before announcements */}
+              {/* Informes da Rede */}
               {networkAnnouncements.length > 0 && (
                 <Card className="border-primary/30 bg-primary/5">
                   <CardHeader className="pb-2">
@@ -944,6 +936,30 @@ export default function MeuApp() {
                 </Card>
               )}
 
+              {/* Escalas pendentes */}
+              {schedules.filter(s => !s.confirmed).length > 0 && (
+                <Card className="border-amber-300/30 bg-amber-50/50 dark:bg-amber-950/10">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2"><Clock className="w-4 h-4 text-amber-600" /> Escalas Pendentes</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {schedules.filter(s => !s.confirmed).slice(0, 3).map((s) => (
+                        <div key={s.id} className="flex items-center justify-between p-2 rounded-lg bg-card border border-border">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{s.schedule?.event_name}</p>
+                            <p className="text-xs text-muted-foreground">{s.schedule?.event_date ? new Date(s.schedule.event_date + "T12:00:00").toLocaleDateString("pt-BR") : ""}</p>
+                          </div>
+                          <Button size="sm" variant="outline" onClick={() => handleConfirmSchedule(s)}>
+                            <Check className="w-3 h-3 mr-1" /> Confirmar
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Aniversariantes */}
               {birthdays.length > 0 && (
                 <Card>
@@ -983,6 +999,11 @@ export default function MeuApp() {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Meu Perfil */}
+              <Button variant="outline" className="w-full" onClick={() => setActiveView("profile")}>
+                <User className="w-4 h-4 mr-2" /> Meu Perfil
+              </Button>
             </>
           )}
         </div>
