@@ -695,21 +695,57 @@ export default function MeuApp() {
         if (memberByName?.length) memberId = memberByName[0].id;
       }
 
+      console.log("[MeuApp] Schedule lookup memberId:", memberId, "profile.member_id:", profile.member_id);
+
       if (memberId) {
-        // Also check via ministry_volunteers if schedule_volunteers has no direct match
-        const { data: svData } = await supabase.from("schedule_volunteers")
-          .select(`id, schedule_id, role, confirmed, member_id, schedule:ministry_schedules!inner(id, event_name, event_date, notes, ministry_id, ministry:ministries(name))`)
+        // Two-step approach to avoid nested join issues
+        const { data: svData, error: svError } = await supabase
+          .from("schedule_volunteers")
+          .select("id, schedule_id, role, confirmed, member_id")
           .eq("member_id", memberId);
         
+        console.log("[MeuApp] schedule_volunteers query:", { count: svData?.length, error: svError?.message });
+
         if (svData?.length) {
-          const { data: churchMinistries } = await supabase.from("ministries").select("id").eq("church_id", profile.church_id!);
-          const churchMinistryIds = new Set((churchMinistries || []).map((m: any) => m.id));
-          const allSchedules = svData.map((sv: any) => {
-            const sched = Array.isArray(sv.schedule) ? sv.schedule[0] : sv.schedule;
-            if (!sched || !churchMinistryIds.has(sched.ministry_id)) return null;
-            return { id: sv.id, schedule_id: sv.schedule_id, role: sv.role, confirmed: sv.confirmed, schedule: { id: sched.id, event_name: sched.event_name, event_date: sched.event_date, notes: sched.notes, ministry: Array.isArray(sched.ministry) ? sched.ministry[0] : sched.ministry } };
-          }).filter(Boolean) as MySchedule[];
+          const scheduleIds = [...new Set(svData.map((sv: any) => sv.schedule_id))];
+          const { data: schedData } = await supabase
+            .from("ministry_schedules")
+            .select("id, event_name, event_date, notes, ministry_id")
+            .in("id", scheduleIds);
+
+          // Get ministry names
+          const ministryIds = [...new Set((schedData || []).map((s: any) => s.ministry_id))];
+          const { data: ministriesData } = await supabase
+            .from("ministries")
+            .select("id, name")
+            .in("id", ministryIds)
+            .eq("church_id", profile.church_id!);
+          
+          const ministryMap = new Map((ministriesData || []).map((m: any) => [m.id, m.name]));
+          const schedMap = new Map((schedData || []).map((s: any) => [s.id, s]));
+
+          const allSchedules = svData
+            .map((sv: any) => {
+              const sched = schedMap.get(sv.schedule_id);
+              if (!sched || !ministryMap.has(sched.ministry_id)) return null;
+              return {
+                id: sv.id,
+                schedule_id: sv.schedule_id,
+                role: sv.role,
+                confirmed: sv.confirmed,
+                schedule: {
+                  id: sched.id,
+                  event_name: sched.event_name,
+                  event_date: sched.event_date,
+                  notes: sched.notes,
+                  ministry: { name: ministryMap.get(sched.ministry_id) || "Ministério" },
+                },
+              };
+            })
+            .filter(Boolean) as MySchedule[];
+          
           allSchedules.sort((a, b) => (a.schedule?.event_date || "").localeCompare(b.schedule?.event_date || ""));
+          console.log("[MeuApp] Final schedules:", allSchedules.length);
           setSchedules(allSchedules);
         } else { setSchedules([]); }
       } else { 

@@ -13,7 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import {
   Smartphone, QrCode, DollarSign, Save, Loader2, Palette, Image,
-  Plus, Edit2, Trash2, Target, Megaphone, ArrowLeft,
+  Plus, Edit2, Trash2, Target, Megaphone, ArrowLeft, Flame, Upload,
+  MessageSquare, Globe, Lock, Eye, EyeOff, BookOpen,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
