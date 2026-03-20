@@ -13,7 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import {
   Smartphone, QrCode, DollarSign, Save, Loader2, Palette, Image,
-  Plus, Edit2, Trash2, Target, Megaphone, ArrowLeft,
+  Plus, Edit2, Trash2, Target, Megaphone, ArrowLeft, Flame, Upload,
+  MessageSquare, Globe, Lock, Eye, EyeOff, BookOpen,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -663,6 +664,446 @@ function ModulosSection({ churchId }: { churchId: string }) {
 }
 
 
+// ─── Devocionais Management ──────────────────────────────────
+function DevocionaisSection({ churchId }: { churchId: string }) {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const [devotionals, setDevotionals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [form, setForm] = useState({
+    devotional_date: "", title: "", bible_reference: "", content: "", application: "", prayer: "",
+  });
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase.from("devotionals" as any)
+      .select("*").eq("church_id", churchId)
+      .order("devotional_date", { ascending: false }).limit(100);
+    setDevotionals((data as any[]) || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, [churchId]);
+
+  const openNew = () => {
+    setEditing(null);
+    setForm({ devotional_date: "", title: "", bible_reference: "", content: "", application: "", prayer: "" });
+    setModalOpen(true);
+  };
+
+  const openEdit = (d: any) => {
+    setEditing(d);
+    setForm({
+      devotional_date: d.devotional_date || "",
+      title: d.title || "",
+      bible_reference: d.bible_reference || "",
+      content: d.content || "",
+      application: d.application || "",
+      prayer: d.prayer || "",
+    });
+    setModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.title.trim() || !form.devotional_date || !form.content.trim()) return;
+    try {
+      if (editing) {
+        const { error } = await supabase.from("devotionals" as any).update({
+          ...form, updated_at: new Date().toISOString(),
+        } as any).eq("id", editing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("devotionals" as any).insert({
+          church_id: churchId, created_by: user?.id, ...form,
+        } as any);
+        if (error) throw error;
+      }
+      toast({ title: editing ? "Devocional atualizado!" : "Devocional criado!" });
+      setModalOpen(false);
+      load();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    await supabase.from("devotionals" as any).delete().eq("id", id);
+    toast({ title: "Devocional removido" });
+    load();
+  };
+
+  const handleBulkImport = async () => {
+    if (!bulkText.trim()) return;
+    setBulkImporting(true);
+    try {
+      // Parse structured text: each devotional separated by "---"
+      // Format: DATE | TITLE | REFERENCE\nCONTENT\n[APLICAÇÃO: ...]\n[ORAÇÃO: ...]
+      const blocks = bulkText.split("---").map(b => b.trim()).filter(Boolean);
+      const records: any[] = [];
+      for (const block of blocks) {
+        const lines = block.split("\n");
+        const header = lines[0];
+        const headerParts = header.split("|").map(p => p.trim());
+        if (headerParts.length < 2) continue;
+        const date = headerParts[0]; // yyyy-MM-dd
+        const title = headerParts[1];
+        const reference = headerParts[2] || null;
+        
+        let content = "";
+        let application = "";
+        let prayer = "";
+        let section = "content";
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          if (line.toLowerCase().startsWith("aplicação:") || line.toLowerCase().startsWith("aplicacao:")) {
+            section = "application";
+            application = line.replace(/^aplicaç[aã]o:/i, "").trim();
+          } else if (line.toLowerCase().startsWith("oração:") || line.toLowerCase().startsWith("oracao:")) {
+            section = "prayer";
+            prayer = line.replace(/^oraç[aã]o:/i, "").trim();
+          } else if (section === "content") {
+            content += (content ? "\n" : "") + line;
+          } else if (section === "application") {
+            application += (application ? "\n" : "") + line;
+          } else if (section === "prayer") {
+            prayer += (prayer ? "\n" : "") + line;
+          }
+        }
+        if (date && title && content) {
+          records.push({
+            church_id: churchId, created_by: user?.id,
+            devotional_date: date, title, bible_reference: reference,
+            content: content.trim(), application: application.trim() || null,
+            prayer: prayer.trim() || null,
+          });
+        }
+      }
+      if (records.length === 0) {
+        toast({ title: "Nenhum devocional encontrado", description: "Verifique o formato.", variant: "destructive" });
+        setBulkImporting(false);
+        return;
+      }
+      const { error } = await supabase.from("devotionals" as any).insert(records as any);
+      if (error) throw error;
+      toast({ title: `${records.length} devocionais importados!` });
+      setBulkModalOpen(false);
+      setBulkText("");
+      load();
+    } catch (err: any) {
+      toast({ title: "Erro na importação", description: err.message, variant: "destructive" });
+    } finally {
+      setBulkImporting(false);
+    }
+  };
+
+  if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+        <div className="flex items-center gap-2 text-sm">
+          <Flame className="w-4 h-4 text-primary" />
+          <span className="font-medium">Gerencie os devocionais diários que aparecem no App</span>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={() => setBulkModalOpen(true)}>
+          <Upload className="w-4 h-4 mr-2" /> Importar em Lote
+        </Button>
+        <Button onClick={openNew}><Plus className="w-4 h-4 mr-2" /> Novo Devocional</Button>
+      </div>
+
+      {devotionals.length === 0 ? (
+        <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum devocional cadastrado.</CardContent></Card>
+      ) : (
+        <div className="space-y-2">
+          {devotionals.map(d => (
+            <div key={d.id} className="flex items-center justify-between p-3 rounded-lg border">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm truncate">{d.title}</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{new Date(d.devotional_date + "T12:00:00").toLocaleDateString("pt-BR")}</span>
+                  {d.bible_reference && <Badge variant="secondary" className="text-[10px] py-0">{d.bible_reference}</Badge>}
+                </div>
+              </div>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="icon" onClick={() => openEdit(d)}><Edit2 className="w-4 h-4" /></Button>
+                <Button variant="ghost" size="icon" onClick={() => handleDelete(d.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Single Devotional Modal */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{editing ? "Editar Devocional" : "Novo Devocional"}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>Data *</Label><Input type="date" value={form.devotional_date} onChange={e => setForm(f => ({ ...f, devotional_date: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>Referência Bíblica</Label><Input value={form.bible_reference} onChange={e => setForm(f => ({ ...f, bible_reference: e.target.value }))} placeholder="João 3:16" /></div>
+            </div>
+            <div className="space-y-2"><Label>Título *</Label><Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Título do devocional" /></div>
+            <div className="space-y-2"><Label>Conteúdo *</Label><Textarea value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} rows={5} placeholder="Texto principal do devocional..." /></div>
+            <div className="space-y-2"><Label>Aplicação</Label><Textarea value={form.application} onChange={e => setForm(f => ({ ...f, application: e.target.value }))} rows={2} placeholder="Como aplicar na vida..." /></div>
+            <div className="space-y-2"><Label>Oração</Label><Textarea value={form.prayer} onChange={e => setForm(f => ({ ...f, prayer: e.target.value }))} rows={2} placeholder="Oração do dia..." /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={!form.title.trim() || !form.devotional_date || !form.content.trim()}>
+              {editing ? "Salvar" : "Criar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Import Modal */}
+      <Dialog open={bulkModalOpen} onOpenChange={setBulkModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Importar Devocionais em Lote</DialogTitle>
+            <DialogDescription>
+              Cole o conteúdo dos devocionais no formato abaixo. Separe cada devocional com "---".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-muted text-xs font-mono whitespace-pre-line">
+{`2026-01-01 | Novo Começo | Isaías 43:19
+Texto do devocional aqui...
+Aplicação: Como aplicar...
+Oração: Senhor, neste novo ano...
+---
+2026-01-02 | Fé e Esperança | Hebreus 11:1
+Texto do segundo devocional...
+Aplicação: Reflita sobre...
+Oração: Pai, aumenta minha fé...`}
+            </div>
+            <Textarea
+              value={bulkText}
+              onChange={e => setBulkText(e.target.value)}
+              rows={12}
+              placeholder="Cole os devocionais aqui seguindo o formato acima..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkModalOpen(false)}>Cancelar</Button>
+            <Button onClick={handleBulkImport} disabled={bulkImporting || !bulkText.trim()}>
+              {bulkImporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+              Importar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ─── Hero Background Upload ──────────────────────────────────
+function HeroBgSection({ churchId }: { churchId: string }) {
+  const { toast } = useToast();
+  const [bgUrl, setBgUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const { data } = await supabase.from("app_module_configs" as any)
+        .select("config").eq("church_id", churchId).eq("module_key", "hero_bg").maybeSingle();
+      setBgUrl((data as any)?.config?.bg_url || null);
+      setLoading(false);
+    })();
+  }, [churchId]);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Erro", description: "Imagem deve ter no máximo 5MB.", variant: "destructive" });
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${churchId}/hero.${ext}`;
+      const { error: upErr } = await supabase.storage.from("hero-bg").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("hero-bg").getPublicUrl(path);
+      const newUrl = urlData.publicUrl + "?t=" + Date.now();
+      await supabase.from("app_module_configs" as any).upsert({
+        church_id: churchId, module_key: "hero_bg",
+        config: { bg_url: newUrl }, updated_at: new Date().toISOString(),
+      } as any, { onConflict: "church_id,module_key" });
+      setBgUrl(newUrl);
+      toast({ title: "Fundo atualizado!" });
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    await supabase.from("app_module_configs" as any).upsert({
+      church_id: churchId, module_key: "hero_bg",
+      config: { bg_url: null }, updated_at: new Date().toISOString(),
+    } as any, { onConflict: "church_id,module_key" });
+    setBgUrl(null);
+    toast({ title: "Fundo removido" });
+  };
+
+  if (loading) return <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><Image className="w-5 h-5" /> Fundo do App (Hero)</CardTitle>
+        <CardDescription>Imagem de fundo que aparece atrás da logo no Meu App</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {bgUrl && (
+          <div className="relative rounded-lg overflow-hidden">
+            <img src={bgUrl} alt="Hero BG" className="w-full h-32 object-cover rounded-lg" />
+            <Button variant="destructive" size="sm" className="absolute top-2 right-2" onClick={handleRemove}>
+              <Trash2 className="w-3 h-3 mr-1" /> Remover
+            </Button>
+          </div>
+        )}
+        <div>
+          <Label htmlFor="hero-bg-upload" className="cursor-pointer">
+            <Button variant="outline" size="sm" asChild disabled={uploading}>
+              <span>
+                {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                {uploading ? "Enviando..." : "Enviar Imagem de Fundo"}
+              </span>
+            </Button>
+          </Label>
+          <input id="hero-bg-upload" type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+          <p className="text-xs text-muted-foreground mt-1">Recomendado: imagem 1080x720px, máx 5MB</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Prayer Admin Section ──────────────────────────────────
+function PrayerAdminSection({ churchId }: { churchId: string }) {
+  const { toast } = useToast();
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"todos" | "publicos" | "privados">("todos");
+
+  const load = async () => {
+    setLoading(true);
+    let query = supabase.from("prayer_requests" as any)
+      .select("*").eq("church_id", churchId)
+      .order("created_at", { ascending: false }).limit(100);
+    if (filter === "publicos") query = query.eq("is_public", true);
+    if (filter === "privados") query = query.eq("is_public", false);
+    const { data } = await query;
+    setRequests((data as any[]) || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, [churchId, filter]);
+
+  const toggleStatus = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === "ativo" ? "respondido" : "ativo";
+    await supabase.from("prayer_requests" as any).update({ status: newStatus } as any).eq("id", id);
+    toast({ title: newStatus === "respondido" ? "Marcado como respondido" : "Reativado" });
+    load();
+  };
+
+  const deleteRequest = async (id: string) => {
+    await supabase.from("prayer_requests" as any).delete().eq("id", id);
+    toast({ title: "Pedido removido" });
+    load();
+  };
+
+  const urgencyColors: Record<string, string> = {
+    normal: "bg-muted text-muted-foreground",
+    urgente: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+    muito_urgente: "bg-destructive/20 text-destructive",
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+        <div className="flex items-center gap-2 text-sm">
+          <MessageSquare className="w-4 h-4 text-primary" />
+          <span className="font-medium">Gerencie os pedidos de oração recebidos dos membros</span>
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        {(["todos", "publicos", "privados"] as const).map(f => (
+          <Button key={f} variant={filter === f ? "default" : "outline"} size="sm" onClick={() => setFilter(f)}>
+            {f === "todos" && <Eye className="w-3 h-3 mr-1" />}
+            {f === "publicos" && <Globe className="w-3 h-3 mr-1" />}
+            {f === "privados" && <Lock className="w-3 h-3 mr-1" />}
+            {f.charAt(0).toUpperCase() + f.slice(1)}
+          </Button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+      ) : requests.length === 0 ? (
+        <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum pedido de oração.</CardContent></Card>
+      ) : (
+        <div className="space-y-2">
+          {requests.map((r: any) => (
+            <Card key={r.id}>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-semibold text-sm">{r.title}</h4>
+                      {r.is_public ? (
+                        <Badge variant="outline" className="text-[10px] py-0 h-4"><Globe className="w-2.5 h-2.5 mr-0.5" /> Público</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] py-0 h-4 text-amber-600 border-amber-200"><Lock className="w-2.5 h-2.5 mr-0.5" /> Privado</Badge>
+                      )}
+                      <Badge className={`text-[10px] py-0 h-4 ${urgencyColors[r.urgency] || ""}`}>
+                        {r.urgency === "muito_urgente" ? "Muito Urgente" : r.urgency === "urgente" ? "Urgente" : "Normal"}
+                      </Badge>
+                    </div>
+                    {r.description && <p className="text-xs text-muted-foreground whitespace-pre-line line-clamp-3">{r.description}</p>}
+                    <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
+                      <span>{r.is_anonymous ? "Anônimo" : (r.member_name || "Sem nome")}</span>
+                      {r.contact && <span>📞 {r.contact}</span>}
+                      <span>{new Date(r.created_at).toLocaleDateString("pt-BR")}</span>
+                      <Badge variant={r.status === "ativo" ? "secondary" : "default"} className="text-[10px] py-0 h-4">
+                        {r.status === "ativo" ? "Ativo" : "Respondido"}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <Button variant="ghost" size="icon" onClick={() => toggleStatus(r.id, r.status)} title={r.status === "ativo" ? "Marcar respondido" : "Reativar"}>
+                      {r.status === "ativo" ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => deleteRequest(r.id)}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 export default function GestaoApp() {
   const { profile } = useAuth();
   const churchId = profile?.church_id;
@@ -689,15 +1130,24 @@ export default function GestaoApp() {
           <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="branding"><Palette className="w-4 h-4 mr-1" /> Visual</TabsTrigger>
             <TabsTrigger value="modulos"><Smartphone className="w-4 h-4 mr-1" /> Módulos</TabsTrigger>
-            <TabsTrigger value="contribuicao"><QrCode className="w-4 h-4 mr-1" /> Contribuição App</TabsTrigger>
+            <TabsTrigger value="devocionais"><Flame className="w-4 h-4 mr-1" /> Devocionais</TabsTrigger>
+            <TabsTrigger value="oracoes"><MessageSquare className="w-4 h-4 mr-1" /> Orações</TabsTrigger>
+            <TabsTrigger value="contribuicao"><QrCode className="w-4 h-4 mr-1" /> Contribuição</TabsTrigger>
             <TabsTrigger value="campanhas"><Target className="w-4 h-4 mr-1" /> Campanhas</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="branding" className="mt-6">
+          <TabsContent value="branding" className="mt-6 space-y-6">
             <BrandingSection churchId={churchId} />
+            <HeroBgSection churchId={churchId} />
           </TabsContent>
           <TabsContent value="modulos" className="mt-6">
             <ModulosSection churchId={churchId} />
+          </TabsContent>
+          <TabsContent value="devocionais" className="mt-6">
+            <DevocionaisSection churchId={churchId} />
+          </TabsContent>
+          <TabsContent value="oracoes" className="mt-6">
+            <PrayerAdminSection churchId={churchId} />
           </TabsContent>
           <TabsContent value="contribuicao" className="mt-6">
             <ContribuicaoSection churchId={churchId} />
