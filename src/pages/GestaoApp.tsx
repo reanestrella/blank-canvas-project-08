@@ -905,29 +905,63 @@ Oração: Pai, aumenta minha fé...`}
   );
 }
 
-// ─── Hero Background Upload ──────────────────────────────────
+// ─── Hero Background, Video & Gradient ──────────────────────────────────
 function HeroBgSection({ churchId }: { churchId: string }) {
   const { toast } = useToast();
   const [bgUrl, setBgUrl] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [gradientType, setGradientType] = useState<"none" | "linear" | "radial">("none");
+  const [gradColor1, setGradColor1] = useState("#1e3a5f");
+  const [gradColor2, setGradColor2] = useState("#d97706");
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       const { data } = await supabase.from("app_module_configs" as any)
         .select("config").eq("church_id", churchId).eq("module_key", "hero_bg").maybeSingle();
-      setBgUrl((data as any)?.config?.bg_url || null);
+      const cfg = (data as any)?.config || {};
+      setBgUrl(cfg.bg_url || null);
+      setVideoUrl(cfg.video_url || "");
+      if (cfg.gradient_type) setGradientType(cfg.gradient_type);
+      if (cfg.grad_color1) setGradColor1(cfg.grad_color1);
+      if (cfg.grad_color2) setGradColor2(cfg.grad_color2);
       setLoading(false);
     })();
   }, [churchId]);
+
+  const saveConfig = async (overrides: Record<string, any> = {}) => {
+    setSaving(true);
+    try {
+      const gt = overrides.gradient_type ?? gradientType;
+      const c1 = overrides.grad_color1 ?? gradColor1;
+      const c2 = overrides.grad_color2 ?? gradColor2;
+      let gradient: string | null = null;
+      if (gt === "linear") gradient = `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)`;
+      if (gt === "radial") gradient = `radial-gradient(circle at center, ${c1} 0%, ${c2} 100%)`;
+
+      await supabase.from("app_module_configs" as any).upsert({
+        church_id: churchId, module_key: "hero_bg",
+        config: {
+          bg_url: overrides.bg_url !== undefined ? overrides.bg_url : bgUrl,
+          video_url: overrides.video_url !== undefined ? overrides.video_url : videoUrl,
+          gradient, gradient_type: gt, grad_color1: c1, grad_color2: c2,
+        },
+        updated_at: new Date().toISOString(),
+      } as any, { onConflict: "church_id,module_key" });
+      toast({ title: "Configuração salva!" });
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally { setSaving(false); }
+  };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "Erro", description: "Imagem deve ter no máximo 5MB.", variant: "destructive" });
-      return;
+      toast({ title: "Erro", description: "Imagem deve ter no máximo 5MB.", variant: "destructive" }); return;
     }
     setUploading(true);
     try {
@@ -937,59 +971,98 @@ function HeroBgSection({ churchId }: { churchId: string }) {
       if (upErr) throw upErr;
       const { data: urlData } = supabase.storage.from("hero-bg").getPublicUrl(path);
       const newUrl = urlData.publicUrl + "?t=" + Date.now();
-      await supabase.from("app_module_configs" as any).upsert({
-        church_id: churchId, module_key: "hero_bg",
-        config: { bg_url: newUrl }, updated_at: new Date().toISOString(),
-      } as any, { onConflict: "church_id,module_key" });
       setBgUrl(newUrl);
-      toast({ title: "Fundo atualizado!" });
+      await saveConfig({ bg_url: newUrl });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
-    } finally {
-      setUploading(false);
-    }
+    } finally { setUploading(false); }
   };
 
-  const handleRemove = async () => {
-    await supabase.from("app_module_configs" as any).upsert({
-      church_id: churchId, module_key: "hero_bg",
-      config: { bg_url: null }, updated_at: new Date().toISOString(),
-    } as any, { onConflict: "church_id,module_key" });
-    setBgUrl(null);
-    toast({ title: "Fundo removido" });
-  };
+  const handleRemoveBg = async () => { setBgUrl(null); await saveConfig({ bg_url: null }); };
 
   if (loading) return <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>;
 
+  let gradientPreview = `linear-gradient(135deg, ${gradColor1} 0%, ${gradColor2} 100%)`;
+  if (gradientType === "radial") gradientPreview = `radial-gradient(circle at center, ${gradColor1} 0%, ${gradColor2} 100%)`;
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2"><Image className="w-5 h-5" /> Fundo do App (Hero)</CardTitle>
-        <CardDescription>Imagem de fundo que aparece atrás da logo no Meu App</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {bgUrl && (
-          <div className="relative rounded-lg overflow-hidden">
-            <img src={bgUrl} alt="Hero BG" className="w-full h-32 object-cover rounded-lg" />
-            <Button variant="destructive" size="sm" className="absolute top-2 right-2" onClick={handleRemove}>
-              <Trash2 className="w-3 h-3 mr-1" /> Remover
-            </Button>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Image className="w-5 h-5" /> Fundo do App (Hero)</CardTitle>
+          <CardDescription>Imagem, vídeo ou degradê de fundo do Meu App</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Image */}
+          <div className="space-y-3">
+            <Label className="font-semibold">Imagem de Fundo</Label>
+            {bgUrl && (
+              <div className="relative rounded-lg overflow-hidden">
+                <img src={bgUrl} alt="Hero BG" className="w-full h-32 object-cover rounded-lg" />
+                <Button variant="destructive" size="sm" className="absolute top-2 right-2" onClick={handleRemoveBg}>
+                  <Trash2 className="w-3 h-3 mr-1" /> Remover
+                </Button>
+              </div>
+            )}
+            <div>
+              <Label htmlFor="hero-bg-upload" className="cursor-pointer">
+                <Button variant="outline" size="sm" asChild disabled={uploading}>
+                  <span>{uploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Enviando...</> : <><Upload className="w-4 h-4 mr-2" />Enviar Imagem</>}</span>
+                </Button>
+              </Label>
+              <input id="hero-bg-upload" type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+              <p className="text-xs text-muted-foreground mt-1">Recomendado: 1080x720px, máx 5MB</p>
+            </div>
           </div>
-        )}
-        <div>
-          <Label htmlFor="hero-bg-upload" className="cursor-pointer">
-            <Button variant="outline" size="sm" asChild disabled={uploading}>
-              <span>
-                {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-                {uploading ? "Enviando..." : "Enviar Imagem de Fundo"}
-              </span>
-            </Button>
-          </Label>
-          <input id="hero-bg-upload" type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-          <p className="text-xs text-muted-foreground mt-1">Recomendado: imagem 1080x720px, máx 5MB</p>
-        </div>
-      </CardContent>
-    </Card>
+
+          {/* Video */}
+          <div className="space-y-3 pt-3 border-t">
+            <Label className="font-semibold">Vídeo de Fundo (opcional)</Label>
+            <Input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://exemplo.com/video.mp4" />
+            <p className="text-xs text-muted-foreground">URL de vídeo MP4 leve. Autoplay sem som, responsivo.</p>
+          </div>
+
+          {/* Gradient */}
+          <div className="space-y-3 pt-3 border-t">
+            <Label className="font-semibold">Degradê de Cores</Label>
+            <Select value={gradientType} onValueChange={(v: any) => setGradientType(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem degradê (cor primária)</SelectItem>
+                <SelectItem value="linear">Degradê Linear</SelectItem>
+                <SelectItem value="radial">Degradê Radial</SelectItem>
+              </SelectContent>
+            </Select>
+            {gradientType !== "none" && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Cor 1</Label>
+                    <div className="flex gap-2">
+                      <Input type="color" value={gradColor1} onChange={e => setGradColor1(e.target.value)} className="w-14 h-10 p-1" />
+                      <Input value={gradColor1} onChange={e => setGradColor1(e.target.value)} className="text-xs" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Cor 2</Label>
+                    <div className="flex gap-2">
+                      <Input type="color" value={gradColor2} onChange={e => setGradColor2(e.target.value)} className="w-14 h-10 p-1" />
+                      <Input value={gradColor2} onChange={e => setGradColor2(e.target.value)} className="text-xs" />
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-lg h-16 border" style={{ background: gradientPreview }} />
+              </>
+            )}
+          </div>
+
+          <Button onClick={() => saveConfig()} disabled={saving} className="w-full">
+            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            Salvar Configuração de Fundo
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
