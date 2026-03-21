@@ -625,6 +625,8 @@ export default function MeuApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeView, setActiveView] = useState<string>("home");
   const [heroBgUrl, setHeroBgUrl] = useState<string | null>(null);
+  const [heroVideoUrl, setHeroVideoUrl] = useState<string | null>(null);
+  const [heroGradient, setHeroGradient] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile?.church_id) fetchData();
@@ -637,9 +639,10 @@ export default function MeuApp() {
       // Fetch hero background from app_module_configs
       const { data: heroBgConfig } = await supabase.from("app_module_configs" as any)
         .select("config").eq("church_id", profile.church_id).eq("module_key", "hero_bg").maybeSingle();
-      if ((heroBgConfig as any)?.config?.bg_url) {
-        setHeroBgUrl((heroBgConfig as any).config.bg_url);
-      }
+      const heroCfg = (heroBgConfig as any)?.config || {};
+      if (heroCfg.bg_url) setHeroBgUrl(heroCfg.bg_url);
+      if (heroCfg.video_url) setHeroVideoUrl(heroCfg.video_url);
+      if (heroCfg.gradient) setHeroGradient(heroCfg.gradient);
 
       const { data: announcementsData } = await supabase.from("announcements")
         .select("id, title, content, created_at").eq("church_id", profile.church_id)
@@ -836,11 +839,22 @@ export default function MeuApp() {
         <div
           className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6 px-4 sm:px-6 pt-4 pb-6 mb-0 relative overflow-hidden"
           style={{
-            background: heroBgUrl
-              ? `linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url(${heroBgUrl}) center/cover no-repeat`
-              : `linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 50%, hsl(var(--primary) / 0.6) 100%)`,
+            background: heroGradient
+              ? heroGradient
+              : heroBgUrl
+                ? `linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url(${heroBgUrl}) center/cover no-repeat`
+                : `linear-gradient(135deg, ${church?.primary_color || 'hsl(var(--primary))'} 0%, ${church?.secondary_color || 'hsl(var(--primary) / 0.6)'} 100%)`,
           }}
         >
+          {/* Video background */}
+          {heroVideoUrl && (
+            <video
+              autoPlay muted loop playsInline
+              className="absolute inset-0 w-full h-full object-cover z-0"
+              src={heroVideoUrl}
+            />
+          )}
+          {heroVideoUrl && <div className="absolute inset-0 bg-black/50 z-0" />}
           {/* Subtle overlay pattern */}
           <div className="absolute inset-0 bg-black/20" />
           
