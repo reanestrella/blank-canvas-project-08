@@ -625,6 +625,8 @@ export default function MeuApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeView, setActiveView] = useState<string>("home");
   const [heroBgUrl, setHeroBgUrl] = useState<string | null>(null);
+  const [heroVideoUrl, setHeroVideoUrl] = useState<string | null>(null);
+  const [heroGradient, setHeroGradient] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile?.church_id) fetchData();
@@ -637,9 +639,10 @@ export default function MeuApp() {
       // Fetch hero background from app_module_configs
       const { data: heroBgConfig } = await supabase.from("app_module_configs" as any)
         .select("config").eq("church_id", profile.church_id).eq("module_key", "hero_bg").maybeSingle();
-      if ((heroBgConfig as any)?.config?.bg_url) {
-        setHeroBgUrl((heroBgConfig as any).config.bg_url);
-      }
+      const heroCfg = (heroBgConfig as any)?.config || {};
+      if (heroCfg.bg_url) setHeroBgUrl(heroCfg.bg_url);
+      if (heroCfg.video_url) setHeroVideoUrl(heroCfg.video_url);
+      if (heroCfg.gradient) setHeroGradient(heroCfg.gradient);
 
       const { data: announcementsData } = await supabase.from("announcements")
         .select("id, title, content, created_at").eq("church_id", profile.church_id)

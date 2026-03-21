@@ -28,10 +28,14 @@ interface FinancialImportModalProps {
 
 interface ParsedTx {
   date: string;
-  description: string;
-  type: "receita" | "despesa";
-  amount: number;
+  provider: string;
+  link: string;
   category: string;
+  origin: string;
+  amount: number;
+  extraAmount: number;
+  status: string;
+  type: "receita" | "despesa";
   error?: string;
 }
 
@@ -46,9 +50,9 @@ export function FinancialImportModal({
 
   const downloadTemplate = () => {
     const ws = XLSX.utils.aoa_to_sheet([
-      ["Data", "Descrição", "Tipo", "Valor", "Categoria"],
-      ["01/01/2025", "Dízimo João Silva", "Entrada", "500.00", "Dízimos"],
-      ["02/01/2025", "Conta de Luz", "Saída", "350.00", "Energia"],
+      ["Data", "Provedor", "Vínculo", "Categoria", "Origem", "Valor", "Valor extra", "Status"],
+      ["01/01/2025", "Banco X", "Dízimo João Silva", "Dízimos", "PIX", "500.00", "0", "Confirmado"],
+      ["02/01/2025", "Banco Y", "Conta de Luz", "Energia", "Boleto", "350.00", "10.00", "Pendente"],
     ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Lançamentos");
@@ -57,16 +61,13 @@ export function FinancialImportModal({
 
   const parseDate = (val: any): string => {
     if (!val) return "";
-    // Handle Excel serial numbers
     if (typeof val === "number") {
       const d = XLSX.SSF.parse_date_code(val);
       if (d) return `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`;
     }
     const s = String(val).trim();
-    // DD/MM/YYYY
     const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
     if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
-    // YYYY-MM-DD
     const m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (m2) return s;
     return "";
@@ -79,13 +80,11 @@ export function FinancialImportModal({
     return isNaN(n) ? 0 : Math.abs(n);
   };
 
-  const detectType = (val: any): "receita" | "despesa" => {
-    const s = String(val).toLowerCase().trim();
-    if (["entrada", "receita", "crédito", "credito", "credit", "income", "c"].includes(s)) return "receita";
-    if (["saída", "saida", "despesa", "débito", "debito", "debit", "expense", "d"].includes(s)) return "despesa";
-    // Check if amount is negative
-    if (typeof val === "number" && val < 0) return "despesa";
-    return "receita";
+  const getCol = (row: any, ...keys: string[]): string => {
+    for (const k of keys) {
+      if (row[k] !== undefined && row[k] !== "") return String(row[k]).trim();
+    }
+    return "";
   };
 
   const parseFile = useCallback(async (file: File) => {
@@ -96,22 +95,31 @@ export function FinancialImportModal({
     const json: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
 
     const parsed: ParsedTx[] = json.map((row) => {
-      const rawDate = row["Data"] || row["data"] || row["DATE"] || "";
-      const description = String(row["Descrição"] || row["descricao"] || row["Descriçao"] || row["DESCRIÇÃO"] || row["Description"] || "").trim();
-      const rawType = row["Tipo"] || row["tipo"] || row["TYPE"] || "";
+      const rawDate = getCol(row, "Data", "data", "DATE");
+      const provider = getCol(row, "Provedor", "provedor", "PROVEDOR", "Provider");
+      const link = getCol(row, "Vínculo", "vinculo", "Vinculo", "VÍNCULO", "Descrição", "descricao");
+      const category = getCol(row, "Categoria", "categoria", "CATEGORIA", "Category");
+      const origin = getCol(row, "Origem", "origem", "ORIGEM", "Origin");
       const rawAmount = row["Valor"] || row["valor"] || row["VALUE"] || row["Amount"] || 0;
-      const category = String(row["Categoria"] || row["categoria"] || row["CATEGORIA"] || row["Category"] || "").trim();
+      const rawExtra = row["Valor extra"] || row["valor extra"] || row["Valor Extra"] || row["VALOR EXTRA"] || 0;
+      const status = getCol(row, "Status", "status", "STATUS");
 
       const date = parseDate(rawDate);
       const amount = parseAmount(rawAmount);
-      const type = detectType(rawType);
+      const extraAmount = parseAmount(rawExtra);
+
+      // Detect type from status or amount sign
+      const statusLower = status.toLowerCase();
+      let type: "receita" | "despesa" = "receita";
+      if (["saída", "saida", "despesa", "débito", "debito", "debit", "expense", "d"].some(t => statusLower.includes(t))) {
+        type = "despesa";
+      }
 
       let error = "";
       if (!date) error = "Data inválida";
-      if (!description) error = error ? `${error}; Descrição vazia` : "Descrição vazia";
       if (amount <= 0) error = error ? `${error}; Valor inválido` : "Valor inválido";
 
-      return { date, description, type, amount, category, error };
+      return { date, provider, link, category, origin, amount, extraAmount, status, type, error };
     });
 
     setRows(parsed);
@@ -137,7 +145,6 @@ export function FinancialImportModal({
     let imported = 0;
     let errors = 0;
 
-    // Build category lookup
     const catLookup = new Map(categories.map((c) => [c.name.toLowerCase(), c.id]));
 
     const chunks: ParsedTx[][] = [];
@@ -149,11 +156,17 @@ export function FinancialImportModal({
       const insertData = chunk.map((r) => ({
         church_id: churchId,
         transaction_date: r.date,
-        description: r.description,
+        description: [r.link, r.provider, r.origin].filter(Boolean).join(" - ") || "Importado",
         type: r.type,
-        amount: r.amount,
+        amount: r.amount + r.extraAmount,
         category_id: catLookup.get(r.category.toLowerCase()) || null,
         account_id: targetAccountId || null,
+        payment_method: r.origin || null,
+        notes: [
+          r.provider && `Provedor: ${r.provider}`,
+          r.status && `Status: ${r.status}`,
+          r.extraAmount > 0 && `Valor extra: R$ ${r.extraAmount.toFixed(2)}`,
+        ].filter(Boolean).join(" | ") || null,
       }));
 
       const { data, error } = await supabase.from("financial_transactions").insert(insertData).select("id");
@@ -185,11 +198,11 @@ export function FinancialImportModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Importar Lançamentos Financeiros</DialogTitle>
           <DialogDescription>
-            Importe transações de outro sistema via arquivo CSV ou XLSX.
+            Importe transações via arquivo CSV ou XLSX com as colunas padronizadas.
           </DialogDescription>
         </DialogHeader>
 
@@ -224,7 +237,7 @@ export function FinancialImportModal({
                 Clique ou arraste um arquivo CSV/XLSX
               </span>
               <span className="text-xs text-muted-foreground mt-1">
-                Colunas: Data, Descrição, Tipo (Entrada/Saída), Valor, Categoria
+                Colunas: Data, Provedor, Vínculo, Categoria, Origem, Valor, Valor extra, Status
               </span>
               <input
                 type="file"
@@ -268,10 +281,13 @@ export function FinancialImportModal({
                   <TableRow>
                     <TableHead>Status</TableHead>
                     <TableHead>Data</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead>Provedor</TableHead>
+                    <TableHead>Vínculo</TableHead>
                     <TableHead>Categoria</TableHead>
+                    <TableHead>Origem</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-right">Extra</TableHead>
+                    <TableHead>Status Pgto</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -284,21 +300,20 @@ export function FinancialImportModal({
                           <Badge className="bg-success/20 text-success text-xs">OK</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm">
+                      <TableCell className="text-xs">
                         {r.date ? new Date(r.date + "T12:00:00").toLocaleDateString("pt-BR") : "—"}
                       </TableCell>
-                      <TableCell className="text-sm font-medium">{r.description || "—"}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className={
-                          r.type === "receita" ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"
-                        }>
-                          {r.type === "receita" ? "Entrada" : "Saída"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right text-sm">
+                      <TableCell className="text-xs">{r.provider || "—"}</TableCell>
+                      <TableCell className="text-xs font-medium max-w-[120px] truncate">{r.link || "—"}</TableCell>
+                      <TableCell className="text-xs">{r.category || "—"}</TableCell>
+                      <TableCell className="text-xs">{r.origin || "—"}</TableCell>
+                      <TableCell className="text-right text-xs">
                         R$ {r.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                       </TableCell>
-                      <TableCell className="text-sm">{r.category || "—"}</TableCell>
+                      <TableCell className="text-right text-xs">
+                        {r.extraAmount > 0 ? `R$ ${r.extraAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs">{r.status || "—"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
