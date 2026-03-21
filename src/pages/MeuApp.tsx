@@ -839,11 +839,22 @@ export default function MeuApp() {
         <div
           className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6 px-4 sm:px-6 pt-4 pb-6 mb-0 relative overflow-hidden"
           style={{
-            background: heroBgUrl
-              ? `linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url(${heroBgUrl}) center/cover no-repeat`
-              : `linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 50%, hsl(var(--primary) / 0.6) 100%)`,
+            background: heroGradient
+              ? heroGradient
+              : heroBgUrl
+                ? `linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url(${heroBgUrl}) center/cover no-repeat`
+                : `linear-gradient(135deg, ${church?.primary_color || 'hsl(var(--primary))'} 0%, ${church?.secondary_color || 'hsl(var(--primary) / 0.6)'} 100%)`,
           }}
         >
+          {/* Video background */}
+          {heroVideoUrl && (
+            <video
+              autoPlay muted loop playsInline
+              className="absolute inset-0 w-full h-full object-cover z-0"
+              src={heroVideoUrl}
+            />
+          )}
+          {heroVideoUrl && <div className="absolute inset-0 bg-black/50 z-0" />}
           {/* Subtle overlay pattern */}
           <div className="absolute inset-0 bg-black/20" />
           
