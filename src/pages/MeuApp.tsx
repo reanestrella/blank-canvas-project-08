@@ -687,15 +687,25 @@ export default function MeuApp() {
 
       // Schedule lookup - try multiple approaches to find member_id
       let memberId = profile.member_id;
-      if (!memberId && profile.email) {
+      // Fallback 1: use profile email
+      const emailToSearch = profile.email || user?.email;
+      if (!memberId && emailToSearch) {
         const { data: memberByEmail } = await supabase.from("members").select("id")
-          .eq("church_id", profile.church_id!).ilike("email", profile.email.trim()).limit(1);
-        if (memberByEmail?.length) memberId = memberByEmail[0].id;
+          .eq("church_id", profile.church_id!).ilike("email", emailToSearch.trim()).limit(1);
+        if (memberByEmail?.length) {
+          memberId = memberByEmail[0].id;
+          // Auto-link for future lookups
+          await supabase.from("profiles").update({ member_id: memberId } as any).eq("user_id", user!.id);
+        }
       }
+      // Fallback 2: use full_name
       if (!memberId && profile.full_name) {
         const { data: memberByName } = await supabase.from("members").select("id")
           .eq("church_id", profile.church_id!).ilike("full_name", profile.full_name.trim()).limit(1);
-        if (memberByName?.length) memberId = memberByName[0].id;
+        if (memberByName?.length) {
+          memberId = memberByName[0].id;
+          await supabase.from("profiles").update({ member_id: memberId } as any).eq("user_id", user!.id);
+        }
       }
 
       console.log("[MeuApp] Schedule lookup memberId:", memberId, "profile.member_id:", profile.member_id);

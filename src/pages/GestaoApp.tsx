@@ -1018,8 +1018,40 @@ function HeroBgSection({ churchId }: { churchId: string }) {
           {/* Video */}
           <div className="space-y-3 pt-3 border-t">
             <Label className="font-semibold">Vídeo de Fundo (opcional)</Label>
-            <Input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://exemplo.com/video.mp4" />
-            <p className="text-xs text-muted-foreground">URL de vídeo MP4 leve. Autoplay sem som, responsivo.</p>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://exemplo.com/video.mp4" />
+              </div>
+              <div>
+                <Label htmlFor="video-upload" className="cursor-pointer">
+                  <Button variant="outline" size="sm" asChild disabled={uploading}>
+                    <span><Upload className="w-4 h-4 mr-1" /> Upload</span>
+                  </Button>
+                </Label>
+                <input id="video-upload" type="file" accept="video/mp4,video/webm" className="hidden" onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 50 * 1024 * 1024) {
+                    toast({ title: "Erro", description: "Vídeo deve ter no máximo 50MB.", variant: "destructive" }); return;
+                  }
+                  setUploading(true);
+                  try {
+                    const ext = file.name.split(".").pop() || "mp4";
+                    const path = `${churchId}/hero-video.${ext}`;
+                    const { error: upErr } = await supabase.storage.from("video-bg").upload(path, file, { upsert: true });
+                    if (upErr) throw upErr;
+                    const { data: urlData } = supabase.storage.from("video-bg").getPublicUrl(path);
+                    const newUrl = urlData.publicUrl + "?t=" + Date.now();
+                    setVideoUrl(newUrl);
+                    await saveConfig({ video_url: newUrl });
+                    toast({ title: "Vídeo enviado!" });
+                  } catch (err: any) {
+                    toast({ title: "Erro", description: err.message, variant: "destructive" });
+                  } finally { setUploading(false); }
+                }} />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Upload de vídeo MP4 (máx 50MB) ou cole uma URL. Autoplay sem som, responsivo.</p>
           </div>
 
           {/* Gradient */}
