@@ -1236,6 +1236,7 @@ export default function GestaoApp() {
           <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="branding"><Palette className="w-4 h-4 mr-1" /> Visual</TabsTrigger>
             <TabsTrigger value="modulos"><Smartphone className="w-4 h-4 mr-1" /> Módulos</TabsTrigger>
+            <TabsTrigger value="cadastros"><UserCheck className="w-4 h-4 mr-1" /> Cadastros</TabsTrigger>
             <TabsTrigger value="devocionais"><Flame className="w-4 h-4 mr-1" /> Devocionais</TabsTrigger>
             <TabsTrigger value="oracoes"><MessageSquare className="w-4 h-4 mr-1" /> Orações</TabsTrigger>
             <TabsTrigger value="contribuicao"><QrCode className="w-4 h-4 mr-1" /> Contribuição</TabsTrigger>
