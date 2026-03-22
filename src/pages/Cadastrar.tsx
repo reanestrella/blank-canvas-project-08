@@ -96,10 +96,14 @@ export default function Cadastrar() {
 
       // If session came back immediately (no email confirmation required)
       if (authData.session) {
-        // Update profile
+        // Update profile - set pending if no invite token
+        const profileUpdate: any = { full_name: data.fullName, email: data.email };
+        if (!pendingToken) {
+          profileUpdate.registration_status = "pendente";
+        }
         await supabase
           .from("profiles")
-          .update({ full_name: data.fullName, email: data.email })
+          .update(profileUpdate)
           .eq("user_id", authData.user.id);
 
         // If there's a pending invite token, go accept it
