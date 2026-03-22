@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import {
   Smartphone, QrCode, DollarSign, Save, Loader2, Palette, Image,
   Plus, Edit2, Trash2, Target, Megaphone, ArrowLeft, Flame, Upload,
-  MessageSquare, Globe, Lock, Eye, EyeOff, BookOpen,
+  MessageSquare, Globe, Lock, Eye, EyeOff, BookOpen, UserCheck,
 } from "lucide-react";
 import { RegistrationApproval } from "@/components/admin/RegistrationApproval";
 import { useAuth } from "@/contexts/AuthContext";
