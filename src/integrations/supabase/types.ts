@@ -2740,6 +2740,7 @@ export type Database = {
           member_id: string | null
           ministry_network_id: string | null
           phone: string | null
+          registration_status: string | null
           updated_at: string | null
           user_id: string
         }
@@ -2754,6 +2755,7 @@ export type Database = {
           member_id?: string | null
           ministry_network_id?: string | null
           phone?: string | null
+          registration_status?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -2768,6 +2770,7 @@ export type Database = {
           member_id?: string | null
           ministry_network_id?: string | null
           phone?: string | null
+          registration_status?: string | null
           updated_at?: string | null
           user_id?: string
         }
