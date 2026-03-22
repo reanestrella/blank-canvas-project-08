@@ -16,6 +16,7 @@ import {
   Plus, Edit2, Trash2, Target, Megaphone, ArrowLeft, Flame, Upload,
   MessageSquare, Globe, Lock, Eye, EyeOff, BookOpen,
 } from "lucide-react";
+import { RegistrationApproval } from "@/components/admin/RegistrationApproval";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
