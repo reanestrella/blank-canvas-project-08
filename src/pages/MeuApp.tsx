@@ -667,6 +667,12 @@ export default function MeuApp() {
       if (heroCfg.video_url) setHeroVideoUrl(heroCfg.video_url);
       if (heroCfg.gradient) setHeroGradient(heroCfg.gradient);
 
+      // Fetch YouTube URL
+      const { data: ytConfig } = await supabase.from("app_module_configs" as any)
+        .select("config").eq("church_id", profile.church_id).eq("module_key", "youtube").maybeSingle();
+      const ytCfg = (ytConfig as any)?.config || {};
+      if (ytCfg.channel_url) setYoutubeUrl(ytCfg.channel_url);
+
       const { data: announcementsData } = await supabase.from("announcements")
         .select("id, title, content, created_at").eq("church_id", profile.church_id)
         .eq("is_active", true).order("created_at", { ascending: false }).limit(5);
