@@ -469,6 +469,7 @@ function CellsView({ churchId }: { churchId: string }) {
 function IgrejaView({ churchId, church }: { churchId: string; church: any }) {
   const [config, setConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [churchMapsLink, setChurchMapsLink] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -476,6 +477,10 @@ function IgrejaView({ churchId, church }: { churchId: string; church: any }) {
       const { data } = await supabase.from("app_module_configs" as any)
         .select("config").eq("church_id", churchId).eq("module_key", "igreja").maybeSingle();
       setConfig((data as any)?.config || {});
+      // Fetch maps_link from churches table
+      const { data: cData } = await supabase.from("churches")
+        .select("maps_link").eq("id", churchId).maybeSingle();
+      setChurchMapsLink((cData as any)?.maps_link || null);
       setLoading(false);
     })();
   }, [churchId]);
@@ -498,6 +503,11 @@ function IgrejaView({ churchId, church }: { churchId: string; church: any }) {
           )}
           {(church?.address || config?.address) && (
             <div className="flex items-start gap-2 text-sm"><MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" /><span>{config?.address || church.address}</span></div>
+          )}
+          {churchMapsLink && (
+            <a href={churchMapsLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline font-medium">
+              <MapPin className="w-4 h-4" /> Como chegar
+            </a>
           )}
           {(church?.phone || config?.phone) && (
             <div className="flex justify-between text-sm"><span className="text-muted-foreground">Telefone:</span><span>{config?.phone || church.phone}</span></div>
