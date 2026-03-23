@@ -537,6 +537,7 @@ function ModulosSection({ churchId }: { churchId: string }) {
                 <div className="space-y-2"><Label>Email</Label><Input value={igrejaForm.email} onChange={e => setIgrejaForm(f => ({ ...f, email: e.target.value }))} placeholder="contato@igreja.com" /></div>
                 <div className="space-y-2"><Label>Horários de Culto</Label><Input value={igrejaForm.schedule} onChange={e => setIgrejaForm(f => ({ ...f, schedule: e.target.value }))} placeholder="Dom 9h e 18h / Qua 19h30" /></div>
                 <div className="space-y-2 md:col-span-2"><Label>Endereço</Label><Input value={igrejaForm.address} onChange={e => setIgrejaForm(f => ({ ...f, address: e.target.value }))} placeholder="Rua, número, bairro, cidade" /></div>
+                <div className="space-y-2 md:col-span-2"><Label>Link do Google Maps</Label><Input value={igrejaForm.maps_link} onChange={e => setIgrejaForm(f => ({ ...f, maps_link: e.target.value }))} placeholder="https://maps.google.com/..." /></div>
                 <div className="space-y-2 md:col-span-2"><Label>Sobre a Igreja</Label><Textarea value={igrejaForm.about} onChange={e => setIgrejaForm(f => ({ ...f, about: e.target.value }))} placeholder="Breve descrição da igreja... Use emojis à vontade! 🙏⛪" rows={4} /></div>
               </div>
             )}
