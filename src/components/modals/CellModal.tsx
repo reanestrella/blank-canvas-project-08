@@ -39,6 +39,7 @@ const cellSchema = z.object({
   address: z.string().max(200).optional().or(z.literal("")),
   day_of_week: z.string().optional().or(z.literal("")),
   time: z.string().optional().or(z.literal("")),
+  maps_link: z.string().optional().or(z.literal("")),
 });
 
 type CellFormData = z.infer<typeof cellSchema>;
