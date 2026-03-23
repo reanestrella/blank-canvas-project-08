@@ -947,7 +947,9 @@ export default function MeuApp() {
           <div className="grid grid-cols-3 gap-x-4 gap-y-1 mt-4 relative z-10">
             <ShortcutButton icon={Church} label="Igreja" onClick={() => setActiveView("igreja")} />
             <ShortcutButton icon={Flame} label="Ministérios" onClick={() => setActiveView("ministries")} />
-            <ShortcutButton icon={Video} label="Mensagens" onClick={() => setActiveView("youtube")} />
+            <ShortcutButton icon={Video} label="Mensagens" onClick={() => {
+              if (youtubeUrl) { window.open(youtubeUrl, "_blank"); } else { setActiveView("youtube"); }
+            }} />
           </div>
           <div className="grid grid-cols-3 gap-x-4 gap-y-1 mt-1 relative z-10">
             <ShortcutButton icon={HandHeart} label="Doação" onClick={() => setActiveView("contribuicao")} />
