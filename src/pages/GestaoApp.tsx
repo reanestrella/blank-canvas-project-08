@@ -427,7 +427,7 @@ function ModulosSection({ churchId }: { churchId: string }) {
   const [saving, setSaving] = useState(false);
 
   // Form states for each module
-  const [igrejaForm, setIgrejaForm] = useState({ pastor_name: "", address: "", phone: "", email: "", schedule: "", about: "" });
+  const [igrejaForm, setIgrejaForm] = useState({ pastor_name: "", address: "", phone: "", email: "", schedule: "", about: "", maps_link: "" });
   const [youtubeForm, setYoutubeForm] = useState({ channel_url: "", description: "" });
   const [redesForm, setRedesForm] = useState({ instagram: "", facebook: "", tiktok: "", twitter: "", website: "" });
   const [devocionalForm, setDevocionalForm] = useState({ title: "", content: "", emoji: "🙏" });
