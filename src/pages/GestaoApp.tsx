@@ -449,7 +449,7 @@ function ModulosSection({ churchId }: { churchId: string }) {
       (data || []).forEach((d: any) => { map[d.module_key] = d.config; });
       setConfigs(map);
       // Pre-fill forms
-      if (map.igreja) setIgrejaForm({ pastor_name: map.igreja.pastor_name || "", address: map.igreja.address || "", phone: map.igreja.phone || "", email: map.igreja.email || "", schedule: map.igreja.schedule || "", about: map.igreja.about || "" });
+      if (map.igreja) setIgrejaForm({ pastor_name: map.igreja.pastor_name || "", address: map.igreja.address || "", phone: map.igreja.phone || "", email: map.igreja.email || "", schedule: map.igreja.schedule || "", about: map.igreja.about || "", maps_link: map.igreja.maps_link || "" });
       if (map.youtube) setYoutubeForm({ channel_url: map.youtube.channel_url || "", description: map.youtube.description || "" });
       if (map.redes_sociais) setRedesForm({ instagram: map.redes_sociais.instagram || "", facebook: map.redes_sociais.facebook || "", tiktok: map.redes_sociais.tiktok || "", twitter: map.redes_sociais.twitter || "", website: map.redes_sociais.website || "" });
       if (map.devocional) setDevocionalForm({ title: map.devocional.title || "", content: map.devocional.content || "", emoji: map.devocional.emoji || "🙏" });
