@@ -649,6 +649,7 @@ export default function MeuApp() {
   const [heroBgUrl, setHeroBgUrl] = useState<string | null>(null);
   const [heroVideoUrl, setHeroVideoUrl] = useState<string | null>(null);
   const [heroGradient, setHeroGradient] = useState<string | null>(null);
+  const [youtubeUrl, setYoutubeUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile?.church_id) fetchData();
