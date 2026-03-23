@@ -417,7 +417,7 @@ function CellsView({ churchId }: { churchId: string }) {
     (async () => {
       setLoading(true);
       const { data } = await supabase.from("cells")
-        .select("id, name, day_of_week, time, address, network, leader:members!cells_leader_fk(full_name)")
+        .select("id, name, day_of_week, time, address, network, cover_image_url, maps_link, leader:members!cells_leader_fk(full_name)")
         .eq("church_id", churchId).eq("is_active", true).order("name");
       setCells((data as any[])?.map(d => ({ ...d, leader: Array.isArray(d.leader) ? d.leader[0] : d.leader })) || []);
       setLoading(false);
@@ -433,11 +433,16 @@ function CellsView({ churchId }: { churchId: string }) {
     <div className="space-y-3">
       <h3 className="text-lg font-semibold flex items-center gap-2"><Grid3X3 className="w-5 h-5 text-primary" /> Células</h3>
       {cells.map(c => (
-        <Card key={c.id}>
+        <Card key={c.id} className="overflow-hidden">
+          {c.cover_image_url && (
+            <img src={c.cover_image_url} alt={c.name} className="w-full h-32 object-cover" />
+          )}
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center flex-shrink-0">
-              <Grid3X3 className="w-5 h-5 text-secondary" />
-            </div>
+            {!c.cover_image_url && (
+              <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center flex-shrink-0">
+                <Grid3X3 className="w-5 h-5 text-secondary" />
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm">{c.name}</p>
               <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
@@ -447,6 +452,11 @@ function CellsView({ churchId }: { churchId: string }) {
               </div>
               {c.leader && <p className="text-xs text-primary mt-0.5">Líder: {c.leader.full_name}</p>}
               {c.address && <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1"><MapPin className="w-3 h-3" />{c.address}</p>}
+              {c.maps_link && (
+                <a href={c.maps_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary mt-1 hover:underline">
+                  <MapPin className="w-3 h-3" /> Ver localização
+                </a>
+              )}
             </div>
           </CardContent>
         </Card>
