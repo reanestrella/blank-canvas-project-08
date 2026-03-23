@@ -80,6 +80,7 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
         address: data.address || undefined,
         day_of_week: data.day_of_week || undefined,
         time: data.time || undefined,
+        maps_link: data.maps_link || undefined,
       };
       
       const result = await onSubmit(cleanedData);
