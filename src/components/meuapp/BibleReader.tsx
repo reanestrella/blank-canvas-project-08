@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BookOpen, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 
 const BIBLE_BOOKS = [
   { name: "Gênesis", abbrev: "gn", chapters: 50 },
@@ -74,6 +75,10 @@ const BIBLE_BOOKS = [
   { name: "Apocalipse", abbrev: "ap", chapters: 22 },
 ];
 
+// ABP API mapping (bolls.life API uses numeric book IDs 1-66)
+const BOOK_API_MAP: Record<string, number> = {};
+BIBLE_BOOKS.forEach((b, i) => { BOOK_API_MAP[b.abbrev] = i + 1; });
+
 interface Verse {
   number: number;
   text: string;
@@ -85,6 +90,7 @@ export function BibleReader() {
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(false);
   const [showBooks, setShowBooks] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const book = BIBLE_BOOKS[selectedBook];
 
@@ -95,18 +101,30 @@ export function BibleReader() {
     setSelectedChapter(chapter);
     try {
       const b = BIBLE_BOOKS[bookIdx];
-      // Use bible-api.com with Almeida translation
-      const res = await fetch(`https://bible-api.com/${b.abbrev}+${chapter}?translation=almeida`);
-      if (!res.ok) throw new Error("Failed to fetch");
-      const data = await res.json();
-      if (data.verses) {
-        setVerses(data.verses.map((v: any) => ({ number: v.verse, text: v.text })));
-      } else if (data.text) {
-        // Fallback: split by newlines
-        setVerses(data.text.split("\n").filter(Boolean).map((t: string, i: number) => ({ number: i + 1, text: t })));
+      // Try bolls.life API (free, complete, Portuguese)
+      const bookId = BOOK_API_MAP[b.abbrev];
+      const res = await fetch(`https://bolls.life/get-chapter/ARA/${bookId}/${chapter}/`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setVerses(data.map((v: any) => ({ number: v.verse, text: v.text })));
+          setLoading(false);
+          return;
+        }
+      }
+      // Fallback to bible-api.com
+      const res2 = await fetch(`https://bible-api.com/${b.abbrev}+${chapter}?translation=almeida`);
+      if (res2.ok) {
+        const data2 = await res2.json();
+        if (data2.verses) {
+          setVerses(data2.verses.map((v: any) => ({ number: v.verse, text: v.text })));
+        } else if (data2.text) {
+          setVerses(data2.text.split("\n").filter(Boolean).map((t: string, i: number) => ({ number: i + 1, text: t })));
+        }
+      } else {
+        throw new Error("Failed");
       }
     } catch {
-      // Fallback message
       setVerses([{ number: 1, text: "Não foi possível carregar este capítulo. Verifique sua conexão." }]);
     } finally {
       setLoading(false);
@@ -120,12 +138,23 @@ export function BibleReader() {
     }
   };
 
+  const filteredBooks = searchTerm
+    ? BIBLE_BOOKS.filter(b => b.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    : BIBLE_BOOKS;
+
   if (showBooks) {
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-primary" /> Bíblia Sagrada
         </h3>
+
+        <Input
+          placeholder="Buscar livro..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          className="text-sm"
+        />
 
         {/* Old Testament */}
         <Card>
@@ -134,17 +163,14 @@ export function BibleReader() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-1.5">
-              {BIBLE_BOOKS.slice(0, 39).map((b, i) => (
-                <Button
-                  key={b.abbrev}
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start text-xs h-8"
-                  onClick={() => fetchChapter(i, 1)}
-                >
-                  {b.name}
-                </Button>
-              ))}
+              {filteredBooks.filter((_, i) => BIBLE_BOOKS.indexOf(_) < 39).map((b) => {
+                const origIdx = BIBLE_BOOKS.indexOf(b);
+                return (
+                  <Button key={b.abbrev} variant="ghost" size="sm" className="justify-start text-xs h-8" onClick={() => fetchChapter(origIdx, 1)}>
+                    {b.name}
+                  </Button>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -156,17 +182,14 @@ export function BibleReader() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-1.5">
-              {BIBLE_BOOKS.slice(39).map((b, i) => (
-                <Button
-                  key={b.abbrev}
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start text-xs h-8"
-                  onClick={() => fetchChapter(i + 39, 1)}
-                >
-                  {b.name}
-                </Button>
-              ))}
+              {filteredBooks.filter((_, i) => BIBLE_BOOKS.indexOf(_) >= 39).map((b) => {
+                const origIdx = BIBLE_BOOKS.indexOf(b);
+                return (
+                  <Button key={b.abbrev} variant="ghost" size="sm" className="justify-start text-xs h-8" onClick={() => fetchChapter(origIdx, 1)}>
+                    {b.name}
+                  </Button>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -236,23 +259,13 @@ export function BibleReader() {
 
       {/* Navigation */}
       <div className="flex items-center justify-between">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={selectedChapter <= 1}
-          onClick={() => goChapter(-1)}
-        >
+        <Button variant="outline" size="sm" disabled={selectedChapter <= 1} onClick={() => goChapter(-1)}>
           <ChevronLeft className="w-4 h-4 mr-1" /> Anterior
         </Button>
         <span className="text-xs text-muted-foreground">
           Cap. {selectedChapter} de {book.chapters}
         </span>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={selectedChapter >= book.chapters}
-          onClick={() => goChapter(1)}
-        >
+        <Button variant="outline" size="sm" disabled={selectedChapter >= book.chapters} onClick={() => goChapter(1)}>
           Próximo <ChevronRight className="w-4 h-4 ml-1" />
         </Button>
       </div>
