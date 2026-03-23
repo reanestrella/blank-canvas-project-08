@@ -471,6 +471,10 @@ function ModulosSection({ churchId }: { churchId: string }) {
       const { error } = await supabase.from("app_module_configs" as any)
         .upsert({ church_id: churchId, module_key: moduleKey, config, updated_at: new Date().toISOString() } as any, { onConflict: "church_id,module_key" });
       if (error) throw error;
+      // Also save maps_link to churches table when saving igreja module
+      if (moduleKey === "igreja" && config.maps_link !== undefined) {
+        await supabase.from("churches").update({ maps_link: config.maps_link || null } as any).eq("id", churchId);
+      }
       setConfigs(prev => ({ ...prev, [moduleKey]: config }));
       toast({ title: "Salvo!", description: "Configuração do módulo atualizada." });
       setEditingModule(null);
