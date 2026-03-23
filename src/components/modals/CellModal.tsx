@@ -228,6 +228,20 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="maps_link"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Link do Google Maps</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://maps.google.com/..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}

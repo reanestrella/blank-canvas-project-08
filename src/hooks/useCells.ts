@@ -41,6 +41,8 @@ export interface CreateCellData {
   address?: string;
   day_of_week?: string;
   time?: string;
+  cover_image_url?: string;
+  maps_link?: string;
 }
 
 export interface CreateCellReportData {
