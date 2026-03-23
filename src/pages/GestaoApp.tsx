@@ -427,7 +427,7 @@ function ModulosSection({ churchId }: { churchId: string }) {
   const [saving, setSaving] = useState(false);
 
   // Form states for each module
-  const [igrejaForm, setIgrejaForm] = useState({ pastor_name: "", address: "", phone: "", email: "", schedule: "", about: "" });
+  const [igrejaForm, setIgrejaForm] = useState({ pastor_name: "", address: "", phone: "", email: "", schedule: "", about: "", maps_link: "" });
   const [youtubeForm, setYoutubeForm] = useState({ channel_url: "", description: "" });
   const [redesForm, setRedesForm] = useState({ instagram: "", facebook: "", tiktok: "", twitter: "", website: "" });
   const [devocionalForm, setDevocionalForm] = useState({ title: "", content: "", emoji: "🙏" });
@@ -449,7 +449,7 @@ function ModulosSection({ churchId }: { churchId: string }) {
       (data || []).forEach((d: any) => { map[d.module_key] = d.config; });
       setConfigs(map);
       // Pre-fill forms
-      if (map.igreja) setIgrejaForm({ pastor_name: map.igreja.pastor_name || "", address: map.igreja.address || "", phone: map.igreja.phone || "", email: map.igreja.email || "", schedule: map.igreja.schedule || "", about: map.igreja.about || "" });
+      if (map.igreja) setIgrejaForm({ pastor_name: map.igreja.pastor_name || "", address: map.igreja.address || "", phone: map.igreja.phone || "", email: map.igreja.email || "", schedule: map.igreja.schedule || "", about: map.igreja.about || "", maps_link: map.igreja.maps_link || "" });
       if (map.youtube) setYoutubeForm({ channel_url: map.youtube.channel_url || "", description: map.youtube.description || "" });
       if (map.redes_sociais) setRedesForm({ instagram: map.redes_sociais.instagram || "", facebook: map.redes_sociais.facebook || "", tiktok: map.redes_sociais.tiktok || "", twitter: map.redes_sociais.twitter || "", website: map.redes_sociais.website || "" });
       if (map.devocional) setDevocionalForm({ title: map.devocional.title || "", content: map.devocional.content || "", emoji: map.devocional.emoji || "🙏" });
@@ -471,6 +471,10 @@ function ModulosSection({ churchId }: { churchId: string }) {
       const { error } = await supabase.from("app_module_configs" as any)
         .upsert({ church_id: churchId, module_key: moduleKey, config, updated_at: new Date().toISOString() } as any, { onConflict: "church_id,module_key" });
       if (error) throw error;
+      // Also save maps_link to churches table when saving igreja module
+      if (moduleKey === "igreja" && config.maps_link !== undefined) {
+        await supabase.from("churches").update({ maps_link: config.maps_link || null } as any).eq("id", churchId);
+      }
       setConfigs(prev => ({ ...prev, [moduleKey]: config }));
       toast({ title: "Salvo!", description: "Configuração do módulo atualizada." });
       setEditingModule(null);
@@ -537,6 +541,7 @@ function ModulosSection({ churchId }: { churchId: string }) {
                 <div className="space-y-2"><Label>Email</Label><Input value={igrejaForm.email} onChange={e => setIgrejaForm(f => ({ ...f, email: e.target.value }))} placeholder="contato@igreja.com" /></div>
                 <div className="space-y-2"><Label>Horários de Culto</Label><Input value={igrejaForm.schedule} onChange={e => setIgrejaForm(f => ({ ...f, schedule: e.target.value }))} placeholder="Dom 9h e 18h / Qua 19h30" /></div>
                 <div className="space-y-2 md:col-span-2"><Label>Endereço</Label><Input value={igrejaForm.address} onChange={e => setIgrejaForm(f => ({ ...f, address: e.target.value }))} placeholder="Rua, número, bairro, cidade" /></div>
+                <div className="space-y-2 md:col-span-2"><Label>Link do Google Maps</Label><Input value={igrejaForm.maps_link} onChange={e => setIgrejaForm(f => ({ ...f, maps_link: e.target.value }))} placeholder="https://maps.google.com/..." /></div>
                 <div className="space-y-2 md:col-span-2"><Label>Sobre a Igreja</Label><Textarea value={igrejaForm.about} onChange={e => setIgrejaForm(f => ({ ...f, about: e.target.value }))} placeholder="Breve descrição da igreja... Use emojis à vontade! 🙏⛪" rows={4} /></div>
               </div>
             )}

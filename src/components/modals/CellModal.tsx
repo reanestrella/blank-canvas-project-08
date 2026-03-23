@@ -39,6 +39,7 @@ const cellSchema = z.object({
   address: z.string().max(200).optional().or(z.literal("")),
   day_of_week: z.string().optional().or(z.literal("")),
   time: z.string().optional().or(z.literal("")),
+  maps_link: z.string().optional().or(z.literal("")),
 });
 
 type CellFormData = z.infer<typeof cellSchema>;
@@ -64,6 +65,7 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
       address: cell?.address || "",
       day_of_week: cell?.day_of_week || "",
       time: cell?.time || "",
+      maps_link: cell?.maps_link || "",
     },
   });
 
@@ -78,6 +80,7 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
         address: data.address || undefined,
         day_of_week: data.day_of_week || undefined,
         time: data.time || undefined,
+        maps_link: data.maps_link || undefined,
       };
       
       const result = await onSubmit(cleanedData);
@@ -219,6 +222,20 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
                   <FormLabel>Endereço</FormLabel>
                   <FormControl>
                     <Input placeholder="Local de reunião" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="maps_link"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Link do Google Maps</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://maps.google.com/..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

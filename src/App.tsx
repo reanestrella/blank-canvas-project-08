@@ -79,6 +79,7 @@ const App = () => (
                 <Route path="/convite/:token" element={<Convite />} />
                 <Route path="/accept-invite" element={<InviteGate />} />
                 <Route path="/cadastrar" element={<Cadastrar />} />
+                <Route path="/cadastro" element={<Cadastrar />} />
                 <Route path="/instalar" element={<Instalar />} />
                 
                 {/* Super Admin - standalone */}

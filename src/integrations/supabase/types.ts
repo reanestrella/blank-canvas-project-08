@@ -682,12 +682,14 @@ export type Database = {
         Row: {
           address: string | null
           church_id: string
+          cover_image_url: string | null
           created_at: string | null
           day_of_week: string | null
           id: string
           is_active: boolean
           leader_id: string | null
           leader_user_id: string | null
+          maps_link: string | null
           name: string
           network: string | null
           supervisor_id: string | null
@@ -698,12 +700,14 @@ export type Database = {
         Insert: {
           address?: string | null
           church_id: string
+          cover_image_url?: string | null
           created_at?: string | null
           day_of_week?: string | null
           id?: string
           is_active?: boolean
           leader_id?: string | null
           leader_user_id?: string | null
+          maps_link?: string | null
           name: string
           network?: string | null
           supervisor_id?: string | null
@@ -714,12 +718,14 @@ export type Database = {
         Update: {
           address?: string | null
           church_id?: string
+          cover_image_url?: string | null
           created_at?: string | null
           day_of_week?: string | null
           id?: string
           is_active?: boolean
           leader_id?: string | null
           leader_user_id?: string | null
+          maps_link?: string | null
           name?: string
           network?: string | null
           supervisor_id?: string | null
@@ -916,6 +922,7 @@ export type Database = {
           id: string
           is_active: boolean
           logo_url: string | null
+          maps_link: string | null
           max_members: number | null
           ministry_name: string | null
           ministry_network_id: string | null
@@ -937,6 +944,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           logo_url?: string | null
+          maps_link?: string | null
           max_members?: number | null
           ministry_name?: string | null
           ministry_network_id?: string | null
@@ -958,6 +966,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           logo_url?: string | null
+          maps_link?: string | null
           max_members?: number | null
           ministry_name?: string | null
           ministry_network_id?: string | null
@@ -1395,6 +1404,41 @@ export type Database = {
             columns: ["teacher_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      devotional_progress: {
+        Row: {
+          church_id: string
+          completed: boolean
+          completed_at: string
+          devotional_date: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          church_id: string
+          completed?: boolean
+          completed_at?: string
+          devotional_date: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          church_id?: string
+          completed?: boolean
+          completed_at?: string
+          devotional_date?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devotional_progress_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
             referencedColumns: ["id"]
           },
         ]

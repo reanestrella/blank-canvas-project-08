@@ -112,6 +112,8 @@ interface CellData {
   address: string | null;
   network: string | null;
   leader: { full_name: string } | null;
+  cover_image_url: string | null;
+  maps_link: string | null;
 }
 
 // ─── Schedules View ──────────────────────────────────
@@ -415,7 +417,7 @@ function CellsView({ churchId }: { churchId: string }) {
     (async () => {
       setLoading(true);
       const { data } = await supabase.from("cells")
-        .select("id, name, day_of_week, time, address, network, leader:members!cells_leader_fk(full_name)")
+        .select("id, name, day_of_week, time, address, network, cover_image_url, maps_link, leader:members!cells_leader_fk(full_name)")
         .eq("church_id", churchId).eq("is_active", true).order("name");
       setCells((data as any[])?.map(d => ({ ...d, leader: Array.isArray(d.leader) ? d.leader[0] : d.leader })) || []);
       setLoading(false);
@@ -431,11 +433,16 @@ function CellsView({ churchId }: { churchId: string }) {
     <div className="space-y-3">
       <h3 className="text-lg font-semibold flex items-center gap-2"><Grid3X3 className="w-5 h-5 text-primary" /> Células</h3>
       {cells.map(c => (
-        <Card key={c.id}>
+        <Card key={c.id} className="overflow-hidden">
+          {c.cover_image_url && (
+            <img src={c.cover_image_url} alt={c.name} className="w-full h-32 object-cover" />
+          )}
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center flex-shrink-0">
-              <Grid3X3 className="w-5 h-5 text-secondary" />
-            </div>
+            {!c.cover_image_url && (
+              <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center flex-shrink-0">
+                <Grid3X3 className="w-5 h-5 text-secondary" />
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm">{c.name}</p>
               <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
@@ -445,6 +452,11 @@ function CellsView({ churchId }: { churchId: string }) {
               </div>
               {c.leader && <p className="text-xs text-primary mt-0.5">Líder: {c.leader.full_name}</p>}
               {c.address && <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1"><MapPin className="w-3 h-3" />{c.address}</p>}
+              {c.maps_link && (
+                <a href={c.maps_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary mt-1 hover:underline">
+                  <MapPin className="w-3 h-3" /> Ver localização
+                </a>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -457,6 +469,7 @@ function CellsView({ churchId }: { churchId: string }) {
 function IgrejaView({ churchId, church }: { churchId: string; church: any }) {
   const [config, setConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [churchMapsLink, setChurchMapsLink] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -464,6 +477,10 @@ function IgrejaView({ churchId, church }: { churchId: string; church: any }) {
       const { data } = await supabase.from("app_module_configs" as any)
         .select("config").eq("church_id", churchId).eq("module_key", "igreja").maybeSingle();
       setConfig((data as any)?.config || {});
+      // Fetch maps_link from churches table
+      const { data: cData } = await supabase.from("churches")
+        .select("maps_link").eq("id", churchId).maybeSingle();
+      setChurchMapsLink((cData as any)?.maps_link || null);
       setLoading(false);
     })();
   }, [churchId]);
@@ -486,6 +503,11 @@ function IgrejaView({ churchId, church }: { churchId: string; church: any }) {
           )}
           {(church?.address || config?.address) && (
             <div className="flex items-start gap-2 text-sm"><MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" /><span>{config?.address || church.address}</span></div>
+          )}
+          {churchMapsLink && (
+            <a href={churchMapsLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline font-medium">
+              <MapPin className="w-4 h-4" /> Como chegar
+            </a>
           )}
           {(church?.phone || config?.phone) && (
             <div className="flex justify-between text-sm"><span className="text-muted-foreground">Telefone:</span><span>{config?.phone || church.phone}</span></div>
@@ -627,6 +649,7 @@ export default function MeuApp() {
   const [heroBgUrl, setHeroBgUrl] = useState<string | null>(null);
   const [heroVideoUrl, setHeroVideoUrl] = useState<string | null>(null);
   const [heroGradient, setHeroGradient] = useState<string | null>(null);
+  const [youtubeUrl, setYoutubeUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile?.church_id) fetchData();
@@ -643,6 +666,12 @@ export default function MeuApp() {
       if (heroCfg.bg_url) setHeroBgUrl(heroCfg.bg_url);
       if (heroCfg.video_url) setHeroVideoUrl(heroCfg.video_url);
       if (heroCfg.gradient) setHeroGradient(heroCfg.gradient);
+
+      // Fetch YouTube URL
+      const { data: ytConfig } = await supabase.from("app_module_configs" as any)
+        .select("config").eq("church_id", profile.church_id).eq("module_key", "youtube").maybeSingle();
+      const ytCfg = (ytConfig as any)?.config || {};
+      if (ytCfg.channel_url) setYoutubeUrl(ytCfg.channel_url);
 
       const { data: announcementsData } = await supabase.from("announcements")
         .select("id, title, content, created_at").eq("church_id", profile.church_id)
@@ -918,7 +947,9 @@ export default function MeuApp() {
           <div className="grid grid-cols-3 gap-x-4 gap-y-1 mt-4 relative z-10">
             <ShortcutButton icon={Church} label="Igreja" onClick={() => setActiveView("igreja")} />
             <ShortcutButton icon={Flame} label="Ministérios" onClick={() => setActiveView("ministries")} />
-            <ShortcutButton icon={Video} label="Mensagens" onClick={() => setActiveView("youtube")} />
+            <ShortcutButton icon={Video} label="Mensagens" onClick={() => {
+              if (youtubeUrl) { window.open(youtubeUrl, "_blank"); } else { setActiveView("youtube"); }
+            }} />
           </div>
           <div className="grid grid-cols-3 gap-x-4 gap-y-1 mt-1 relative z-10">
             <ShortcutButton icon={HandHeart} label="Doação" onClick={() => setActiveView("contribuicao")} />
@@ -1053,6 +1084,34 @@ export default function MeuApp() {
                           <Avatar className="w-6 h-6"><AvatarImage src={m.photo_url || ""} /><AvatarFallback className="text-[9px] bg-primary/10 text-primary">{m.full_name.split(" ").map(n => n[0]).join("").slice(0, 2)}</AvatarFallback></Avatar>
                           <span className="text-xs font-medium">{m.full_name.split(" ")[0]}</span>
                           <span className="text-[10px] text-muted-foreground">{m.wedding_date ? new Date(m.wedding_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : ""}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Próximos Eventos */}
+              {events.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-primary" /> Próximos Eventos</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {events.slice(0, 5).map((evt) => (
+                        <div key={evt.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border border-border">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{evt.title}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <CalendarIcon className="w-3 h-3" />
+                              {new Date(evt.event_date + "T12:00:00").toLocaleDateString("pt-BR")}
+                              {evt.event_time && <span>• {evt.event_time}</span>}
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => setActiveView("events")} className="text-xs">
+                            Detalhes
+                          </Button>
                         </div>
                       ))}
                     </div>
