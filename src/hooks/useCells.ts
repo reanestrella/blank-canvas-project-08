@@ -16,6 +16,8 @@ export interface Cell {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  cover_image_url: string | null;
+  maps_link: string | null;
 }
 
 export interface CellReport {
