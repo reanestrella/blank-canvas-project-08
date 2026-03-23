@@ -112,6 +112,8 @@ interface CellData {
   address: string | null;
   network: string | null;
   leader: { full_name: string } | null;
+  cover_image_url: string | null;
+  maps_link: string | null;
 }
 
 // ─── Schedules View ──────────────────────────────────
