@@ -65,6 +65,7 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
       address: cell?.address || "",
       day_of_week: cell?.day_of_week || "",
       time: cell?.time || "",
+      maps_link: cell?.maps_link || "",
     },
   });
 
