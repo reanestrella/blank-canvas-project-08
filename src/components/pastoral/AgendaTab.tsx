@@ -198,17 +198,45 @@ export function AgendaTab({ churchId }: { churchId: string }) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar compromissos..." className="pl-9" />
           </div>
-          <Select value={filterPeriod} onValueChange={(v: any) => setFilterPeriod(v)}>
-            <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="week">Esta semana</SelectItem>
-              <SelectItem value="month">Este mês</SelectItem>
-              <SelectItem value="all">Todos</SelectItem>
-            </SelectContent>
-          </Select>
+          {viewMode === "list" && (
+            <Select value={filterPeriod} onValueChange={(v: any) => setFilterPeriod(v)}>
+              <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="week">Esta semana</SelectItem>
+                <SelectItem value="month">Este mês</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
-        <Button onClick={openNew}><Plus className="w-4 h-4 mr-2" /> Novo Compromisso</Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+            <Button variant={viewMode === "list" ? "default" : "ghost"} size="sm" onClick={() => { setViewMode("list"); setSelectedDate(undefined); }}>
+              <List className="w-4 h-4 mr-1" /> Lista
+            </Button>
+            <Button variant={viewMode === "calendar" ? "default" : "ghost"} size="sm" onClick={() => setViewMode("calendar")}>
+              <CalendarDays className="w-4 h-4 mr-1" /> Calendário
+            </Button>
+          </div>
+          <Button onClick={openNew}><Plus className="w-4 h-4 mr-2" /> Novo</Button>
+        </div>
       </div>
+
+      {viewMode === "calendar" && (
+        <Card>
+          <CardContent className="p-4 flex justify-center">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={setSelectedDate}
+              locale={ptBR}
+              modifiers={{ hasAppointment: appointmentDates }}
+              modifiersClassNames={{ hasAppointment: "bg-primary/20 font-bold text-primary" }}
+              className="rounded-md"
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {filtered.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">
