@@ -92,20 +92,25 @@ export function AgendaTab({ churchId }: { churchId: string }) {
   const filtered = useMemo(() => {
     let list = appointments;
     
-    // Period filter
-    const now = new Date();
-    if (filterPeriod === "week") {
-      const weekEnd = new Date(now);
-      weekEnd.setDate(now.getDate() + 7);
-      list = list.filter(a => {
-        const d = new Date(a.appointment_date);
-        return d >= new Date(now.toISOString().split("T")[0]) && d <= weekEnd;
-      });
-    } else if (filterPeriod === "month") {
-      list = list.filter(a => {
-        const d = new Date(a.appointment_date);
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-      });
+    // If calendar mode with selected date, filter to that day
+    if (viewMode === "calendar" && selectedDate) {
+      list = list.filter(a => isSameDay(new Date(a.appointment_date + "T12:00:00"), selectedDate));
+    } else {
+      // Period filter
+      const now = new Date();
+      if (filterPeriod === "week") {
+        const weekEnd = new Date(now);
+        weekEnd.setDate(now.getDate() + 7);
+        list = list.filter(a => {
+          const d = new Date(a.appointment_date);
+          return d >= new Date(now.toISOString().split("T")[0]) && d <= weekEnd;
+        });
+      } else if (filterPeriod === "month") {
+        list = list.filter(a => {
+          const d = new Date(a.appointment_date);
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        });
+      }
     }
 
     // Search
@@ -119,7 +124,11 @@ export function AgendaTab({ churchId }: { churchId: string }) {
     }
 
     return list;
-  }, [appointments, search, filterPeriod]);
+  }, [appointments, search, filterPeriod, viewMode, selectedDate]);
+
+  const appointmentDates = useMemo(() => {
+    return appointments.map(a => new Date(a.appointment_date + "T12:00:00"));
+  }, [appointments]);
 
   const openNew = () => {
     setEditing(null);
