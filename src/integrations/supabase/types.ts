@@ -1493,6 +1493,51 @@ export type Database = {
           },
         ]
       }
+      discipleship_logs: {
+        Row: {
+          church_id: string
+          created_at: string
+          created_by: string | null
+          description: string
+          discipleship_id: string
+          id: string
+          log_date: string
+        }
+        Insert: {
+          church_id: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          discipleship_id: string
+          id?: string
+          log_date?: string
+        }
+        Update: {
+          church_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          discipleship_id?: string
+          id?: string
+          log_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipleship_logs_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipleship_logs_discipleship_id_fkey"
+            columns: ["discipleship_id"]
+            isOneToOne: false
+            referencedRelation: "discipleships"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discipleships: {
         Row: {
           church_id: string
