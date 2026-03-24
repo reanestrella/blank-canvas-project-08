@@ -372,7 +372,7 @@ export default function Consolidacao() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  {(record.status === "contato" || record.status === "contato_inicial") && (
+                                  {(record.status === "contato" || (record.status as string) === "contato_inicial") && (
                                     <DropdownMenuItem onClick={() => updateStatus(record.id, "acompanhamento" as any)}>
                                       ✅ Iniciar Consolidação (decisão)
                                     </DropdownMenuItem>
