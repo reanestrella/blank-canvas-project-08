@@ -73,6 +73,8 @@ export function AgendaTab({ churchId }: { churchId: string }) {
   const [form, setForm] = useState(emptyForm);
   const [search, setSearch] = useState("");
   const [filterPeriod, setFilterPeriod] = useState<"all" | "week" | "month">("month");
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   const load = async () => {
     setLoading(true);
