@@ -21,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus, Users, UserCheck, UserPlus, Heart, Loader2, MoreHorizontal,
   Phone, Mail, AlertTriangle, Eye, Droplets, MessageSquare, Clock,
-  CheckCircle2,
+  CheckCircle2, Send,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConsolidation, ConsolidationRecord } from "@/hooks/useConsolidation";
@@ -29,9 +29,13 @@ import { useMembers } from "@/hooks/useMembers";
 import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
 
-const statusConfig: Record<ConsolidationRecord["status"], { label: string; color: string }> = {
+// Status config agora com separação clara:
+// contato_inicial = apenas mensagem enviada (NÃO é consolidação)
+// em_consolidacao = após decisão por Jesus
+const statusConfig: Record<string, { label: string; color: string }> = {
+  contato_inicial: { label: "Contato Inicial", color: "bg-muted text-muted-foreground" },
   contato: { label: "Contato Inicial", color: "bg-info/20 text-info" },
-  acompanhamento: { label: "Em Acompanhamento", color: "bg-secondary/20 text-secondary" },
+  acompanhamento: { label: "Em Consolidação", color: "bg-secondary/20 text-secondary" },
   integracao: { label: "Integração", color: "bg-accent/20 text-accent-foreground" },
   concluido: { label: "Concluído", color: "bg-success/20 text-success" },
   desistente: { label: "Desistente", color: "bg-destructive/20 text-destructive" },
@@ -65,16 +69,25 @@ export default function Consolidacao() {
     });
   }, [records, periodMode, filterMonth, filterYear]);
 
+  // Separate: contato_inicial/contato = NOT consolidation, acompanhamento+ = consolidation
+  const contatosRealizados = useMemo(() => 
+    filteredRecords.filter(r => r.status === "contato" || r.status === "contato_inicial").length,
+  [filteredRecords]);
+
+  const emConsolidacao = useMemo(() =>
+    filteredRecords.filter(r => r.status === "acompanhamento").length,
+  [filteredRecords]);
+
   const filteredStats = useMemo(() => ({
     total: filteredRecords.length,
-    contato: filteredRecords.filter((r) => r.status === "contato").length,
-    acompanhamento: filteredRecords.filter((r) => r.status === "acompanhamento").length,
+    contatos: contatosRealizados,
+    emConsolidacao,
     integracao: filteredRecords.filter((r) => r.status === "integracao").length,
     concluido: filteredRecords.filter((r) => r.status === "concluido").length,
     desistente: filteredRecords.filter((r) => r.status === "desistente").length,
-  }), [filteredRecords]);
+  }), [filteredRecords, contatosRealizados, emConsolidacao]);
 
-  // Funnel: Visitantes → Decididos → Consolidados → Batizados (only)
+  // Funnel: Visitantes → Decididos → Consolidados → Batizados
   const funnelStats = useMemo(() => {
     const activeMembers = members.filter(m => m.is_active);
     return {
@@ -109,38 +122,36 @@ export default function Consolidacao() {
     const createdAt = new Date(member.created_at || "");
     const nowMs = Date.now();
     const diffDays = Math.floor((nowMs - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-    
-    // Check if there's a consolidation record for this visitor
     const hasConsolidation = records.some(r => r.member_id === member.id);
-    
     const steps = {
-      visita: true, // always true, they were registered
+      visita: true,
       mensagem1dia: diffDays >= 1,
       followUp: hasConsolidation,
     };
-
     return { diffDays, steps, hasConsolidation };
   };
 
-  const handleAddConsolidation = async () => {
+  // Iniciar contato = status "contato" (NÃO é consolidação)
+  const handleStartContact = async (memberId: string) => {
+    await createRecord({
+      member_id: memberId,
+      status: "contato" as any,
+      contact_date: new Date().toISOString().split("T")[0],
+    });
+  };
+
+  // Iniciar consolidação = após decisão, status "acompanhamento"
+  const handleStartConsolidation = async () => {
     if (!selectedMemberId) return;
     await createRecord({
       member_id: selectedMemberId,
       consolidator_id: selectedConsolidatorId || undefined,
-      status: "contato",
+      status: "acompanhamento" as any,
       contact_date: new Date().toISOString().split("T")[0],
     });
     setSelectedMemberId(null);
     setSelectedConsolidatorId(null);
     setShowAddForm(false);
-  };
-
-  const handleStartConsolidation = async (memberId: string) => {
-    await createRecord({
-      member_id: memberId,
-      status: "contato",
-      contact_date: new Date().toISOString().split("T")[0],
-    });
   };
 
   const handleEditRecord = (record: ConsolidationRecord) => {
@@ -178,8 +189,10 @@ export default function Consolidacao() {
 
   const funnelSteps = [
     { label: "Visitantes", value: funnelStats.visitantes, icon: Eye, color: "bg-muted text-muted-foreground" },
+    { label: "Contatos", value: contatosRealizados, icon: Send, color: "bg-info/20 text-info" },
     { label: "Decididos", value: funnelStats.decididos, icon: Heart, color: "bg-success/20 text-success" },
-    { label: "Consolidados", value: funnelStats.consolidados, icon: UserCheck, color: "bg-primary/20 text-primary" },
+    { label: "Em Consolidação", value: emConsolidacao, icon: UserCheck, color: "bg-secondary/20 text-secondary" },
+    { label: "Consolidados", value: filteredStats.concluido, icon: UserCheck, color: "bg-primary/20 text-primary" },
     { label: "Batizados", value: funnelStats.batizados, icon: Droplets, color: "bg-info/20 text-info" },
   ];
 
@@ -206,8 +219,8 @@ export default function Consolidacao() {
           </div>
         </div>
 
-        {/* Funnel - 4 items only */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* Funnel - 6 items */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           {funnelSteps.map((step) => {
             const Icon = step.icon;
             return (
@@ -237,80 +250,11 @@ export default function Consolidacao() {
 
           {/* Acompanhamentos Tab */}
           <TabsContent value="acompanhamentos" className="space-y-4">
-            {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Users className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{filteredStats.total}</p>
-                      <p className="text-xs text-muted-foreground">Total</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-info/10">
-                      <Phone className="w-5 h-5 text-info" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{filteredStats.contato}</p>
-                      <p className="text-xs text-muted-foreground">Contato</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-secondary/10">
-                      <Heart className="w-5 h-5 text-secondary" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{filteredStats.acompanhamento}</p>
-                      <p className="text-xs text-muted-foreground">Acompanhando</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-success/10">
-                      <UserCheck className="w-5 h-5 text-success" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{filteredStats.concluido}</p>
-                      <p className="text-xs text-muted-foreground">Concluídos</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-destructive/10">
-                      <AlertTriangle className="w-5 h-5 text-destructive" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{filteredStats.desistente}</p>
-                      <p className="text-xs text-muted-foreground">Desistentes</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
             {/* Add button */}
             <div className="flex justify-end">
               <Button onClick={() => setShowAddForm(true)}>
                 <Plus className="w-4 h-4 mr-2" />
-                Nova Consolidação
+                Nova Consolidação (após decisão)
               </Button>
             </div>
 
@@ -319,11 +263,12 @@ export default function Consolidacao() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Nova Consolidação</CardTitle>
+                  <p className="text-xs text-muted-foreground">⚠️ Só inicie consolidação após decisão por Jesus (novo convertido)</p>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Novo Convertido/Visitante *</label>
+                      <label className="text-sm font-medium">Novo Convertido *</label>
                       <MemberAutocomplete
                         churchId={churchId}
                         value={selectedMemberId || undefined}
@@ -341,9 +286,9 @@ export default function Consolidacao() {
                       />
                     </div>
                     <div className="flex items-end gap-2">
-                      <Button onClick={handleAddConsolidation} disabled={!selectedMemberId}>
+                      <Button onClick={handleStartConsolidation} disabled={!selectedMemberId}>
                         <UserPlus className="w-4 h-4 mr-2" />
-                        Iniciar
+                        Iniciar Consolidação
                       </Button>
                       <Button variant="outline" onClick={() => setShowAddForm(false)}>
                         Cancelar
@@ -364,7 +309,7 @@ export default function Consolidacao() {
                 ) : filteredRecords.length === 0 ? (
                   <div className="flex flex-col items-center justify-center p-12 text-center">
                     <Users className="w-12 h-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium">Nenhuma consolidação neste período</h3>
+                    <h3 className="text-lg font-medium">Nenhum registro neste período</h3>
                     <p className="text-muted-foreground mb-4">
                       Inicie o acompanhamento de novos convertidos.
                     </p>
@@ -383,80 +328,83 @@ export default function Consolidacao() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredRecords.map((record) => (
-                        <TableRow key={record.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar className="w-8 h-8">
-                                <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                                  {record.member?.full_name?.split(" ").map((n) => n[0]).join("").slice(0, 2) || "?"}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="font-medium">{record.member?.full_name || "—"}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            <div className="flex flex-col gap-1">
-                              {record.member?.phone && (
-                                <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                                  <Phone className="w-3 h-3" /> {record.member.phone}
-                                </span>
-                              )}
-                              {record.member?.email && (
-                                <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                                  <Mail className="w-3 h-3" /> {record.member.email}
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">{record.consolidator?.full_name || "—"}</TableCell>
-                          <TableCell>
-                            <Select
-                              value={record.status}
-                              onValueChange={(value: ConsolidationRecord["status"]) => updateStatus(record.id, value)}
-                            >
-                              <SelectTrigger className="w-[160px]">
-                                <SelectValue>
-                                  <Badge className={statusConfig[record.status].color}>
-                                    {statusConfig[record.status].label}
-                                  </Badge>
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Object.entries(statusConfig).map(([key, config]) => (
-                                  <SelectItem key={key} value={key}>{config.label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {record.contact_date ? new Date(record.contact_date).toLocaleDateString("pt-BR") : "—"}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            <span className="text-sm font-medium">{(record as any).visit_count || 1}x</span>
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEditRecord(record)}>
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleRegisterReturn(record)}>
-                                  <Eye className="w-4 h-4 mr-2" /> Registrar Retorno
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive" onClick={() => deleteRecord(record.id)}>
-                                  Excluir
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {filteredRecords.map((record) => {
+                        const cfg = statusConfig[record.status] || { label: record.status, color: "" };
+                        return (
+                          <TableRow key={record.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <Avatar className="w-8 h-8">
+                                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                    {record.member?.full_name?.split(" ").map((n) => n[0]).join("").slice(0, 2) || "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium">{record.member?.full_name || "—"}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <div className="flex flex-col gap-1">
+                                {record.member?.phone && (
+                                  <span className="text-xs flex items-center gap-1"><Phone className="w-3 h-3" />{record.member.phone}</span>
+                                )}
+                                {record.member?.email && (
+                                  <span className="text-xs flex items-center gap-1"><Mail className="w-3 h-3" />{record.member.email}</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell text-sm">
+                              {record.consolidator?.full_name || "—"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={cfg.color}>{cfg.label}</Badge>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell text-sm">
+                              {record.contact_date ? new Date(record.contact_date + "T12:00:00").toLocaleDateString("pt-BR") : "—"}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell text-sm">
+                              {(record as any).visit_count || 1}
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {(record.status === "contato" || record.status === "contato_inicial") && (
+                                    <DropdownMenuItem onClick={() => updateStatus(record.id, "acompanhamento" as any)}>
+                                      ✅ Iniciar Consolidação (decisão)
+                                    </DropdownMenuItem>
+                                  )}
+                                  {record.status === "acompanhamento" && (
+                                    <DropdownMenuItem onClick={() => updateStatus(record.id, "integracao" as any)}>
+                                      Promover para Integração
+                                    </DropdownMenuItem>
+                                  )}
+                                  {record.status === "integracao" && (
+                                    <DropdownMenuItem onClick={() => updateStatus(record.id, "concluido" as any)}>
+                                      Marcar como Concluído
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem onClick={() => handleRegisterReturn(record)}>
+                                    🔄 Registrar Retorno
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleEditRecord(record)}>
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => updateStatus(record.id, "desistente" as any)}>
+                                    Marcar Desistente
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem className="text-destructive" onClick={() => deleteRecord(record.id)}>
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 )}
@@ -467,24 +415,11 @@ export default function Consolidacao() {
           {/* Visitantes Tab */}
           <TabsContent value="visitantes" className="space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Eye className="w-5 h-5" />
-                  Visitantes Cadastrados na Secretaria
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex items-center justify-center p-8">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                  </div>
-                ) : visitors.length === 0 ? (
+              <CardContent className="p-0">
+                {visitors.length === 0 ? (
                   <div className="flex flex-col items-center justify-center p-12 text-center">
                     <Eye className="w-12 h-12 text-muted-foreground mb-4" />
                     <h3 className="text-lg font-medium">Nenhum visitante neste período</h3>
-                    <p className="text-muted-foreground">
-                      Cadastre visitantes na Secretaria para acompanhá-los aqui.
-                    </p>
                   </div>
                 ) : (
                   <Table>
@@ -492,14 +427,13 @@ export default function Consolidacao() {
                       <TableRow>
                         <TableHead>Visitante</TableHead>
                         <TableHead className="hidden md:table-cell">Contato</TableHead>
-                        <TableHead>Cadastro</TableHead>
-                        <TableHead>Fluxo</TableHead>
-                        <TableHead className="w-[120px]">Ação</TableHead>
+                        <TableHead>Acompanhamento</TableHead>
+                        <TableHead className="w-[150px]">Ação</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {visitors.map((visitor) => {
-                        const followUp = getVisitorFollowUp(visitor);
+                        const { diffDays, steps, hasConsolidation } = getVisitorFollowUp(visitor);
                         return (
                           <TableRow key={visitor.id}>
                             <TableCell>
@@ -509,75 +443,37 @@ export default function Consolidacao() {
                                     {visitor.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                                   </AvatarFallback>
                                 </Avatar>
-                                <span className="font-medium">{visitor.full_name}</span>
+                                <div>
+                                  <span className="font-medium text-sm">{visitor.full_name}</span>
+                                  <p className="text-xs text-muted-foreground">{diffDays}d atrás</p>
+                                </div>
                               </div>
                             </TableCell>
                             <TableCell className="hidden md:table-cell">
-                              <div className="flex flex-col gap-1">
-                                {visitor.phone && (
-                                  <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                                    <Phone className="w-3 h-3" /> {visitor.phone}
-                                  </span>
-                                )}
-                                {visitor.email && (
-                                  <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                                    <Mail className="w-3 h-3" /> {visitor.email}
-                                  </span>
-                                )}
+                              <div className="flex flex-col gap-0.5">
+                                {visitor.phone && <span className="text-xs">{visitor.phone}</span>}
+                                {visitor.email && <span className="text-xs text-muted-foreground">{visitor.email}</span>}
                               </div>
                             </TableCell>
                             <TableCell>
-                              <span className="text-sm text-muted-foreground">
-                                {new Date(visitor.created_at || "").toLocaleDateString("pt-BR")}
-                              </span>
-                              <span className="block text-xs text-muted-foreground">
-                                {followUp.diffDays === 0 ? "Hoje" : `Há ${followUp.diffDays} dia${followUp.diffDays > 1 ? "s" : ""}`}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                {/* Step 1: Visita */}
-                                <div className="flex items-center gap-1" title="Visita registrada">
-                                  <CheckCircle2 className="w-4 h-4 text-success" />
-                                  <span className="text-xs hidden lg:inline">Visita</span>
-                                </div>
-                                <span className="text-muted-foreground">→</span>
-                                {/* Step 2: Mensagem 1 dia */}
-                                <div className="flex items-center gap-1" title={followUp.steps.mensagem1dia ? "Pronto para contato (1+ dia)" : "Aguardando 1 dia"}>
-                                  {followUp.steps.mensagem1dia ? (
-                                    <MessageSquare className="w-4 h-4 text-info" />
-                                  ) : (
-                                    <Clock className="w-4 h-4 text-muted-foreground" />
-                                  )}
-                                  <span className="text-xs hidden lg:inline">Msg 1d</span>
-                                </div>
-                                <span className="text-muted-foreground">→</span>
-                                {/* Step 3: Follow-up / Consolidação */}
-                                <div className="flex items-center gap-1" title={followUp.hasConsolidation ? "Em consolidação" : "Aguardando consolidação"}>
-                                  {followUp.hasConsolidation ? (
-                                    <UserCheck className="w-4 h-4 text-success" />
-                                  ) : (
-                                    <UserPlus className="w-4 h-4 text-muted-foreground" />
-                                  )}
-                                  <span className="text-xs hidden lg:inline">Consolidação</span>
-                                </div>
+                              <div className="flex items-center gap-1">
+                                <Badge variant={steps.visita ? "default" : "outline"} className="text-[10px] py-0 h-4">Visita</Badge>
+                                {hasConsolidation && <Badge variant="default" className="text-[10px] py-0 h-4 bg-info/80">Contatado</Badge>}
                               </div>
                             </TableCell>
                             <TableCell>
-                              {!followUp.hasConsolidation ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleStartConsolidation(visitor.id)}
-                                >
-                                  <UserPlus className="w-3 h-3 mr-1" />
-                                  Iniciar
-                                </Button>
-                              ) : (
-                                <Badge className="bg-success/20 text-success">
-                                  Em andamento
-                                </Badge>
-                              )}
+                              <div className="flex gap-1">
+                                {!hasConsolidation && (
+                                  <Button size="sm" variant="outline" onClick={() => handleStartContact(visitor.id)}>
+                                    <Send className="w-3 h-3 mr-1" /> Iniciar Contato
+                                  </Button>
+                                )}
+                                {hasConsolidation && (
+                                  <Badge variant="secondary" className="text-[10px]">
+                                    <CheckCircle2 className="w-3 h-3 mr-1" /> Contato realizado
+                                  </Badge>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
@@ -591,10 +487,10 @@ export default function Consolidacao() {
         </Tabs>
 
         {/* Edit Modal */}
-        <Dialog open={!!editingRecord} onOpenChange={open => !open && setEditingRecord(null)}>
+        <Dialog open={!!editingRecord} onOpenChange={(open) => !open && setEditingRecord(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Editar Consolidação - {editingRecord?.member?.full_name}</DialogTitle>
+              <DialogTitle>Editar Acompanhamento</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -602,19 +498,13 @@ export default function Consolidacao() {
                 <MemberAutocomplete
                   churchId={churchId}
                   value={editForm.consolidator_id || undefined}
-                  onChange={v => setEditForm(f => ({ ...f, consolidator_id: v || "" }))}
-                  placeholder="Quem vai acompanhar..."
+                  onChange={(id) => setEditForm(f => ({ ...f, consolidator_id: id || "" }))}
+                  placeholder="Selecione..."
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Data Contato</Label>
-                  <Input type="date" value={editForm.contact_date} onChange={e => setEditForm(f => ({ ...f, contact_date: e.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Primeira Visita</Label>
-                  <Input type="date" value={editForm.first_visit_date} onChange={e => setEditForm(f => ({ ...f, first_visit_date: e.target.value }))} />
-                </div>
+              <div className="space-y-2">
+                <Label>Data do Contato</Label>
+                <Input type="date" value={editForm.contact_date} onChange={e => setEditForm(f => ({ ...f, contact_date: e.target.value }))} />
               </div>
               <div className="space-y-2">
                 <Label>Observações</Label>
