@@ -71,7 +71,7 @@ export default function Consolidacao() {
 
   // Separate: contato_inicial/contato = NOT consolidation, acompanhamento+ = consolidation
   const contatosRealizados = useMemo(() => 
-    filteredRecords.filter(r => r.status === "contato" || r.status === "contato_inicial").length,
+    filteredRecords.filter(r => r.status === "contato" || (r.status as string) === "contato_inicial").length,
   [filteredRecords]);
 
   const emConsolidacao = useMemo(() =>
