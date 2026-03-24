@@ -12,6 +12,22 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Plus, Loader2, MoreHorizontal, Search, Calendar as CalendarIcon, Clock, Filter, List, CalendarDays,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { ptBR } from "date-fns/locale";
+import { isSameDay } from "date-fns";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
 import {
   Plus, Loader2, MoreHorizontal, Search, Calendar, Clock, Filter,
 } from "lucide-react";
