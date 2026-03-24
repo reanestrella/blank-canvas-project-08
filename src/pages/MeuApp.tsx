@@ -974,6 +974,60 @@ export default function MeuApp() {
             <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
           ) : (
             <>
+              {/* 1. Devocional do dia */}
+              <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent cursor-pointer" onClick={() => setActiveView("devocional")}>
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><Flame className="w-5 h-5 text-primary" /></div>
+                  <div><p className="font-semibold text-sm">Devocional do Dia</p><p className="text-xs text-muted-foreground">Leia o devocional de hoje 📖</p></div>
+                </CardContent>
+              </Card>
+
+              {/* 2. Próximos Eventos */}
+              {events.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-primary" /> Próximos Eventos</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {events.slice(0, 5).map((evt) => (
+                        <div key={evt.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border border-border">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{evt.title}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <CalendarIcon className="w-3 h-3" />
+                              {new Date(evt.event_date + "T12:00:00").toLocaleDateString("pt-BR")}
+                              {evt.event_time && <span>• {evt.event_time}</span>}
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => setActiveView("events")} className="text-xs">Detalhes</Button>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* 3. Aniversariantes */}
+              {birthdays.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2"><Cake className="w-4 h-4 text-secondary" /> Aniversariantes do Mês</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {birthdays.slice(0, 10).map((m) => (
+                        <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border">
+                          <Avatar className="w-6 h-6"><AvatarImage src={m.photo_url || ""} /><AvatarFallback className="text-[9px] bg-secondary/10 text-secondary">{m.full_name.split(" ").map(n => n[0]).join("").slice(0, 2)}</AvatarFallback></Avatar>
+                          <span className="text-xs font-medium">{m.full_name.split(" ")[0]}</span>
+                          <span className="text-[10px] text-muted-foreground">{m.birth_date ? new Date(m.birth_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : ""}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Informes da Rede */}
               {networkAnnouncements.length > 0 && (
                 <Card className="border-primary/30 bg-primary/5">
@@ -984,21 +1038,13 @@ export default function MeuApp() {
                     <div className="space-y-3">
                       {networkAnnouncements.map((item) => (
                         <div key={item.id} className="p-3 rounded-xl bg-card border border-border">
-                          {item.image_url && (
-                            <img src={item.image_url} alt="" className="w-full h-32 object-cover rounded-lg mb-2" />
-                          )}
+                          {item.image_url && (<img src={item.image_url} alt="" className="w-full h-32 object-cover rounded-lg mb-2" />)}
                           <h4 className="font-medium text-sm mb-1">{item.title}</h4>
                           <p className="text-xs text-muted-foreground whitespace-pre-line">{item.content}</p>
                           <div className="flex items-center gap-2 mt-2 text-[10px] text-muted-foreground">
-                            {item.start_date && (
-                              <span>📅 {new Date(item.start_date + "T12:00:00").toLocaleDateString("pt-BR")}</span>
-                            )}
-                            {item.end_date && (
-                              <span>→ {new Date(item.end_date + "T12:00:00").toLocaleDateString("pt-BR")}</span>
-                            )}
-                            {!item.start_date && (
-                              <span>{new Date(item.created_at).toLocaleDateString("pt-BR")}</span>
-                            )}
+                            {item.start_date && (<span>📅 {new Date(item.start_date + "T12:00:00").toLocaleDateString("pt-BR")}</span>)}
+                            {item.end_date && (<span>→ {new Date(item.end_date + "T12:00:00").toLocaleDateString("pt-BR")}</span>)}
+                            {!item.start_date && (<span>{new Date(item.created_at).toLocaleDateString("pt-BR")}</span>)}
                           </div>
                         </div>
                       ))}
@@ -1051,26 +1097,6 @@ export default function MeuApp() {
                 </Card>
               )}
 
-              {/* Aniversariantes */}
-              {birthdays.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2"><Cake className="w-4 h-4 text-secondary" /> Aniversariantes do Mês</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {birthdays.slice(0, 10).map((m) => (
-                        <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border">
-                          <Avatar className="w-6 h-6"><AvatarImage src={m.photo_url || ""} /><AvatarFallback className="text-[9px] bg-secondary/10 text-secondary">{m.full_name.split(" ").map(n => n[0]).join("").slice(0, 2)}</AvatarFallback></Avatar>
-                          <span className="text-xs font-medium">{m.full_name.split(" ")[0]}</span>
-                          <span className="text-[10px] text-muted-foreground">{m.birth_date ? new Date(m.birth_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : ""}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
               {/* Aniversários de Casamento */}
               {weddingAnniversaries.length > 0 && (
                 <Card>
@@ -1084,34 +1110,6 @@ export default function MeuApp() {
                           <Avatar className="w-6 h-6"><AvatarImage src={m.photo_url || ""} /><AvatarFallback className="text-[9px] bg-primary/10 text-primary">{m.full_name.split(" ").map(n => n[0]).join("").slice(0, 2)}</AvatarFallback></Avatar>
                           <span className="text-xs font-medium">{m.full_name.split(" ")[0]}</span>
                           <span className="text-[10px] text-muted-foreground">{m.wedding_date ? new Date(m.wedding_date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : ""}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Próximos Eventos */}
-              {events.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2"><CalendarIcon className="w-4 h-4 text-primary" /> Próximos Eventos</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {events.slice(0, 5).map((evt) => (
-                        <div key={evt.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border border-border">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">{evt.title}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <CalendarIcon className="w-3 h-3" />
-                              {new Date(evt.event_date + "T12:00:00").toLocaleDateString("pt-BR")}
-                              {evt.event_time && <span>• {evt.event_time}</span>}
-                            </div>
-                          </div>
-                          <Button variant="ghost" size="sm" onClick={() => setActiveView("events")} className="text-xs">
-                            Detalhes
-                          </Button>
                         </div>
                       ))}
                     </div>

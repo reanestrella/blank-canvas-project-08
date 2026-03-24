@@ -12,12 +12,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
+import { Calendar } from "@/components/ui/calendar";
 import {
-  Plus, Loader2, MoreHorizontal, Search, Calendar, Clock, Filter,
+  Plus, Loader2, MoreHorizontal, Search, Calendar as CalendarIcon, Clock, Filter, List, CalendarDays,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { ptBR } from "date-fns/locale";
+import { isSameDay } from "date-fns";
+
+
 
 interface Appointment {
   id: string;
@@ -68,6 +73,8 @@ export function AgendaTab({ churchId }: { churchId: string }) {
   const [form, setForm] = useState(emptyForm);
   const [search, setSearch] = useState("");
   const [filterPeriod, setFilterPeriod] = useState<"all" | "week" | "month">("month");
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   const load = async () => {
     setLoading(true);
@@ -85,20 +92,25 @@ export function AgendaTab({ churchId }: { churchId: string }) {
   const filtered = useMemo(() => {
     let list = appointments;
     
-    // Period filter
-    const now = new Date();
-    if (filterPeriod === "week") {
-      const weekEnd = new Date(now);
-      weekEnd.setDate(now.getDate() + 7);
-      list = list.filter(a => {
-        const d = new Date(a.appointment_date);
-        return d >= new Date(now.toISOString().split("T")[0]) && d <= weekEnd;
-      });
-    } else if (filterPeriod === "month") {
-      list = list.filter(a => {
-        const d = new Date(a.appointment_date);
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-      });
+    // If calendar mode with selected date, filter to that day
+    if (viewMode === "calendar" && selectedDate) {
+      list = list.filter(a => isSameDay(new Date(a.appointment_date + "T12:00:00"), selectedDate));
+    } else {
+      // Period filter
+      const now = new Date();
+      if (filterPeriod === "week") {
+        const weekEnd = new Date(now);
+        weekEnd.setDate(now.getDate() + 7);
+        list = list.filter(a => {
+          const d = new Date(a.appointment_date);
+          return d >= new Date(now.toISOString().split("T")[0]) && d <= weekEnd;
+        });
+      } else if (filterPeriod === "month") {
+        list = list.filter(a => {
+          const d = new Date(a.appointment_date);
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        });
+      }
     }
 
     // Search
@@ -112,7 +124,11 @@ export function AgendaTab({ churchId }: { churchId: string }) {
     }
 
     return list;
-  }, [appointments, search, filterPeriod]);
+  }, [appointments, search, filterPeriod, viewMode, selectedDate]);
+
+  const appointmentDates = useMemo(() => {
+    return appointments.map(a => new Date(a.appointment_date + "T12:00:00"));
+  }, [appointments]);
 
   const openNew = () => {
     setEditing(null);
@@ -182,17 +198,45 @@ export function AgendaTab({ churchId }: { churchId: string }) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar compromissos..." className="pl-9" />
           </div>
-          <Select value={filterPeriod} onValueChange={(v: any) => setFilterPeriod(v)}>
-            <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="week">Esta semana</SelectItem>
-              <SelectItem value="month">Este mês</SelectItem>
-              <SelectItem value="all">Todos</SelectItem>
-            </SelectContent>
-          </Select>
+          {viewMode === "list" && (
+            <Select value={filterPeriod} onValueChange={(v: any) => setFilterPeriod(v)}>
+              <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="week">Esta semana</SelectItem>
+                <SelectItem value="month">Este mês</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
-        <Button onClick={openNew}><Plus className="w-4 h-4 mr-2" /> Novo Compromisso</Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+            <Button variant={viewMode === "list" ? "default" : "ghost"} size="sm" onClick={() => { setViewMode("list"); setSelectedDate(undefined); }}>
+              <List className="w-4 h-4 mr-1" /> Lista
+            </Button>
+            <Button variant={viewMode === "calendar" ? "default" : "ghost"} size="sm" onClick={() => setViewMode("calendar")}>
+              <CalendarDays className="w-4 h-4 mr-1" /> Calendário
+            </Button>
+          </div>
+          <Button onClick={openNew}><Plus className="w-4 h-4 mr-2" /> Novo</Button>
+        </div>
       </div>
+
+      {viewMode === "calendar" && (
+        <Card>
+          <CardContent className="p-4 flex justify-center">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={setSelectedDate}
+              locale={ptBR}
+              modifiers={{ hasAppointment: appointmentDates }}
+              modifiersClassNames={{ hasAppointment: "bg-primary/20 font-bold text-primary" }}
+              className="rounded-md"
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {filtered.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">
