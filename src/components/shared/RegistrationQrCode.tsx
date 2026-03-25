@@ -8,14 +8,17 @@ import { useToast } from "@/hooks/use-toast";
 
 interface RegistrationQrCodeProps {
   compact?: boolean;
+  churchId?: string;
 }
 
-export function RegistrationQrCode({ compact }: RegistrationQrCodeProps) {
+export function RegistrationQrCode({ compact, churchId }: RegistrationQrCodeProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
-  // Build the registration URL based on current origin
-  const registrationUrl = `${window.location.origin}/cadastro`;
+  // Build the registration URL with church_id
+  const registrationUrl = churchId
+    ? `${window.location.origin}/cadastro?church=${churchId}`
+    : `${window.location.origin}/cadastro`;
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(registrationUrl);

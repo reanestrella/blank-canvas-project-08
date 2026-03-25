@@ -55,8 +55,24 @@ interface CellModalProps {
 
 export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [coverPreview, setCoverPreview] = useState<string | null>(cell?.cover_image_url || null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
+
+  // Reset state when cell changes or modal opens
+  const resetForCell = () => {
+    setCoverPreview(cell?.cover_image_url || null);
+    setCoverFile(null);
+    form.reset({
+      name: cell?.name || "",
+      leader_id: cell?.leader_id || "",
+      supervisor_id: cell?.supervisor_id || "",
+      network: cell?.network || "",
+      address: cell?.address || "",
+      day_of_week: cell?.day_of_week || "",
+      time: cell?.time || "",
+      maps_link: cell?.maps_link || "",
+    });
+  };
 
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -78,16 +94,25 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
   const form = useForm<CellFormData>({
     resolver: zodResolver(cellSchema),
     defaultValues: {
-      name: cell?.name || "",
-      leader_id: cell?.leader_id || "",
-      supervisor_id: cell?.supervisor_id || "",
-      network: cell?.network || "",
-      address: cell?.address || "",
-      day_of_week: cell?.day_of_week || "",
-      time: cell?.time || "",
-      maps_link: cell?.maps_link || "",
+      name: "",
+      leader_id: "",
+      supervisor_id: "",
+      network: "",
+      address: "",
+      day_of_week: "",
+      time: "",
+      maps_link: "",
     },
   });
+
+  // Reset form whenever modal opens or cell changes
+  useState(() => { resetForCell(); });
+  // Also reset when `open` transitions to true
+  const [prevOpen, setPrevOpen] = useState(false);
+  if (open && !prevOpen) {
+    resetForCell();
+  }
+  if (open !== prevOpen) setPrevOpen(open);
 
   const handleSubmit = async (data: CellFormData) => {
     setIsSubmitting(true);
@@ -153,10 +178,10 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
               <FormLabel>Imagem de Capa</FormLabel>
               <div className="flex items-center gap-4">
                 {coverPreview ? (
-                  <img src={coverPreview} alt="Capa" className="w-24 h-16 object-cover rounded-md border" />
+                  <img src={coverPreview} alt="Capa" className="w-16 h-12 object-cover rounded border" />
                 ) : (
-                  <div className="w-24 h-16 rounded-md border border-dashed flex items-center justify-center bg-muted">
-                    <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                  <div className="w-16 h-12 rounded border border-dashed flex items-center justify-center bg-muted">
+                    <ImageIcon className="w-4 h-4 text-muted-foreground" />
                   </div>
                 )}
                 <label className="cursor-pointer">

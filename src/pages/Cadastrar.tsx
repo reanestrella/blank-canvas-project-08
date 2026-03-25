@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 const signupSchema = z.object({
   fullName: z.string().min(2, "Nome completo deve ter pelo menos 2 caracteres").max(100),
   email: z.string().email("Email inválido"),
+  birthDate: z.string().optional(),
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -63,8 +64,11 @@ export default function Cadastrar() {
 
   const form = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { fullName: "", email: "", password: "", confirmPassword: "" },
+    defaultValues: { fullName: "", email: "", birthDate: "", password: "", confirmPassword: "" },
   });
+
+  // Get church_id from URL params (from QR code link)
+  const churchIdFromUrl = searchParams.get("church");
 
   const handleSubmit = async (data: SignupFormData) => {
     setIsLoading(true);
@@ -79,7 +83,7 @@ export default function Cadastrar() {
         password: data.password,
         options: {
           emailRedirectTo,
-          data: { full_name: data.fullName },
+          data: { full_name: data.fullName, birth_date: data.birthDate || null },
         },
       });
 
@@ -96,15 +100,27 @@ export default function Cadastrar() {
 
       // If session came back immediately (no email confirmation required)
       if (authData.session) {
-        // Update profile - set pending if no invite token
+        // Update profile - set pending if no invite token, link to church if from QR
         const profileUpdate: any = { full_name: data.fullName, email: data.email };
         if (!pendingToken) {
           profileUpdate.registration_status = "pendente";
+        }
+        if (churchIdFromUrl) {
+          profileUpdate.church_id = churchIdFromUrl;
         }
         await supabase
           .from("profiles")
           .update(profileUpdate)
           .eq("user_id", authData.user.id);
+
+        // If church from QR, also assign membro role
+        if (churchIdFromUrl && !pendingToken) {
+          await supabase.from("user_roles").insert({
+            user_id: authData.user.id,
+            church_id: churchIdFromUrl,
+            role: "membro",
+          }).select();
+        }
 
         // If there's a pending invite token, go accept it
         if (pendingToken) {
@@ -207,6 +223,20 @@ export default function Cadastrar() {
                     <FormLabel>Email *</FormLabel>
                     <FormControl>
                       <Input type="email" placeholder="seu@email.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="birthDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data de Nascimento</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
