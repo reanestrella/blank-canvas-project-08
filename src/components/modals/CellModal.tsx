@@ -27,7 +27,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, ImageIcon } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import type { Cell, CreateCellData } from "@/hooks/useCells";
 import type { Member } from "@/hooks/useMembers";
 
@@ -54,6 +55,25 @@ interface CellModalProps {
 
 export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [coverPreview, setCoverPreview] = useState<string | null>(cell?.cover_image_url || null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+
+  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCoverFile(file);
+    setCoverPreview(URL.createObjectURL(file));
+  };
+
+  const uploadCover = async (): Promise<string | undefined> => {
+    if (!coverFile) return cell?.cover_image_url || undefined;
+    const ext = coverFile.name.split(".").pop();
+    const path = `${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("cell-covers").upload(path, coverFile, { upsert: true });
+    if (error) { console.error("Cover upload error:", error); return undefined; }
+    const { data: urlData } = supabase.storage.from("cell-covers").getPublicUrl(path);
+    return urlData.publicUrl;
+  };
   
   const form = useForm<CellFormData>({
     resolver: zodResolver(cellSchema),
@@ -72,6 +92,7 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
   const handleSubmit = async (data: CellFormData) => {
     setIsSubmitting(true);
     try {
+      const coverUrl = await uploadCover();
       const cleanedData: CreateCellData = {
         name: data.name,
         leader_id: data.leader_id || undefined,
@@ -81,6 +102,7 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
         day_of_week: data.day_of_week || undefined,
         time: data.time || undefined,
         maps_link: data.maps_link || undefined,
+        cover_image_url: coverUrl,
       };
       
       const result = await onSubmit(cleanedData);
@@ -125,6 +147,26 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
                 </FormItem>
               )}
             />
+
+            {/* Cover Image Upload */}
+            <div className="space-y-2">
+              <FormLabel>Imagem de Capa</FormLabel>
+              <div className="flex items-center gap-4">
+                {coverPreview ? (
+                  <img src={coverPreview} alt="Capa" className="w-24 h-16 object-cover rounded-md border" />
+                ) : (
+                  <div className="w-24 h-16 rounded-md border border-dashed flex items-center justify-center bg-muted">
+                    <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                )}
+                <label className="cursor-pointer">
+                  <Button type="button" variant="outline" size="sm" asChild>
+                    <span><Upload className="w-4 h-4 mr-1" /> Upload</span>
+                  </Button>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+                </label>
+              </div>
+            </div>
 
             <FormField
               control={form.control}

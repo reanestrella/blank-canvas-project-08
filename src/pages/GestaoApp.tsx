@@ -17,6 +17,7 @@ import {
   MessageSquare, Globe, Lock, Eye, EyeOff, BookOpen, UserCheck,
 } from "lucide-react";
 import { RegistrationApproval } from "@/components/admin/RegistrationApproval";
+import { RegistrationQrCode } from "@/components/shared/RegistrationQrCode";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -1255,7 +1256,8 @@ export default function GestaoApp() {
           <TabsContent value="modulos" className="mt-6">
             <ModulosSection churchId={churchId} />
           </TabsContent>
-          <TabsContent value="cadastros" className="mt-6">
+          <TabsContent value="cadastros" className="mt-6 space-y-6">
+            <RegistrationQrCode />
             <RegistrationApproval churchId={churchId} />
           </TabsContent>
           <TabsContent value="devocionais" className="mt-6">
