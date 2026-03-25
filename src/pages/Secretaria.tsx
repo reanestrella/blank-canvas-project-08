@@ -174,6 +174,7 @@ export default function Secretaria() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <RegistrationQrCode compact />
             <CongregationSelector
               congregations={congregations}
               selectedId={selectedCongregation}
