@@ -83,7 +83,7 @@ export default function Cadastrar() {
         password: data.password,
         options: {
           emailRedirectTo,
-          data: { full_name: data.fullName },
+          data: { full_name: data.fullName, birth_date: data.birthDate || null },
         },
       });
 
