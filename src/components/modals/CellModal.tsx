@@ -92,6 +92,7 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
   const handleSubmit = async (data: CellFormData) => {
     setIsSubmitting(true);
     try {
+      const coverUrl = await uploadCover();
       const cleanedData: CreateCellData = {
         name: data.name,
         leader_id: data.leader_id || undefined,
@@ -101,6 +102,7 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
         day_of_week: data.day_of_week || undefined,
         time: data.time || undefined,
         maps_link: data.maps_link || undefined,
+        cover_image_url: coverUrl,
       };
       
       const result = await onSubmit(cleanedData);
