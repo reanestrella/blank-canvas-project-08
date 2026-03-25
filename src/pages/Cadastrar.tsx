@@ -64,8 +64,11 @@ export default function Cadastrar() {
 
   const form = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { fullName: "", email: "", password: "", confirmPassword: "" },
+    defaultValues: { fullName: "", email: "", birthDate: "", password: "", confirmPassword: "" },
   });
+
+  // Get church_id from URL params (from QR code link)
+  const churchIdFromUrl = searchParams.get("church");
 
   const handleSubmit = async (data: SignupFormData) => {
     setIsLoading(true);
