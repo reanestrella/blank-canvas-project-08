@@ -100,15 +100,27 @@ export default function Cadastrar() {
 
       // If session came back immediately (no email confirmation required)
       if (authData.session) {
-        // Update profile - set pending if no invite token
+        // Update profile - set pending if no invite token, link to church if from QR
         const profileUpdate: any = { full_name: data.fullName, email: data.email };
         if (!pendingToken) {
           profileUpdate.registration_status = "pendente";
+        }
+        if (churchIdFromUrl) {
+          profileUpdate.church_id = churchIdFromUrl;
         }
         await supabase
           .from("profiles")
           .update(profileUpdate)
           .eq("user_id", authData.user.id);
+
+        // If church from QR, also assign membro role
+        if (churchIdFromUrl && !pendingToken) {
+          await supabase.from("user_roles").insert({
+            user_id: authData.user.id,
+            church_id: churchIdFromUrl,
+            role: "membro",
+          }).select();
+        }
 
         // If there's a pending invite token, go accept it
         if (pendingToken) {
