@@ -17,6 +17,7 @@ import {
   MessageSquare, Globe, Lock, Eye, EyeOff, BookOpen, UserCheck,
 } from "lucide-react";
 import { RegistrationApproval } from "@/components/admin/RegistrationApproval";
+import { RegistrationQrCode } from "@/components/shared/RegistrationQrCode";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
