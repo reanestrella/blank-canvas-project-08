@@ -38,6 +38,7 @@ import { CongregationSelector } from "@/components/layout/CongregationSelector";
 import { useCongregations } from "@/hooks/useCongregations";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Member } from "@/hooks/useMembers";
+import { RegistrationQrCode } from "@/components/shared/RegistrationQrCode";
 
 const statusConfig = {
   visitante: { label: "Visitante", color: "bg-muted text-muted-foreground" },
