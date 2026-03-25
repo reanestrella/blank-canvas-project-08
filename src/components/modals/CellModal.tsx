@@ -148,6 +148,26 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
               )}
             />
 
+            {/* Cover Image Upload */}
+            <div className="space-y-2">
+              <FormLabel>Imagem de Capa</FormLabel>
+              <div className="flex items-center gap-4">
+                {coverPreview ? (
+                  <img src={coverPreview} alt="Capa" className="w-24 h-16 object-cover rounded-md border" />
+                ) : (
+                  <div className="w-24 h-16 rounded-md border border-dashed flex items-center justify-center bg-muted">
+                    <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                )}
+                <label className="cursor-pointer">
+                  <Button type="button" variant="outline" size="sm" asChild>
+                    <span><Upload className="w-4 h-4 mr-1" /> Upload</span>
+                  </Button>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+                </label>
+              </div>
+            </div>
+
             <FormField
               control={form.control}
               name="network"
