@@ -178,10 +178,10 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
               <FormLabel>Imagem de Capa</FormLabel>
               <div className="flex items-center gap-4">
                 {coverPreview ? (
-                  <img src={coverPreview} alt="Capa" className="w-24 h-16 object-cover rounded-md border" />
+                  <img src={coverPreview} alt="Capa" className="w-16 h-12 object-cover rounded border" />
                 ) : (
-                  <div className="w-24 h-16 rounded-md border border-dashed flex items-center justify-center bg-muted">
-                    <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                  <div className="w-16 h-12 rounded border border-dashed flex items-center justify-center bg-muted">
+                    <ImageIcon className="w-4 h-4 text-muted-foreground" />
                   </div>
                 )}
                 <label className="cursor-pointer">
