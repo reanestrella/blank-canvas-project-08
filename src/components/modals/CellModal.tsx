@@ -27,7 +27,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, ImageIcon } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import type { Cell, CreateCellData } from "@/hooks/useCells";
 import type { Member } from "@/hooks/useMembers";
 
