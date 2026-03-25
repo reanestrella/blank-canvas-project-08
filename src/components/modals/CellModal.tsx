@@ -55,6 +55,25 @@ interface CellModalProps {
 
 export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [coverPreview, setCoverPreview] = useState<string | null>(cell?.cover_image_url || null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+
+  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCoverFile(file);
+    setCoverPreview(URL.createObjectURL(file));
+  };
+
+  const uploadCover = async (): Promise<string | undefined> => {
+    if (!coverFile) return cell?.cover_image_url || undefined;
+    const ext = coverFile.name.split(".").pop();
+    const path = `${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("cell-covers").upload(path, coverFile, { upsert: true });
+    if (error) { console.error("Cover upload error:", error); return undefined; }
+    const { data: urlData } = supabase.storage.from("cell-covers").getPublicUrl(path);
+    return urlData.publicUrl;
+  };
   
   const form = useForm<CellFormData>({
     resolver: zodResolver(cellSchema),
