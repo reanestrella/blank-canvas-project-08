@@ -1257,7 +1257,7 @@ export default function GestaoApp() {
             <ModulosSection churchId={churchId} />
           </TabsContent>
           <TabsContent value="cadastros" className="mt-6 space-y-6">
-            <RegistrationQrCode />
+            <RegistrationQrCode churchId={churchId} />
             <RegistrationApproval churchId={churchId} />
           </TabsContent>
           <TabsContent value="devocionais" className="mt-6">
