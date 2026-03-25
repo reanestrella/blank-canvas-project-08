@@ -94,16 +94,25 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
   const form = useForm<CellFormData>({
     resolver: zodResolver(cellSchema),
     defaultValues: {
-      name: cell?.name || "",
-      leader_id: cell?.leader_id || "",
-      supervisor_id: cell?.supervisor_id || "",
-      network: cell?.network || "",
-      address: cell?.address || "",
-      day_of_week: cell?.day_of_week || "",
-      time: cell?.time || "",
-      maps_link: cell?.maps_link || "",
+      name: "",
+      leader_id: "",
+      supervisor_id: "",
+      network: "",
+      address: "",
+      day_of_week: "",
+      time: "",
+      maps_link: "",
     },
   });
+
+  // Reset form whenever modal opens or cell changes
+  useState(() => { resetForCell(); });
+  // Also reset when `open` transitions to true
+  const [prevOpen, setPrevOpen] = useState(false);
+  if (open && !prevOpen) {
+    resetForCell();
+  }
+  if (open !== prevOpen) setPrevOpen(open);
 
   const handleSubmit = async (data: CellFormData) => {
     setIsSubmitting(true);
