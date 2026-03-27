@@ -39,6 +39,7 @@ import { useCongregations } from "@/hooks/useCongregations";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Member } from "@/hooks/useMembers";
 import { RegistrationQrCode } from "@/components/shared/RegistrationQrCode";
+import { PendingUsersTab } from "@/components/secretaria/PendingUsersTab";
 
 const statusConfig = {
   visitante: { label: "Visitante", color: "bg-muted text-muted-foreground" },
@@ -445,6 +446,10 @@ export default function Secretaria() {
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="pendentes" className="mt-4">
+            {churchId && <PendingUsersTab churchId={churchId} />}
           </TabsContent>
         </Tabs>
       </div>

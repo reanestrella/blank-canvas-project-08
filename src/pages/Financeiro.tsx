@@ -267,10 +267,12 @@ export default function Financeiro() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="flex-wrap h-auto gap-1">
+           <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="transactions">Movimentações</TabsTrigger>
             <TabsTrigger value="extrato">Extrato</TabsTrigger>
+            <TabsTrigger value="charts">Gráficos</TabsTrigger>
+            <TabsTrigger value="summary">Resumo</TabsTrigger>
             <TabsTrigger value="tithers">Dizimistas</TabsTrigger>
             <TabsTrigger value="accounts">Contas</TabsTrigger>
             <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
