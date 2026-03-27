@@ -289,6 +289,58 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
               />
             </div>
 
+            {/* Vice-leaders */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="vice_leader_1_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Vice-líder 1</FormLabel>
+                    <Select 
+                      onValueChange={(val) => field.onChange(val === "_none" ? "" : val)} 
+                      value={field.value || "_none"}
+                    >
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="_none">Nenhum</SelectItem>
+                        {members.map((member) => (
+                          <SelectItem key={member.id} value={member.id}>{member.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="vice_leader_2_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Vice-líder 2</FormLabel>
+                    <Select 
+                      onValueChange={(val) => field.onChange(val === "_none" ? "" : val)} 
+                      value={field.value || "_none"}
+                    >
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="_none">Nenhum</SelectItem>
+                        {members.map((member) => (
+                          <SelectItem key={member.id} value={member.id}>{member.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="address"
