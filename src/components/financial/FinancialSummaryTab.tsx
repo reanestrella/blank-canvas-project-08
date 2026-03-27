@@ -22,7 +22,7 @@ export function FinancialSummaryTab({ transactions, categories }: FinancialSumma
       if (tx.type === "receita") {
         if (catLower.includes("dízimo") || catLower.includes("dizimo")) dizimos += amount;
         else if (catLower.includes("oferta")) ofertas += amount;
-        else if (tx.campaign_id) campanhas += amount;
+        else if (catLower.includes("campanha")) campanhas += amount;
         else outrasReceitas += amount;
       } else {
         totalDespesas += amount;
