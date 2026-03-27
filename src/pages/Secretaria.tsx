@@ -283,11 +283,12 @@ export default function Secretaria() {
 
         {/* Tabs by Person Type */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
+          <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="todos">Todos ({stats.total})</TabsTrigger>
             <TabsTrigger value="membros">Membros ({stats.membros})</TabsTrigger>
             <TabsTrigger value="decididos">Decididos ({stats.decididos})</TabsTrigger>
             <TabsTrigger value="visitantes">Visitantes ({stats.visitantes})</TabsTrigger>
+            <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-4">
