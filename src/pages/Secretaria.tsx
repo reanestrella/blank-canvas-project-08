@@ -39,6 +39,7 @@ import { useCongregations } from "@/hooks/useCongregations";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Member } from "@/hooks/useMembers";
 import { RegistrationQrCode } from "@/components/shared/RegistrationQrCode";
+import { PendingUsersTab } from "@/components/secretaria/PendingUsersTab";
 
 const statusConfig = {
   visitante: { label: "Visitante", color: "bg-muted text-muted-foreground" },
@@ -283,11 +284,12 @@ export default function Secretaria() {
 
         {/* Tabs by Person Type */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
+          <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="todos">Todos ({stats.total})</TabsTrigger>
             <TabsTrigger value="membros">Membros ({stats.membros})</TabsTrigger>
             <TabsTrigger value="decididos">Decididos ({stats.decididos})</TabsTrigger>
             <TabsTrigger value="visitantes">Visitantes ({stats.visitantes})</TabsTrigger>
+            <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-4">
@@ -444,6 +446,10 @@ export default function Secretaria() {
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="pendentes" className="mt-4">
+            {churchId && <PendingUsersTab churchId={churchId} />}
           </TabsContent>
         </Tabs>
       </div>

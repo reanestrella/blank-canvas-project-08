@@ -696,6 +696,8 @@ export type Database = {
           supervisor_user_id: string | null
           time: string | null
           updated_at: string
+          vice_leader_1_id: string | null
+          vice_leader_2_id: string | null
         }
         Insert: {
           address?: string | null
@@ -714,6 +716,8 @@ export type Database = {
           supervisor_user_id?: string | null
           time?: string | null
           updated_at?: string
+          vice_leader_1_id?: string | null
+          vice_leader_2_id?: string | null
         }
         Update: {
           address?: string | null
@@ -732,6 +736,8 @@ export type Database = {
           supervisor_user_id?: string | null
           time?: string | null
           updated_at?: string
+          vice_leader_1_id?: string | null
+          vice_leader_2_id?: string | null
         }
         Relationships: [
           {
@@ -758,6 +764,20 @@ export type Database = {
           {
             foreignKeyName: "cells_supervisor_fk"
             columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cells_vice_leader_1_id_fkey"
+            columns: ["vice_leader_1_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cells_vice_leader_2_id_fkey"
+            columns: ["vice_leader_2_id"]
             isOneToOne: false
             referencedRelation: "members"
             referencedColumns: ["id"]
@@ -1044,6 +1064,7 @@ export type Database = {
           contact_date: string | null
           created_at: string | null
           created_by: string | null
+          decision_date: string | null
           first_visit_date: string | null
           id: string
           last_visit_date: string | null
@@ -1060,6 +1081,7 @@ export type Database = {
           contact_date?: string | null
           created_at?: string | null
           created_by?: string | null
+          decision_date?: string | null
           first_visit_date?: string | null
           id?: string
           last_visit_date?: string | null
@@ -1076,6 +1098,7 @@ export type Database = {
           contact_date?: string | null
           created_at?: string | null
           created_by?: string | null
+          decision_date?: string | null
           first_visit_date?: string | null
           id?: string
           last_visit_date?: string | null
@@ -2752,6 +2775,60 @@ export type Database = {
           {
             foreignKeyName: "pastoral_visits_visitor_id_fkey"
             columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pending_users: {
+        Row: {
+          birth_date: string | null
+          church_id: string
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          linked_member_id: string | null
+          phone: string | null
+          status: string
+          tipo: string
+        }
+        Insert: {
+          birth_date?: string | null
+          church_id: string
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          linked_member_id?: string | null
+          phone?: string | null
+          status?: string
+          tipo?: string
+        }
+        Update: {
+          birth_date?: string | null
+          church_id?: string
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          linked_member_id?: string | null
+          phone?: string | null
+          status?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_users_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_users_linked_member_id_fkey"
+            columns: ["linked_member_id"]
             isOneToOne: false
             referencedRelation: "members"
             referencedColumns: ["id"]

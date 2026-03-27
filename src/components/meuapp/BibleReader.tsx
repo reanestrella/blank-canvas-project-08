@@ -243,7 +243,7 @@ export function BibleReader() {
       ) : (
         <Card>
           <CardContent className="p-4">
-            <ScrollArea className="max-h-[60vh]">
+            <ScrollArea className="h-[60vh]">
               <div className="space-y-2 text-sm leading-relaxed">
                 {verses.map((v) => (
                   <p key={v.number}>

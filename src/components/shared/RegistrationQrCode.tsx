@@ -2,7 +2,6 @@ import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Copy, Download, QrCode, Link2, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,10 +14,11 @@ export function RegistrationQrCode({ compact, churchId }: RegistrationQrCodeProp
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
-  // Build the registration URL with church_id
+  // Use published URL or env var, never preview URL
+  const baseUrl = import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin;
   const registrationUrl = churchId
-    ? `${window.location.origin}/cadastro?church=${churchId}`
-    : `${window.location.origin}/cadastro`;
+    ? `${baseUrl}/cadastro?church=${churchId}`
+    : `${baseUrl}/cadastro`;
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(registrationUrl);
