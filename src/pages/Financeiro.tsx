@@ -28,6 +28,8 @@ import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFi
 import { ExtratoTab } from "@/components/financial/ExtratoTab";
 import { FinancialImportModal } from "@/components/financial/FinancialImportModal";
 import { PatrimonioTab } from "@/components/patrimonio/PatrimonioTab";
+import { FinancialChartsTab } from "@/components/financial/FinancialChartsTab";
+import { FinancialSummaryTab } from "@/components/financial/FinancialSummaryTab";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -446,6 +448,16 @@ export default function Financeiro() {
               month={filterMonth}
               mode={periodMode}
             />
+          </TabsContent>
+
+          {/* Charts Tab */}
+          <TabsContent value="charts" className="mt-6">
+            <FinancialChartsTab transactions={transactions} filterYear={filterYear} />
+          </TabsContent>
+
+          {/* Summary Tab */}
+          <TabsContent value="summary" className="mt-6">
+            <FinancialSummaryTab transactions={filteredTransactions} categories={categories} />
           </TabsContent>
 
           {/* Tithers Tab */}
