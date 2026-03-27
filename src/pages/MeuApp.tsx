@@ -435,7 +435,10 @@ function CellsView({ churchId }: { churchId: string }) {
       {cells.map(c => (
         <Card key={c.id} className="overflow-hidden">
           {c.cover_image_url && (
-            <img src={c.cover_image_url} alt={c.name} className="w-full h-32 object-cover" />
+            <div className="relative w-full aspect-[4/3] overflow-hidden">
+              <img src={c.cover_image_url} alt={c.name} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+            </div>
           )}
           <CardContent className="p-4 flex items-center gap-4">
             {!c.cover_image_url && (
