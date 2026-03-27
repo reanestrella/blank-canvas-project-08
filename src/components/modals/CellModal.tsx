@@ -36,6 +36,8 @@ const cellSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
   leader_id: z.string().optional().or(z.literal("")),
   supervisor_id: z.string().optional().or(z.literal("")),
+  vice_leader_1_id: z.string().optional().or(z.literal("")),
+  vice_leader_2_id: z.string().optional().or(z.literal("")),
   network: z.string().optional().or(z.literal("")),
   address: z.string().max(200).optional().or(z.literal("")),
   day_of_week: z.string().optional().or(z.literal("")),
@@ -66,6 +68,8 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
       name: cell?.name || "",
       leader_id: cell?.leader_id || "",
       supervisor_id: cell?.supervisor_id || "",
+      vice_leader_1_id: (cell as any)?.vice_leader_1_id || "",
+      vice_leader_2_id: (cell as any)?.vice_leader_2_id || "",
       network: cell?.network || "",
       address: cell?.address || "",
       day_of_week: cell?.day_of_week || "",
@@ -97,6 +101,8 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
       name: "",
       leader_id: "",
       supervisor_id: "",
+      vice_leader_1_id: "",
+      vice_leader_2_id: "",
       network: "",
       address: "",
       day_of_week: "",
@@ -118,10 +124,12 @@ export function CellModal({ open, onOpenChange, cell, members, onSubmit }: CellM
     setIsSubmitting(true);
     try {
       const coverUrl = await uploadCover();
-      const cleanedData: CreateCellData = {
+      const cleanedData: any = {
         name: data.name,
         leader_id: data.leader_id || undefined,
         supervisor_id: data.supervisor_id || undefined,
+        vice_leader_1_id: data.vice_leader_1_id || null,
+        vice_leader_2_id: data.vice_leader_2_id || null,
         network: data.network || undefined,
         address: data.address || undefined,
         day_of_week: data.day_of_week || undefined,
