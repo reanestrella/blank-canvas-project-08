@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Check, X, Loader2, UserPlus, Users } from "lucide-react";
+import { Check, X, Loader2, UserPlus, Users, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 interface PendingUser {
   id: string;
@@ -17,12 +19,15 @@ interface PendingUser {
   tipo: string;
   status: string;
   created_at: string;
+  linked_member_id: string | null;
 }
 
 export function PendingUsersTab({ churchId }: { churchId: string }) {
   const [users, setUsers] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
+  const [linkingUser, setLinkingUser] = useState<PendingUser | null>(null);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchPending = async () => {
@@ -41,7 +46,6 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
   const handleApprove = async (pu: PendingUser) => {
     setProcessing(pu.id);
     try {
-      // Create member record
       const { data: newMember, error: memberErr } = await supabase.from("members").insert({
         church_id: churchId,
         full_name: pu.full_name,
@@ -54,12 +58,53 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
 
       if (memberErr) throw memberErr;
 
-      // Update pending_users status
       await supabase.from("pending_users" as any)
         .update({ status: "aprovado", linked_member_id: newMember.id } as any)
         .eq("id", pu.id);
 
       toast({ title: "Cadastro aprovado!", description: `${pu.full_name} adicionado como ${pu.tipo}.` });
+      fetchPending();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleLinkToExisting = async () => {
+    if (!linkingUser || !selectedMemberId) return;
+    setProcessing(linkingUser.id);
+    try {
+      // Update pending_users to link to existing member
+      await supabase.from("pending_users" as any)
+        .update({ status: "aprovado", linked_member_id: selectedMemberId } as any)
+        .eq("id", linkingUser.id);
+
+      // If pending user has email, try to link profile to member
+      if (linkingUser.email) {
+        const { data: authUsers } = await supabase.from("profiles")
+          .select("user_id")
+          .eq("email", linkingUser.email)
+          .limit(1);
+        if (authUsers?.length) {
+          await supabase.from("profiles")
+            .update({ member_id: selectedMemberId } as any)
+            .eq("user_id", authUsers[0].user_id);
+        }
+      }
+
+      // Update existing member with pending user data (merge)
+      const updates: any = {};
+      if (linkingUser.phone) updates.phone = linkingUser.phone;
+      if (linkingUser.birth_date) updates.birth_date = linkingUser.birth_date;
+      if (linkingUser.email) updates.email = linkingUser.email;
+      if (Object.keys(updates).length > 0) {
+        await supabase.from("members").update(updates).eq("id", selectedMemberId);
+      }
+
+      toast({ title: "Vinculado!", description: `${linkingUser.full_name} vinculado ao membro existente.` });
+      setLinkingUser(null);
+      setSelectedMemberId(null);
       fetchPending();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -109,7 +154,7 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
                   <TableHead className="hidden md:table-cell">Email</TableHead>
                   <TableHead className="hidden md:table-cell">Telefone</TableHead>
                   <TableHead className="hidden md:table-cell">Data</TableHead>
-                  <TableHead className="w-[120px]">Ações</TableHead>
+                  <TableHead className="w-[180px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -126,7 +171,10 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button size="sm" variant="default" disabled={processing === pu.id} onClick={() => handleApprove(pu)}>
+                        <Button size="sm" variant="outline" disabled={processing === pu.id} onClick={() => { setLinkingUser(pu); setSelectedMemberId(null); }} title="Vincular a membro existente">
+                          <Link2 className="w-3 h-3" />
+                        </Button>
+                        <Button size="sm" variant="default" disabled={processing === pu.id} onClick={() => handleApprove(pu)} title="Aprovar como novo membro">
                           {processing === pu.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                         </Button>
                         <Button size="sm" variant="destructive" disabled={processing === pu.id} onClick={() => handleReject(pu.id)}>
@@ -177,6 +225,33 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
           </CardContent>
         </Card>
       )}
+
+      {/* Link to existing member modal */}
+      <Dialog open={!!linkingUser} onOpenChange={(open) => !open && setLinkingUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Vincular a Membro Existente</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Vincule <strong>{linkingUser?.full_name}</strong> a um membro já cadastrado. Os dados de contato serão atualizados.
+            </p>
+            <MemberAutocomplete
+              churchId={churchId}
+              value={selectedMemberId || undefined}
+              onChange={setSelectedMemberId}
+              placeholder="Buscar membro existente..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkingUser(null)}>Cancelar</Button>
+            <Button onClick={handleLinkToExisting} disabled={!selectedMemberId || processing === linkingUser?.id}>
+              {processing === linkingUser?.id && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Vincular
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
