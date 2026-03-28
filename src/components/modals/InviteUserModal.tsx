@@ -35,9 +35,10 @@ import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
 const inviteSchema = z.object({
   email: z.string().email("Email inválido"),
   full_name: z.string().optional(),
-  role: z.enum(["tesoureiro", "secretario", "lider_celula", "lider_ministerio", "consolidacao", "membro"]),
+  role: z.enum(["tesoureiro", "secretario", "lider_celula", "vice_lider_celula", "lider_ministerio", "consolidacao", "membro"]),
   congregation_id: z.string().optional(),
   member_id: z.string().optional(),
+  ministry_id: z.string().optional(),
 });
 
 type InviteFormData = z.infer<typeof inviteSchema>;
@@ -46,6 +47,7 @@ const roleLabels: Record<string, string> = {
   tesoureiro: "Tesoureiro(a)",
   secretario: "Secretário(a)",
   lider_celula: "Líder de Célula",
+  vice_lider_celula: "Vice-Líder de Célula",
   lider_ministerio: "Líder de Ministério",
   consolidacao: "Consolidação",
   membro: "Membro",
