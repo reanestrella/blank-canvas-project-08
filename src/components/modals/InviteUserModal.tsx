@@ -295,7 +295,7 @@ export function InviteUserModal({
                   )}
                 />
               )}
-
+              {congregations.length > 1 && (
                 <FormField
                   control={form.control}
                   name="congregation_id"
