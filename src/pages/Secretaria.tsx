@@ -40,6 +40,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Member } from "@/hooks/useMembers";
 import { RegistrationQrCode } from "@/components/shared/RegistrationQrCode";
 import { PendingUsersTab } from "@/components/secretaria/PendingUsersTab";
+import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
 
 const statusConfig = {
   visitante: { label: "Visitante", color: "bg-muted text-muted-foreground" },
@@ -64,6 +65,11 @@ export default function Secretaria() {
   const [deletingMember, setDeletingMember] = useState<Member | null>(null);
   const [activeTab, setActiveTab] = useState("todos");
   const [networkFilter, setNetworkFilter] = useState<string>("all");
+  
+  const now = new Date();
+  const [periodMode, setPeriodMode] = useState<"month" | "year" | "all">("all");
+  const [filterMonth, setFilterMonth] = useState(now.getMonth());
+  const [filterYear, setFilterYear] = useState(now.getFullYear());
   
   const { profile } = useAuth();
   const churchId = profile?.church_id;
