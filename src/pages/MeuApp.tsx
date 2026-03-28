@@ -434,16 +434,14 @@ function CellsView({ churchId }: { churchId: string }) {
       <h3 className="text-lg font-semibold flex items-center gap-2"><Grid3X3 className="w-5 h-5 text-primary" /> Células</h3>
       {cells.map(c => (
         <Card key={c.id} className="overflow-hidden">
-          {c.cover_image_url && (
-            <div className="relative w-full aspect-[4/3] overflow-hidden">
-              <img src={c.cover_image_url} alt={c.name} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-            </div>
-          )}
-          <CardContent className="p-4 flex items-center gap-4">
-            {!c.cover_image_url && (
-              <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center flex-shrink-0">
-                <Grid3X3 className="w-5 h-5 text-secondary" />
+          <CardContent className="p-3 flex items-center gap-3">
+            {c.cover_image_url ? (
+              <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">
+                <img src={c.cover_image_url} alt={c.name} className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="w-14 h-14 rounded-xl bg-secondary/10 flex items-center justify-center flex-shrink-0">
+                <Grid3X3 className="w-6 h-6 text-secondary" />
               </div>
             )}
             <div className="flex-1 min-w-0">
@@ -1123,6 +1121,11 @@ export default function MeuApp() {
               {/* Meu Perfil */}
               <Button variant="outline" className="w-full" onClick={() => setActiveView("profile")}>
                 <User className="w-4 h-4 mr-2" /> Meu Perfil
+              </Button>
+
+              {/* Instalar App */}
+              <Button variant="secondary" className="w-full" onClick={() => navigate("/instalar")}>
+                <Download className="w-4 h-4 mr-2" /> Instalar App
               </Button>
             </>
           )}
