@@ -40,6 +40,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Member } from "@/hooks/useMembers";
 import { RegistrationQrCode } from "@/components/shared/RegistrationQrCode";
 import { PendingUsersTab } from "@/components/secretaria/PendingUsersTab";
+import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
 
 const statusConfig = {
   visitante: { label: "Visitante", color: "bg-muted text-muted-foreground" },
@@ -65,12 +66,17 @@ export default function Secretaria() {
   const [activeTab, setActiveTab] = useState("todos");
   const [networkFilter, setNetworkFilter] = useState<string>("all");
   
+  const now = new Date();
+  const [periodMode, setPeriodMode] = useState<"month" | "year" | "all">("all");
+  const [filterMonth, setFilterMonth] = useState(now.getMonth());
+  const [filterYear, setFilterYear] = useState(now.getFullYear());
+  
   const { profile } = useAuth();
   const churchId = profile?.church_id;
   const { congregations, selectedCongregation, setSelectedCongregation } = useCongregations(churchId || undefined);
   const { members, isLoading, createMember, updateMember, deleteMember, fetchMembers } = useMembers(churchId || undefined);
 
-  // Filter members by tab, search, and network
+  // Filter members by tab, search, network, period, and active status
   const filteredMembers = useMemo(() => {
     return members.filter((member) => {
       // Search filter
@@ -79,6 +85,22 @@ export default function Secretaria() {
         (member.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
         (member.phone?.includes(searchTerm) ?? false);
       
+      // Inactive tab shows only inactive
+      if (activeTab === "inativos") {
+        return matchesSearch && !member.is_active;
+      }
+
+      // All other tabs only show active
+      if (!member.is_active) return false;
+
+      // Period filter
+      let matchesPeriod = true;
+      if (periodMode !== "all") {
+        const d = new Date(member.created_at || "");
+        if (periodMode === "year") matchesPeriod = d.getFullYear() === filterYear;
+        else matchesPeriod = d.getFullYear() === filterYear && d.getMonth() === filterMonth;
+      }
+
       // Tab filter (by spiritual status)
       let matchesTab = true;
       if (activeTab === "membros") {
@@ -99,9 +121,9 @@ export default function Secretaria() {
         member.congregation_id === selectedCongregation ||
         !member.congregation_id;
 
-      return matchesSearch && matchesTab && matchesNetwork && matchesCongregation;
+      return matchesSearch && matchesTab && matchesNetwork && matchesCongregation && matchesPeriod;
     });
-  }, [members, searchTerm, activeTab, networkFilter, selectedCongregation]);
+  }, [members, searchTerm, activeTab, networkFilter, selectedCongregation, periodMode, filterMonth, filterYear]);
 
   // Stats by type
   const stats = useMemo(() => {
@@ -131,7 +153,8 @@ export default function Secretaria() {
       ).length,
       decididos: activeMembers.filter(m => m.spiritual_status === "novo_convertido").length,
       visitantes: activeMembers.filter(m => m.spiritual_status === "visitante").length,
-      batizados: activeMembers.filter(m => m.baptism_date !== null).length,
+      batizados: activeMembers.filter(m => (m as any).is_baptized === true || m.baptism_date !== null).length,
+      inativos: members.filter(m => !m.is_active).length,
       networks: networkCounts,
       withoutNetwork,
     };
@@ -176,6 +199,7 @@ export default function Secretaria() {
           </div>
           <div className="flex items-center gap-2">
             <RegistrationQrCode compact churchId={churchId} />
+            <FinancialFilters mode={periodMode} month={filterMonth} year={filterYear} onModeChange={(m) => setPeriodMode(m)} onMonthChange={setFilterMonth} onYearChange={setFilterYear} />
             <CongregationSelector
               congregations={congregations}
               selectedId={selectedCongregation}
@@ -289,6 +313,7 @@ export default function Secretaria() {
             <TabsTrigger value="membros">Membros ({stats.membros})</TabsTrigger>
             <TabsTrigger value="decididos">Decididos ({stats.decididos})</TabsTrigger>
             <TabsTrigger value="visitantes">Visitantes ({stats.visitantes})</TabsTrigger>
+            <TabsTrigger value="inativos">Inativos ({stats.inativos})</TabsTrigger>
             <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
           </TabsList>
 

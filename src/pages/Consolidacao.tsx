@@ -20,8 +20,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus, Users, UserCheck, UserPlus, Heart, Loader2, MoreHorizontal,
-  Phone, Mail, AlertTriangle, Eye, Droplets, MessageSquare, Clock,
-  CheckCircle2, Send,
+  Phone, Mail, Eye, Droplets, Send, CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConsolidation, ConsolidationRecord } from "@/hooks/useConsolidation";
@@ -29,15 +28,10 @@ import { useMembers } from "@/hooks/useMembers";
 import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
 
-// Status config agora com separação clara:
-// contato_inicial = apenas mensagem enviada (NÃO é consolidação)
-// em_consolidacao = após decisão por Jesus
 const statusConfig: Record<string, { label: string; color: string }> = {
-  contato_inicial: { label: "Contato Inicial", color: "bg-muted text-muted-foreground" },
-  contato: { label: "Contato Inicial", color: "bg-info/20 text-info" },
+  contato: { label: "Contato Realizado", color: "bg-info/20 text-info" },
   acompanhamento: { label: "Em Consolidação", color: "bg-secondary/20 text-secondary" },
-  integracao: { label: "Integração", color: "bg-accent/20 text-accent-foreground" },
-  concluido: { label: "Concluído", color: "bg-success/20 text-success" },
+  concluido: { label: "Consolidado", color: "bg-success/20 text-success" },
   desistente: { label: "Desistente", color: "bg-destructive/20 text-destructive" },
 };
 
@@ -45,9 +39,11 @@ export default function Consolidacao() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [selectedConsolidatorId, setSelectedConsolidatorId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("acompanhamentos");
+  const [activeTab, setActiveTab] = useState("visitantes");
   const [editingRecord, setEditingRecord] = useState<ConsolidationRecord | null>(null);
-  const [editForm, setEditForm] = useState({ consolidator_id: "", notes: "", contact_date: "", first_visit_date: "", cell_integration_date: "" });
+  const [editForm, setEditForm] = useState({ consolidator_id: "", notes: "", contact_date: "", status: "" });
+  const [editingVisitor, setEditingVisitor] = useState<any>(null);
+  const [newVisitorStatus, setNewVisitorStatus] = useState<string>("");
 
   const now = new Date();
   const [periodMode, setPeriodMode] = useState<PeriodMode>("month");
@@ -57,7 +53,7 @@ export default function Consolidacao() {
   const { profile } = useAuth();
   const churchId = profile?.church_id;
   const { records, isLoading, createRecord, updateRecord, updateStatus, deleteRecord } = useConsolidation(churchId || undefined);
-  const { members } = useMembers(churchId || undefined);
+  const { members, updateMember } = useMembers(churchId || undefined);
 
   // Filter records by time period
   const filteredRecords = useMemo(() => {
@@ -69,44 +65,7 @@ export default function Consolidacao() {
     });
   }, [records, periodMode, filterMonth, filterYear]);
 
-  // Separate: contato_inicial/contato = NOT consolidation, acompanhamento+ = consolidation
-  const contatosRealizados = useMemo(() => 
-    filteredRecords.filter(r => r.status === "contato" || (r.status as string) === "contato_inicial").length,
-  [filteredRecords]);
-
-  const emConsolidacao = useMemo(() =>
-    filteredRecords.filter(r => r.status === "acompanhamento").length,
-  [filteredRecords]);
-
-  const filteredStats = useMemo(() => ({
-    total: filteredRecords.length,
-    contatos: contatosRealizados,
-    emConsolidacao,
-    integracao: filteredRecords.filter((r) => r.status === "integracao").length,
-    concluido: filteredRecords.filter((r) => r.status === "concluido").length,
-    desistente: filteredRecords.filter((r) => r.status === "desistente").length,
-  }), [filteredRecords, contatosRealizados, emConsolidacao]);
-
-  // Funnel: Visitantes → Decididos → Consolidados → Batizados
-  const funnelStats = useMemo(() => {
-    const activeMembers = members.filter(m => m.is_active);
-    return {
-      visitantes: activeMembers.filter(m => m.spiritual_status === "visitante").length,
-      decididos: activeMembers.filter(m => m.spiritual_status === "novo_convertido").length,
-      consolidados: filteredStats.concluido,
-      batizados: (() => {
-        if (periodMode === "all") return activeMembers.filter(m => m.baptism_date).length;
-        return activeMembers.filter(m => {
-          if (!m.baptism_date) return false;
-          const bd = new Date(m.baptism_date);
-          if (periodMode === "year") return bd.getFullYear() === filterYear;
-          return bd.getFullYear() === filterYear && bd.getMonth() === filterMonth;
-        }).length;
-      })(),
-    };
-  }, [members, filteredStats, periodMode, filterMonth, filterYear]);
-
-  // Visitors registered in Secretaria (spiritual_status === "visitante")
+  // Visitors = members with spiritual_status "visitante" (tab 1)
   const visitors = useMemo(() => {
     const visitantes = members.filter(m => m.is_active && m.spiritual_status === "visitante");
     if (periodMode === "all") return visitantes;
@@ -117,21 +76,25 @@ export default function Consolidacao() {
     });
   }, [members, periodMode, filterMonth, filterYear]);
 
-  // Calculate follow-up status for each visitor
+  // Em Consolidação = records with status "acompanhamento" (tab 2)
+  const emConsolidacao = useMemo(() =>
+    filteredRecords.filter(r => r.status === "acompanhamento" || r.status === "contato"),
+  [filteredRecords]);
+
+  // Consolidados = records with status "concluido" (tab 3)
+  const consolidados = useMemo(() =>
+    filteredRecords.filter(r => r.status === "concluido"),
+  [filteredRecords]);
+
+  // Check if visitor has a consolidation contact
   const getVisitorFollowUp = (member: typeof members[0]) => {
-    const createdAt = new Date(member.created_at || "");
-    const nowMs = Date.now();
-    const diffDays = Math.floor((nowMs - createdAt.getTime()) / (1000 * 60 * 60 * 24));
     const hasConsolidation = records.some(r => r.member_id === member.id);
-    const steps = {
-      visita: true,
-      mensagem1dia: diffDays >= 1,
-      followUp: hasConsolidation,
-    };
-    return { diffDays, steps, hasConsolidation };
+    const createdAt = new Date(member.created_at || "");
+    const diffDays = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+    return { diffDays, hasConsolidation };
   };
 
-  // Iniciar contato = status "contato" (NÃO é consolidação)
+  // Iniciar contato para visitante
   const handleStartContact = async (memberId: string) => {
     await createRecord({
       member_id: memberId,
@@ -140,7 +103,24 @@ export default function Consolidacao() {
     });
   };
 
-  // Iniciar consolidação = após decisão, status "acompanhamento"
+  // Converter visitante para novo convertido → vai para aba "Em Consolidação"
+  const handleConvertToNewConvert = async (member: any) => {
+    await updateMember(member.id, { spiritual_status: "novo_convertido" } as any);
+    // Also create/update consolidation record with status "acompanhamento"
+    const existingRecord = records.find(r => r.member_id === member.id);
+    if (existingRecord) {
+      await updateStatus(existingRecord.id, "acompanhamento" as any);
+    } else {
+      await createRecord({
+        member_id: member.id,
+        status: "acompanhamento" as any,
+        contact_date: new Date().toISOString().split("T")[0],
+      });
+    }
+    setEditingVisitor(null);
+  };
+
+  // Nova consolidação direta
   const handleStartConsolidation = async () => {
     if (!selectedMemberId) return;
     await createRecord({
@@ -160,8 +140,7 @@ export default function Consolidacao() {
       consolidator_id: record.consolidator_id || "",
       notes: record.notes || "",
       contact_date: record.contact_date || "",
-      first_visit_date: record.first_visit_date || "",
-      cell_integration_date: record.cell_integration_date || "",
+      status: record.status,
     });
   };
 
@@ -172,29 +151,107 @@ export default function Consolidacao() {
       notes: editForm.notes || undefined,
       contact_date: editForm.contact_date || undefined,
     } as any);
+    if (editForm.status !== editingRecord.status) {
+      await updateStatus(editingRecord.id, editForm.status as any);
+    }
     setEditingRecord(null);
-  };
-
-  const handleRegisterReturn = async (record: ConsolidationRecord) => {
-    const currentCount = (record as any).visit_count || 1;
-    const today = new Date().toISOString().split("T")[0];
-    await updateRecord(record.id, {
-      visit_count: currentCount + 1,
-      last_visit_date: today,
-      notes: `${record.notes || ""}\n[${today}] Retorno registrado (visita #${currentCount + 1})`.trim(),
-    } as any);
   };
 
   if (!churchId) return null;
 
+  // Stats
   const funnelSteps = [
-    { label: "Visitantes", value: funnelStats.visitantes, icon: Eye, color: "bg-muted text-muted-foreground" },
-    { label: "Contatos", value: contatosRealizados, icon: Send, color: "bg-info/20 text-info" },
-    { label: "Decididos", value: funnelStats.decididos, icon: Heart, color: "bg-success/20 text-success" },
-    { label: "Em Consolidação", value: emConsolidacao, icon: UserCheck, color: "bg-secondary/20 text-secondary" },
-    { label: "Consolidados", value: filteredStats.concluido, icon: UserCheck, color: "bg-primary/20 text-primary" },
-    { label: "Batizados", value: funnelStats.batizados, icon: Droplets, color: "bg-info/20 text-info" },
+    { label: "Visitantes", value: visitors.length, icon: Eye, color: "bg-muted text-muted-foreground" },
+    { label: "Em Consolidação", value: emConsolidacao.length, icon: UserCheck, color: "bg-secondary/20 text-secondary" },
+    { label: "Consolidados", value: consolidados.length, icon: Heart, color: "bg-success/20 text-success" },
+    { label: "Batizados", value: members.filter(m => m.is_active && (m as any).is_baptized).length, icon: Droplets, color: "bg-info/20 text-info" },
   ];
+
+  const renderRecordsTable = (recs: ConsolidationRecord[], showActions: boolean = true) => (
+    <Card>
+      <CardContent className="p-0">
+        {recs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 text-center">
+            <Users className="w-12 h-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium">Nenhum registro</h3>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Pessoa</TableHead>
+                <TableHead className="hidden md:table-cell">Contato</TableHead>
+                <TableHead className="hidden md:table-cell">Consolidador</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="hidden md:table-cell">Data</TableHead>
+                {showActions && <TableHead className="w-[50px]"></TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recs.map((record) => {
+                const cfg = statusConfig[record.status] || { label: record.status, color: "" };
+                return (
+                  <TableRow key={record.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="w-8 h-8">
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                            {record.member?.full_name?.split(" ").map((n) => n[0]).join("").slice(0, 2) || "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{record.member?.full_name || "—"}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <div className="flex flex-col gap-1">
+                        {record.member?.phone && <span className="text-xs flex items-center gap-1"><Phone className="w-3 h-3" />{record.member.phone}</span>}
+                        {record.member?.email && <span className="text-xs flex items-center gap-1"><Mail className="w-3 h-3" />{record.member.email}</span>}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm">
+                      {record.consolidator?.full_name || "—"}
+                    </TableCell>
+                    <TableCell><Badge className={cfg.color}>{cfg.label}</Badge></TableCell>
+                    <TableCell className="hidden md:table-cell text-sm">
+                      {record.contact_date ? new Date(record.contact_date + "T12:00:00").toLocaleDateString("pt-BR") : "—"}
+                    </TableCell>
+                    {showActions && (
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditRecord(record)}>Editar</DropdownMenuItem>
+                            {record.status === "acompanhamento" && (
+                              <DropdownMenuItem onClick={() => updateStatus(record.id, "concluido" as any)}>
+                                ✅ Marcar como Consolidado
+                              </DropdownMenuItem>
+                            )}
+                            {record.status === "contato" && (
+                              <DropdownMenuItem onClick={() => updateStatus(record.id, "acompanhamento" as any)}>
+                                Mover para Consolidação
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={() => updateStatus(record.id, "desistente" as any)}>
+                              Marcar Desistente
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => deleteRecord(record.id)}>
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
 
   return (
     <AppLayout>
@@ -203,32 +260,19 @@ export default function Consolidacao() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">Central de Consolidação</h1>
-            <p className="text-muted-foreground">
-              Acompanhamento de novos convertidos e visitantes
-            </p>
+            <p className="text-muted-foreground">Acompanhamento de visitantes e novos convertidos</p>
           </div>
-          <div className="flex items-center gap-2">
-            <FinancialFilters
-              mode={periodMode}
-              month={filterMonth}
-              year={filterYear}
-              onModeChange={setPeriodMode}
-              onMonthChange={setFilterMonth}
-              onYearChange={setFilterYear}
-            />
-          </div>
+          <FinancialFilters mode={periodMode} month={filterMonth} year={filterYear} onModeChange={setPeriodMode} onMonthChange={setFilterMonth} onYearChange={setFilterYear} />
         </div>
 
-        {/* Funnel - 6 items */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+        {/* Funnel */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {funnelSteps.map((step) => {
             const Icon = step.icon;
             return (
               <Card key={step.label}>
                 <CardContent className="p-4 text-center">
-                  <div className={`inline-flex p-2 rounded-lg mb-2 ${step.color}`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
+                  <div className={`inline-flex p-2 rounded-lg mb-2 ${step.color}`}><Icon className="w-5 h-5" /></div>
                   <p className="text-2xl font-bold">{step.value}</p>
                   <p className="text-xs text-muted-foreground">{step.label}</p>
                 </CardContent>
@@ -237,182 +281,15 @@ export default function Consolidacao() {
           })}
         </div>
 
-        {/* Tabs */}
+        {/* Tabs: 3 abas */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="acompanhamentos">
-              Acompanhamentos ({filteredStats.total})
-            </TabsTrigger>
-            <TabsTrigger value="visitantes">
-              Visitantes ({visitors.length})
-            </TabsTrigger>
+            <TabsTrigger value="visitantes">Visitantes ({visitors.length})</TabsTrigger>
+            <TabsTrigger value="consolidacao">Em Consolidação ({emConsolidacao.length})</TabsTrigger>
+            <TabsTrigger value="consolidados">Consolidados ({consolidados.length})</TabsTrigger>
           </TabsList>
 
-          {/* Acompanhamentos Tab */}
-          <TabsContent value="acompanhamentos" className="space-y-4">
-            {/* Add button */}
-            <div className="flex justify-end">
-              <Button onClick={() => setShowAddForm(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Nova Consolidação (após decisão)
-              </Button>
-            </div>
-
-            {/* Add Form */}
-            {showAddForm && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Nova Consolidação</CardTitle>
-                  <p className="text-xs text-muted-foreground">⚠️ Só inicie consolidação após decisão por Jesus (novo convertido)</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Novo Convertido *</label>
-                      <MemberAutocomplete
-                        churchId={churchId}
-                        value={selectedMemberId || undefined}
-                        onChange={setSelectedMemberId}
-                        placeholder="Selecione a pessoa..."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Consolidador</label>
-                      <MemberAutocomplete
-                        churchId={churchId}
-                        value={selectedConsolidatorId || undefined}
-                        onChange={setSelectedConsolidatorId}
-                        placeholder="Quem vai acompanhar..."
-                      />
-                    </div>
-                    <div className="flex items-end gap-2">
-                      <Button onClick={handleStartConsolidation} disabled={!selectedMemberId}>
-                        <UserPlus className="w-4 h-4 mr-2" />
-                        Iniciar Consolidação
-                      </Button>
-                      <Button variant="outline" onClick={() => setShowAddForm(false)}>
-                        Cancelar
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Records Table */}
-            <Card>
-              <CardContent className="p-0">
-                {isLoading ? (
-                  <div className="flex items-center justify-center p-8">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                  </div>
-                ) : filteredRecords.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center p-12 text-center">
-                    <Users className="w-12 h-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium">Nenhum registro neste período</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Inicie o acompanhamento de novos convertidos.
-                    </p>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Pessoa</TableHead>
-                        <TableHead className="hidden md:table-cell">Contato</TableHead>
-                        <TableHead className="hidden md:table-cell">Consolidador</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="hidden md:table-cell">Data Contato</TableHead>
-                        <TableHead className="hidden md:table-cell">Visitas</TableHead>
-                        <TableHead className="w-[50px]"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredRecords.map((record) => {
-                        const cfg = statusConfig[record.status] || { label: record.status, color: "" };
-                        return (
-                          <TableRow key={record.id}>
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <Avatar className="w-8 h-8">
-                                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                                    {record.member?.full_name?.split(" ").map((n) => n[0]).join("").slice(0, 2) || "?"}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="font-medium">{record.member?.full_name || "—"}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              <div className="flex flex-col gap-1">
-                                {record.member?.phone && (
-                                  <span className="text-xs flex items-center gap-1"><Phone className="w-3 h-3" />{record.member.phone}</span>
-                                )}
-                                {record.member?.email && (
-                                  <span className="text-xs flex items-center gap-1"><Mail className="w-3 h-3" />{record.member.email}</span>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell text-sm">
-                              {record.consolidator?.full_name || "—"}
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={cfg.color}>{cfg.label}</Badge>
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell text-sm">
-                              {record.contact_date ? new Date(record.contact_date + "T12:00:00").toLocaleDateString("pt-BR") : "—"}
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell text-sm">
-                              {(record as any).visit_count || 1}
-                            </TableCell>
-                            <TableCell>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreHorizontal className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  {(record.status === "contato" || (record.status as string) === "contato_inicial") && (
-                                    <DropdownMenuItem onClick={() => updateStatus(record.id, "acompanhamento" as any)}>
-                                      ✅ Iniciar Consolidação (decisão)
-                                    </DropdownMenuItem>
-                                  )}
-                                  {record.status === "acompanhamento" && (
-                                    <DropdownMenuItem onClick={() => updateStatus(record.id, "integracao" as any)}>
-                                      Promover para Integração
-                                    </DropdownMenuItem>
-                                  )}
-                                  {record.status === "integracao" && (
-                                    <DropdownMenuItem onClick={() => updateStatus(record.id, "concluido" as any)}>
-                                      Marcar como Concluído
-                                    </DropdownMenuItem>
-                                  )}
-                                  <DropdownMenuItem onClick={() => handleRegisterReturn(record)}>
-                                    🔄 Registrar Retorno
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleEditRecord(record)}>
-                                    Editar
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => updateStatus(record.id, "desistente" as any)}>
-                                    Marcar Desistente
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem className="text-destructive" onClick={() => deleteRecord(record.id)}>
-                                    Excluir
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Visitantes Tab */}
+          {/* Tab 1: Visitantes */}
           <TabsContent value="visitantes" className="space-y-4">
             <Card>
               <CardContent className="p-0">
@@ -428,12 +305,12 @@ export default function Consolidacao() {
                         <TableHead>Visitante</TableHead>
                         <TableHead className="hidden md:table-cell">Contato</TableHead>
                         <TableHead>Acompanhamento</TableHead>
-                        <TableHead className="w-[150px]">Ação</TableHead>
+                        <TableHead className="w-[200px]">Ação</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {visitors.map((visitor) => {
-                        const { diffDays, steps, hasConsolidation } = getVisitorFollowUp(visitor);
+                        const { diffDays, hasConsolidation } = getVisitorFollowUp(visitor);
                         return (
                           <TableRow key={visitor.id}>
                             <TableCell>
@@ -457,7 +334,7 @@ export default function Consolidacao() {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1">
-                                <Badge variant={steps.visita ? "default" : "outline"} className="text-[10px] py-0 h-4">Visita</Badge>
+                                <Badge variant="default" className="text-[10px] py-0 h-4">Visita</Badge>
                                 {hasConsolidation && <Badge variant="default" className="text-[10px] py-0 h-4 bg-info/80">Contatado</Badge>}
                               </div>
                             </TableCell>
@@ -465,14 +342,12 @@ export default function Consolidacao() {
                               <div className="flex gap-1">
                                 {!hasConsolidation && (
                                   <Button size="sm" variant="outline" onClick={() => handleStartContact(visitor.id)}>
-                                    <Send className="w-3 h-3 mr-1" /> Iniciar Contato
+                                    <Send className="w-3 h-3 mr-1" /> Contato
                                   </Button>
                                 )}
-                                {hasConsolidation && (
-                                  <Badge variant="secondary" className="text-[10px]">
-                                    <CheckCircle2 className="w-3 h-3 mr-1" /> Contato realizado
-                                  </Badge>
-                                )}
+                                <Button size="sm" variant="default" onClick={() => { setEditingVisitor(visitor); setNewVisitorStatus("novo_convertido"); }}>
+                                  <Heart className="w-3 h-3 mr-1" /> Novo Convertido
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -484,23 +359,69 @@ export default function Consolidacao() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Tab 2: Em Consolidação */}
+          <TabsContent value="consolidacao" className="space-y-4">
+            <div className="flex justify-end">
+              <Button onClick={() => setShowAddForm(true)}>
+                <Plus className="w-4 h-4 mr-2" /> Nova Consolidação
+              </Button>
+            </div>
+
+            {showAddForm && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Nova Consolidação</CardTitle>
+                  <p className="text-xs text-muted-foreground">Adicione um novo convertido ao acompanhamento</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Pessoa *</label>
+                      <MemberAutocomplete churchId={churchId} value={selectedMemberId || undefined} onChange={setSelectedMemberId} placeholder="Selecione..." />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Consolidador</label>
+                      <MemberAutocomplete churchId={churchId} value={selectedConsolidatorId || undefined} onChange={setSelectedConsolidatorId} placeholder="Quem vai acompanhar..." />
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <Button onClick={handleStartConsolidation} disabled={!selectedMemberId}><UserPlus className="w-4 h-4 mr-2" /> Iniciar</Button>
+                      <Button variant="outline" onClick={() => setShowAddForm(false)}>Cancelar</Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {renderRecordsTable(emConsolidacao)}
+          </TabsContent>
+
+          {/* Tab 3: Consolidados */}
+          <TabsContent value="consolidados" className="space-y-4">
+            {renderRecordsTable(consolidados, false)}
+          </TabsContent>
         </Tabs>
 
-        {/* Edit Modal */}
+        {/* Edit Record Modal */}
         <Dialog open={!!editingRecord} onOpenChange={(open) => !open && setEditingRecord(null)}>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Editar Acompanhamento</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Editar Acompanhamento</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={editForm.status} onValueChange={(v) => setEditForm(f => ({ ...f, status: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="contato">Contato Realizado</SelectItem>
+                    <SelectItem value="acompanhamento">Em Consolidação</SelectItem>
+                    <SelectItem value="concluido">Consolidado</SelectItem>
+                    <SelectItem value="desistente">Desistente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label>Consolidador</Label>
-                <MemberAutocomplete
-                  churchId={churchId}
-                  value={editForm.consolidator_id || undefined}
-                  onChange={(id) => setEditForm(f => ({ ...f, consolidator_id: id || "" }))}
-                  placeholder="Selecione..."
-                />
+                <MemberAutocomplete churchId={churchId} value={editForm.consolidator_id || undefined} onChange={(id) => setEditForm(f => ({ ...f, consolidator_id: id || "" }))} placeholder="Selecione..." />
               </div>
               <div className="space-y-2">
                 <Label>Data do Contato</Label>
@@ -514,6 +435,22 @@ export default function Consolidacao() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditingRecord(null)}>Cancelar</Button>
               <Button onClick={handleSaveEdit}>Salvar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Convert visitor to new convert */}
+        <Dialog open={!!editingVisitor} onOpenChange={(open) => !open && setEditingVisitor(null)}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Converter para Novo Convertido</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              Ao confirmar, <strong>{editingVisitor?.full_name}</strong> será marcado como novo convertido e movido para a aba "Em Consolidação".
+            </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingVisitor(null)}>Cancelar</Button>
+              <Button onClick={() => handleConvertToNewConvert(editingVisitor)}>
+                <Heart className="w-4 h-4 mr-2" /> Confirmar Decisão
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

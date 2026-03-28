@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -35,9 +36,10 @@ import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
 const inviteSchema = z.object({
   email: z.string().email("Email inválido"),
   full_name: z.string().optional(),
-  role: z.enum(["tesoureiro", "secretario", "lider_celula", "lider_ministerio", "consolidacao", "membro"]),
+  role: z.enum(["tesoureiro", "secretario", "lider_celula", "vice_lider_celula", "lider_ministerio", "consolidacao", "membro"]),
   congregation_id: z.string().optional(),
   member_id: z.string().optional(),
+  ministry_id: z.string().optional(),
 });
 
 type InviteFormData = z.infer<typeof inviteSchema>;
@@ -46,6 +48,7 @@ const roleLabels: Record<string, string> = {
   tesoureiro: "Tesoureiro(a)",
   secretario: "Secretário(a)",
   lider_celula: "Líder de Célula",
+  vice_lider_celula: "Vice-Líder de Célula",
   lider_ministerio: "Líder de Ministério",
   consolidacao: "Consolidação",
   membro: "Membro",
@@ -77,6 +80,14 @@ export function InviteUserModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [ministries, setMinistries] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    if (open && churchId) {
+      supabase.from("ministries").select("id, name").eq("church_id", churchId).eq("is_active", true).order("name")
+        .then(({ data }) => setMinistries((data as any[]) || []));
+    }
+  }, [open, churchId]);
   
   const form = useForm<InviteFormData>({
     resolver: zodResolver(inviteSchema),
@@ -90,14 +101,15 @@ export function InviteUserModal({
   });
 
   const selectedRole = form.watch("role");
-  const needsMemberLink = selectedRole === "lider_celula" || selectedRole === "lider_ministerio";
+  const needsMemberLink = selectedRole === "lider_celula" || selectedRole === "vice_lider_celula" || selectedRole === "lider_ministerio";
 
   const handleSubmit = async (data: InviteFormData) => {
     setIsSubmitting(true);
     try {
       const submitData: CreateInvitationData = {
         email: data.email,
-        role: data.role,
+        // vice_lider_celula maps to lider_celula role (same permissions)
+        role: data.role === "vice_lider_celula" ? "lider_celula" : data.role,
       };
       
       // Add optional fields
@@ -260,6 +272,29 @@ export function InviteUserModal({
                 />
               )}
 
+              {selectedRole === "lider_ministerio" && ministries.length > 0 && (
+                <FormField
+                  control={form.control}
+                  name="ministry_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ministério *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger><SelectValue placeholder="Selecione o ministério" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {ministries.map((m) => (
+                            <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>O líder terá acesso apenas a este ministério.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               {congregations.length > 1 && (
                 <FormField
                   control={form.control}

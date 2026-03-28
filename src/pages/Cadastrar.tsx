@@ -18,10 +18,12 @@ import { useToast } from "@/hooks/use-toast";
 
 const cadastroSchema = z.object({
   fullName: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
-  email: z.string().email("Email inválido").optional().or(z.literal("")),
+  email: z.string().email("Email inválido"),
+  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
   phone: z.string().optional().or(z.literal("")),
   birthDate: z.string().optional().or(z.literal("")),
   tipo: z.enum(["visitante", "membro"]),
+  isBaptized: z.enum(["sim", "nao"]),
 });
 
 type CadastroFormData = z.infer<typeof cadastroSchema>;
@@ -37,7 +39,7 @@ export default function Cadastrar() {
 
   const form = useForm<CadastroFormData>({
     resolver: zodResolver(cadastroSchema),
-    defaultValues: { fullName: "", email: "", phone: "", birthDate: "", tipo: "visitante" },
+    defaultValues: { fullName: "", email: "", password: "", phone: "", birthDate: "", tipo: "visitante", isBaptized: "nao" },
   });
 
   const handleSubmit = async (data: CadastroFormData) => {
@@ -48,18 +50,47 @@ export default function Cadastrar() {
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      const { error } = await supabase.from("pending_users" as any).insert({
+      // 1. Create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            full_name: data.fullName,
+            church_id: churchId,
+          },
+        },
+      });
+      if (authError) throw authError;
+
+      // 2. Update profile with church_id
+      if (authData.user) {
+        await supabase.from("profiles").update({
+          church_id: churchId,
+          full_name: data.fullName,
+        } as any).eq("user_id", authData.user.id);
+
+        // 3. Assign membro role
+        await supabase.from("user_roles").insert({
+          user_id: authData.user.id,
+          church_id: churchId,
+          role: "membro",
+        } as any).select();
+      }
+
+      // 4. Save to pending_users for admin approval/linking
+      await supabase.from("pending_users" as any).insert({
         full_name: data.fullName,
-        email: data.email || null,
+        email: data.email,
         phone: data.phone || null,
         birth_date: data.birthDate || null,
         church_id: churchId,
         tipo: data.tipo,
         status: "pendente",
       });
-      if (error) throw error;
+
       setSuccess(true);
-      toast({ title: "Cadastro enviado!" });
+      toast({ title: "Cadastro realizado!" });
     } catch (error: any) {
       console.error("[Cadastrar] error:", error);
       setErrorMsg(error.message || "Erro ao enviar cadastro.");
@@ -92,14 +123,14 @@ export default function Cadastrar() {
             <div className="mx-auto w-12 h-12 bg-success/10 rounded-full flex items-center justify-center mb-4">
               <CheckCircle className="w-6 h-6 text-success" />
             </div>
-            <CardTitle>Cadastro Enviado!</CardTitle>
+            <CardTitle>Cadastro Realizado!</CardTitle>
             <CardDescription>
-              Seu cadastro foi enviado com sucesso e está aguardando aprovação. A liderança da igreja irá analisar seus dados.
+              Sua conta foi criada com sucesso. Você já pode fazer login e acessar o app. A liderança da igreja irá finalizar seu vínculo.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Link to="/">
-              <Button variant="ghost">Voltar ao site</Button>
+            <Link to="/login">
+              <Button className="w-full">Ir para o Login</Button>
             </Link>
           </CardContent>
         </Card>
@@ -133,8 +164,16 @@ export default function Cadastrar() {
 
               <FormField control={form.control} name="email" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Email *</FormLabel>
                   <FormControl><Input type="email" placeholder="seu@email.com" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="password" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Senha *</FormLabel>
+                  <FormControl><Input type="password" placeholder="Mínimo 6 caracteres" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -171,9 +210,25 @@ export default function Cadastrar() {
                 </FormItem>
               )} />
 
+              <FormField control={form.control} name="isBaptized" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Batizado? *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="nao">Não</SelectItem>
+                      <SelectItem value="sim">Sim</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Enviar Cadastro
+                Criar Conta
               </Button>
             </form>
           </Form>

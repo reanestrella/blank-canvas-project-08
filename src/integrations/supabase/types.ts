@@ -2139,6 +2139,7 @@ export type Database = {
           id: string
           inactivity_reason: string | null
           is_active: boolean
+          is_baptized: boolean
           last_attendance_date: string | null
           marital_status: string | null
           network: string | null
@@ -2168,6 +2169,7 @@ export type Database = {
           id?: string
           inactivity_reason?: string | null
           is_active?: boolean
+          is_baptized?: boolean
           last_attendance_date?: string | null
           marital_status?: string | null
           network?: string | null
@@ -2197,6 +2199,7 @@ export type Database = {
           id?: string
           inactivity_reason?: string | null
           is_active?: boolean
+          is_baptized?: boolean
           last_attendance_date?: string | null
           marital_status?: string | null
           network?: string | null
