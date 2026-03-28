@@ -10,7 +10,7 @@ import {
   Clock, MapPin, Plus, Loader2, Camera, GraduationCap, Settings,
   List, CalendarDays, Check, X, DollarSign, QrCode, Copy,
   Church, Mic, Video, Newspaper, HandHeart, Grid3X3, Flame,
-  Cake, HeartHandshake, Megaphone, Upload, Book,
+  Cake, HeartHandshake, Megaphone, Upload, Book, Download,
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { useAuth } from "@/contexts/AuthContext";
