@@ -92,14 +92,15 @@ export function InviteUserModal({
   });
 
   const selectedRole = form.watch("role");
-  const needsMemberLink = selectedRole === "lider_celula" || selectedRole === "lider_ministerio";
+  const needsMemberLink = selectedRole === "lider_celula" || selectedRole === "vice_lider_celula" || selectedRole === "lider_ministerio";
 
   const handleSubmit = async (data: InviteFormData) => {
     setIsSubmitting(true);
     try {
       const submitData: CreateInvitationData = {
         email: data.email,
-        role: data.role,
+        // vice_lider_celula maps to lider_celula role (same permissions)
+        role: data.role === "vice_lider_celula" ? "lider_celula" : data.role,
       };
       
       // Add optional fields
