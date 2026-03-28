@@ -80,6 +80,14 @@ export function InviteUserModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [ministries, setMinistries] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    if (open && churchId) {
+      supabase.from("ministries").select("id, name").eq("church_id", churchId).eq("is_active", true).order("name")
+        .then(({ data }) => setMinistries((data as any[]) || []));
+    }
+  }, [open, churchId]);
   
   const form = useForm<InviteFormData>({
     resolver: zodResolver(inviteSchema),
