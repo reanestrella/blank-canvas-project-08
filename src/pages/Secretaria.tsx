@@ -153,7 +153,8 @@ export default function Secretaria() {
       ).length,
       decididos: activeMembers.filter(m => m.spiritual_status === "novo_convertido").length,
       visitantes: activeMembers.filter(m => m.spiritual_status === "visitante").length,
-      batizados: activeMembers.filter(m => m.baptism_date !== null).length,
+      batizados: activeMembers.filter(m => (m as any).is_baptized === true || m.baptism_date !== null).length,
+      inativos: members.filter(m => !m.is_active).length,
       networks: networkCounts,
       withoutNetwork,
     };
@@ -198,6 +199,7 @@ export default function Secretaria() {
           </div>
           <div className="flex items-center gap-2">
             <RegistrationQrCode compact churchId={churchId} />
+            <FinancialFilters mode={periodMode} month={filterMonth} year={filterYear} onModeChange={(m) => setPeriodMode(m)} onMonthChange={setFilterMonth} onYearChange={setFilterYear} />
             <CongregationSelector
               congregations={congregations}
               selectedId={selectedCongregation}
@@ -311,6 +313,7 @@ export default function Secretaria() {
             <TabsTrigger value="membros">Membros ({stats.membros})</TabsTrigger>
             <TabsTrigger value="decididos">Decididos ({stats.decididos})</TabsTrigger>
             <TabsTrigger value="visitantes">Visitantes ({stats.visitantes})</TabsTrigger>
+            <TabsTrigger value="inativos">Inativos ({stats.inativos})</TabsTrigger>
             <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
           </TabsList>
 
