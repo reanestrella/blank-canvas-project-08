@@ -76,7 +76,7 @@ export default function Secretaria() {
   const { congregations, selectedCongregation, setSelectedCongregation } = useCongregations(churchId || undefined);
   const { members, isLoading, createMember, updateMember, deleteMember, fetchMembers } = useMembers(churchId || undefined);
 
-  // Filter members by tab, search, and network
+  // Filter members by tab, search, network, period, and active status
   const filteredMembers = useMemo(() => {
     return members.filter((member) => {
       // Search filter
@@ -85,6 +85,22 @@ export default function Secretaria() {
         (member.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
         (member.phone?.includes(searchTerm) ?? false);
       
+      // Inactive tab shows only inactive
+      if (activeTab === "inativos") {
+        return matchesSearch && !member.is_active;
+      }
+
+      // All other tabs only show active
+      if (!member.is_active) return false;
+
+      // Period filter
+      let matchesPeriod = true;
+      if (periodMode !== "all") {
+        const d = new Date(member.created_at || "");
+        if (periodMode === "year") matchesPeriod = d.getFullYear() === filterYear;
+        else matchesPeriod = d.getFullYear() === filterYear && d.getMonth() === filterMonth;
+      }
+
       // Tab filter (by spiritual status)
       let matchesTab = true;
       if (activeTab === "membros") {
@@ -105,9 +121,9 @@ export default function Secretaria() {
         member.congregation_id === selectedCongregation ||
         !member.congregation_id;
 
-      return matchesSearch && matchesTab && matchesNetwork && matchesCongregation;
+      return matchesSearch && matchesTab && matchesNetwork && matchesCongregation && matchesPeriod;
     });
-  }, [members, searchTerm, activeTab, networkFilter, selectedCongregation]);
+  }, [members, searchTerm, activeTab, networkFilter, selectedCongregation, periodMode, filterMonth, filterYear]);
 
   // Stats by type
   const stats = useMemo(() => {
