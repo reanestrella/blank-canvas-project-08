@@ -272,7 +272,30 @@ export function InviteUserModal({
                 />
               )}
 
-              {congregations.length > 1 && (
+              {selectedRole === "lider_ministerio" && ministries.length > 0 && (
+                <FormField
+                  control={form.control}
+                  name="ministry_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ministério *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger><SelectValue placeholder="Selecione o ministério" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {ministries.map((m) => (
+                            <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>O líder terá acesso apenas a este ministério.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
                 <FormField
                   control={form.control}
                   name="congregation_id"
