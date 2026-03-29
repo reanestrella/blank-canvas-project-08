@@ -78,7 +78,7 @@ export default function Consolidacao() {
 
   // Em Consolidação = records with status "acompanhamento" (tab 2)
   const emConsolidacao = useMemo(() =>
-    filteredRecords.filter(r => r.status === "acompanhamento" || r.status === "contato"),
+    filteredRecords.filter(r => r.status === "acompanhamento"),
   [filteredRecords]);
 
   // Consolidados = records with status "concluido" (tab 3)

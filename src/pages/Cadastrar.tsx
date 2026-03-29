@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -34,6 +34,7 @@ export default function Cadastrar() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const churchId = searchParams.get("church");
 
@@ -89,8 +90,20 @@ export default function Cadastrar() {
         status: "pendente",
       });
 
-      setSuccess(true);
-      toast({ title: "Cadastro realizado!" });
+      // 5. Auto sign-in and redirect to app
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+      
+      if (signInError) {
+        // If auto sign-in fails, show success with login link
+        setSuccess(true);
+        toast({ title: "Cadastro realizado! Faça login para acessar." });
+      } else {
+        toast({ title: "Cadastro realizado! Bem-vindo(a)!" });
+        navigate("/meu-app");
+      }
     } catch (error: any) {
       console.error("[Cadastrar] error:", error);
       setErrorMsg(error.message || "Erro ao enviar cadastro.");
