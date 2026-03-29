@@ -76,10 +76,18 @@ export default function Consolidacao() {
     });
   }, [members, periodMode, filterMonth, filterYear]);
 
-  // Em Consolidação = records with status "acompanhamento" (tab 2)
+  const memberById = useMemo(
+    () => new Map(members.map((member) => [member.id, member])),
+    [members],
+  );
+
+  // Em Consolidação = only new converts with status "acompanhamento" (tab 2)
   const emConsolidacao = useMemo(() =>
-    filteredRecords.filter(r => r.status === "acompanhamento"),
-  [filteredRecords]);
+    filteredRecords.filter((record) => {
+      const member = memberById.get(record.member_id);
+      return record.status === "acompanhamento" && member?.spiritual_status === "novo_convertido";
+    }),
+  [filteredRecords, memberById]);
 
   // Consolidados = records with status "concluido" (tab 3)
   const consolidados = useMemo(() =>
@@ -101,6 +109,7 @@ export default function Consolidacao() {
       status: "contato" as any,
       contact_date: new Date().toISOString().split("T")[0],
     });
+    setActiveTab("visitantes");
   };
 
   // Converter visitante para novo convertido → vai para aba "Em Consolidação"
