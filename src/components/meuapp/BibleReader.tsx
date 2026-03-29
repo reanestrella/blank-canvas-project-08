@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BookOpen, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Loader2, Maximize2, Minimize2, Plus, Minus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 
 const BIBLE_BOOKS = [
   { name: "Gênesis", abbrev: "gn", chapters: 50 },
@@ -91,6 +92,8 @@ export function BibleReader() {
   const [loading, setLoading] = useState(false);
   const [showBooks, setShowBooks] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [fontSize, setFontSize] = useState(16);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const book = BIBLE_BOOKS[selectedBook];
 
@@ -138,13 +141,24 @@ export function BibleReader() {
     }
   };
 
+  const toggleFullscreen = () => {
+    setIsFullscreen(prev => !prev);
+  };
+
   const filteredBooks = searchTerm
     ? BIBLE_BOOKS.filter(b => b.name.toLowerCase().includes(searchTerm.toLowerCase()))
     : BIBLE_BOOKS;
 
   if (showBooks) {
     return (
-      <div className="space-y-4">
+      <div className={`space-y-4 ${isFullscreen ? "fixed inset-0 z-50 bg-background p-4 overflow-y-auto" : ""}`}>
+        {isFullscreen && (
+          <div className="flex justify-end">
+            <Button variant="ghost" size="sm" onClick={toggleFullscreen}>
+              <Minimize2 className="w-4 h-4 mr-1" /> Sair
+            </Button>
+          </div>
+        )}
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-primary" /> Bíblia Sagrada
         </h3>
@@ -198,15 +212,28 @@ export function BibleReader() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
+    <div className={`space-y-4 ${isFullscreen ? "fixed inset-0 z-50 bg-background p-4 flex flex-col" : ""}`}>
+      <div className="flex items-center gap-2 flex-shrink-0">
         <Button variant="ghost" size="sm" onClick={() => setShowBooks(true)}>
           ← Livros
+        </Button>
+        <div className="flex-1" />
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setFontSize(s => Math.max(12, s - 2))}>
+            <Minus className="w-3 h-3" />
+          </Button>
+          <span className="text-xs text-muted-foreground w-8 text-center">{fontSize}</span>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setFontSize(s => Math.min(32, s + 2))}>
+            <Plus className="w-3 h-3" />
+          </Button>
+        </div>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={toggleFullscreen}>
+          {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
         </Button>
       </div>
 
       {/* Book/Chapter selector */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-shrink-0">
         <Select value={selectedBook.toString()} onValueChange={(v) => fetchChapter(parseInt(v), 1)}>
           <SelectTrigger className="flex-1">
             <SelectValue />
@@ -241,13 +268,13 @@ export function BibleReader() {
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
         </div>
       ) : (
-        <Card>
-          <CardContent className="p-4">
-            <ScrollArea className="h-[60vh]">
-              <div className="space-y-2 text-sm leading-relaxed">
+        <Card className={isFullscreen ? "flex-1 overflow-hidden" : ""}>
+          <CardContent className="p-4 h-full">
+            <ScrollArea className={isFullscreen ? "h-full" : "h-[60vh]"}>
+              <div className="space-y-2 leading-relaxed" style={{ fontSize: `${fontSize}px` }}>
                 {verses.map((v) => (
                   <p key={v.number}>
-                    <span className="text-xs font-bold text-primary mr-1">{v.number}</span>
+                    <span className="font-bold text-primary mr-1" style={{ fontSize: `${Math.max(10, fontSize - 4)}px` }}>{v.number}</span>
                     {v.text}
                   </p>
                 ))}
@@ -258,7 +285,7 @@ export function BibleReader() {
       )}
 
       {/* Navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-shrink-0">
         <Button variant="outline" size="sm" disabled={selectedChapter <= 1} onClick={() => goChapter(-1)}>
           <ChevronLeft className="w-4 h-4 mr-1" /> Anterior
         </Button>
