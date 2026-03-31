@@ -40,6 +40,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Member } from "@/hooks/useMembers";
 import { RegistrationQrCode } from "@/components/shared/RegistrationQrCode";
 import { PendingUsersTab } from "@/components/secretaria/PendingUsersTab";
+import { AppUsersTab } from "@/components/secretaria/AppUsersTab";
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
 
 const statusConfig = {
