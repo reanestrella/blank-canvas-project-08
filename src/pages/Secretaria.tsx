@@ -40,6 +40,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Member } from "@/hooks/useMembers";
 import { RegistrationQrCode } from "@/components/shared/RegistrationQrCode";
 import { PendingUsersTab } from "@/components/secretaria/PendingUsersTab";
+import { AppUsersTab } from "@/components/secretaria/AppUsersTab";
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
 
 const statusConfig = {
@@ -187,7 +188,7 @@ export default function Secretaria() {
   };
 
   return (
-    <AppLayout>
+    <AppLayout requireChurch>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -315,6 +316,7 @@ export default function Secretaria() {
             <TabsTrigger value="visitantes">Visitantes ({stats.visitantes})</TabsTrigger>
             <TabsTrigger value="inativos">Inativos ({stats.inativos})</TabsTrigger>
             <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
+            <TabsTrigger value="usuarios">Usuários do App</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-4">
@@ -475,6 +477,10 @@ export default function Secretaria() {
 
           <TabsContent value="pendentes" className="mt-4">
             {churchId && <PendingUsersTab churchId={churchId} />}
+          </TabsContent>
+
+          <TabsContent value="usuarios" className="mt-4">
+            {churchId && <AppUsersTab churchId={churchId} />}
           </TabsContent>
         </Tabs>
       </div>

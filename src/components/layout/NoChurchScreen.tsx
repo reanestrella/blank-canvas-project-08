@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Church, LogOut } from "lucide-react";
+import { Church, LogOut, Smartphone } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -20,12 +20,16 @@ export function NoChurchScreen() {
           <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4">
             <Church className="w-6 h-6 text-muted-foreground" />
           </div>
-          <CardTitle>Conta sem igreja vinculada</CardTitle>
+          <CardTitle>Área administrativa</CardTitle>
           <CardDescription>
-            Sua conta ainda não está associada a nenhuma igreja. Solicite um convite ao administrador da igreja ou crie uma nova igreja.
+            Esta área requer vínculo com uma igreja. Use o "Meu App" para acessar o aplicativo ou solicite um convite ao administrador.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-3">
+          <Button className="w-full" onClick={() => navigate("/meu-app")}>
+            <Smartphone className="w-4 h-4 mr-2" />
+            Ir para Meu App
+          </Button>
           <Button variant="outline" asChild className="w-full">
             <a href="/registro">Criar nova igreja</a>
           </Button>
