@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Heart, Grid3X3, TrendingUp, Eye, Loader2, DollarSign, ChevronDown, ChevronUp, Sparkles, Brain, UserCheck, Droplets } from "lucide-react";
+import { Users, Heart, Grid3X3, TrendingUp, Eye, Loader2, DollarSign, ChevronDown, ChevronUp, Sparkles, Brain, UserCheck, Droplets, Phone, PhoneOff } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { SpiritualFunnel } from "@/components/dashboard/SpiritualFunnel";
@@ -35,8 +35,13 @@ function PastorDashboard() {
     { title: "Membros", value: stats.totalMembers.toString(), change: "Membros ativos", changeType: "positive" as const, icon: Users, iconColor: "bg-primary/10 text-primary" },
     { title: "Decididos", value: stats.totalDecididos.toString(), change: "Novos convertidos", changeType: "positive" as const, icon: Heart, iconColor: "bg-success/10 text-success" },
     { title: "Visitantes", value: stats.totalVisitantes.toString(), change: "Cadastrados", changeType: "neutral" as const, icon: Eye, iconColor: "bg-secondary/10 text-secondary" },
-    { title: "Em Consolidação", value: stats.totalConsolidacao.toString(), change: "Em acompanhamento", changeType: "positive" as const, icon: UserCheck, iconColor: "bg-accent/10 text-accent-foreground" },
+    { title: "Em Consolidação", value: stats.totalConsolidacao.toString(), change: "Novos convertidos em acompanhamento", changeType: "positive" as const, icon: UserCheck, iconColor: "bg-accent/10 text-accent-foreground" },
     { title: "Batizados", value: stats.totalBaptized.toString(), change: "Total batizados", changeType: "positive" as const, icon: Droplets, iconColor: "bg-info/10 text-info" },
+  ];
+
+  const contactCards = [
+    { title: "Contatos Feitos", value: stats.totalContatosFeitos.toString(), change: "Realizados", changeType: "positive" as const, icon: Phone, iconColor: "bg-success/10 text-success" },
+    { title: "Contatos Pendentes", value: stats.totalContatosNaoFeitos.toString(), change: "Não realizados", changeType: "negative" as const, icon: PhoneOff, iconColor: "bg-destructive/10 text-destructive" },
   ];
 
   if (isLoading) {
@@ -59,8 +64,12 @@ function PastorDashboard() {
         ))}
       </div>
 
-
-
+      {/* Contact stats */}
+      <div className="grid grid-cols-2 gap-4">
+        {contactCards.map((stat) => (
+          <StatCard key={stat.title} {...stat} />
+        ))}
+      </div>
 
       {stats.recentAlerts.length > 0 && <AlertsCard alerts={stats.recentAlerts} />}
 
@@ -192,11 +201,9 @@ function MemberDashboard() {
 export default function Dashboard() {
   const { roles, isAdmin, hasRole, hasAnyRole } = useAuth();
 
-  // Only pastor/admin sees the full dashboard
   const isPastor = isAdmin() || hasRole("pastor");
 
   if (!isPastor) {
-    // Redirect non-pastors to their appropriate page
     if (hasRole("tesoureiro")) return <Navigate to="/financeiro" replace />;
     if (hasRole("secretario")) return <Navigate to="/secretaria" replace />;
     if (hasRole("consolidacao")) return <Navigate to="/consolidacao" replace />;
@@ -208,7 +215,7 @@ export default function Dashboard() {
   const dashboardSections = [PastorDashboard];
 
   return (
-    <AppLayout>
+    <AppLayout requireChurch>
       <div className="space-y-6">
         {dashboardSections.length > 1 && (
           <div className="flex items-center gap-2 flex-wrap">

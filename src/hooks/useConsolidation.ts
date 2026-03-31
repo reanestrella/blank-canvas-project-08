@@ -11,6 +11,8 @@ export interface ConsolidationRecord {
   contact_date: string | null;
   first_visit_date: string | null;
   cell_integration_date: string | null;
+  contact_made: boolean;
+  contact_reason: string | null;
   notes: string | null;
   created_by: string | null;
   created_at: string;
@@ -25,6 +27,8 @@ export interface CreateConsolidationData {
   status?: ConsolidationRecord["status"];
   contact_date?: string;
   notes?: string;
+  contact_made?: boolean;
+  contact_reason?: string;
 }
 
 export function useConsolidation(churchId?: string) {
@@ -59,7 +63,7 @@ export function useConsolidation(churchId?: string) {
     try {
       const { data: newRecord, error } = await supabase
         .from("consolidation_records")
-        .insert([{ ...data, church_id: churchId }])
+        .insert([{ ...data, church_id: churchId }] as any)
         .select(`
           *,
           member:members!consolidation_records_member_id_fkey(full_name, phone, email),
@@ -80,7 +84,7 @@ export function useConsolidation(churchId?: string) {
     try {
       const { data: updated, error } = await supabase
         .from("consolidation_records")
-        .update(data)
+        .update(data as any)
         .eq("id", id)
         .select(`
           *,
@@ -99,7 +103,7 @@ export function useConsolidation(churchId?: string) {
   };
 
   const updateStatus = async (id: string, status: ConsolidationRecord["status"]) => {
-    const updates: Partial<ConsolidationRecord> = { status };
+    const updates: any = { status };
     if (status === "integracao") {
       updates.cell_integration_date = new Date().toISOString().split("T")[0];
     }
@@ -123,7 +127,6 @@ export function useConsolidation(churchId?: string) {
     fetchRecords();
   }, [churchId]);
 
-  // Stats
   const stats = {
     total: records.length,
     contato: records.filter((r) => r.status === "contato").length,
@@ -131,6 +134,8 @@ export function useConsolidation(churchId?: string) {
     integracao: records.filter((r) => r.status === "integracao").length,
     concluido: records.filter((r) => r.status === "concluido").length,
     desistente: records.filter((r) => r.status === "desistente").length,
+    contatosFeitos: records.filter((r) => r.contact_made === true).length,
+    contatosNaoFeitos: records.filter((r) => r.contact_made === false).length,
   };
 
   return {

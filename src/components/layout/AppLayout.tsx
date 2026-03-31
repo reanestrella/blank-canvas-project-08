@@ -12,9 +12,11 @@ import { useChurchBranding } from "@/hooks/useChurchBranding";
 
 interface AppLayoutProps {
   children: React.ReactNode;
+  /** If true, the layout will block access when user has no church */
+  requireChurch?: boolean;
 }
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, isLoading, hasNoChurch } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
@@ -32,8 +34,8 @@ export function AppLayout({ children }: AppLayoutProps) {
     return <Navigate to="/login" replace />;
   }
 
-  // Super admin without church can still access — redirect to master panel
-  if (hasNoChurch) {
+  // Only block access for admin-level pages that actually require a church
+  if (hasNoChurch && requireChurch) {
     if (isSuperAdmin) {
       return <Navigate to="/master" replace />;
     }

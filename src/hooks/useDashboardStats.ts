@@ -8,6 +8,8 @@ interface DashboardStats {
   totalVisitantes: number;
   totalBaptized: number;
   totalConsolidacao: number;
+  totalContatosFeitos: number;
+  totalContatosNaoFeitos: number;
   networkStats: {
     homens: number;
     mulheres: number;
@@ -48,22 +50,23 @@ export function useDashboardStats(congregationId?: string | null) {
   const [members, setMembers] = useState<Member[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [consolidationCount, setConsolidationCount] = useState(0);
+  const [contatosFeitos, setContatosFeitos] = useState(0);
+  const [contatosNaoFeitos, setContatosNaoFeitos] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [hasFetched, setHasFetched] = useState(false);
   
   const { currentChurchId } = useAuth();
 
   useEffect(() => {
-    // Keep isLoading=true until we have a valid churchId and fetch completes
     if (!currentChurchId) {
-      // Only clear data if we previously fetched (avoids flash of zeros on first load)
       if (hasFetched) {
         setMembers([]);
         setAlerts([]);
         setConsolidationCount(0);
+        setContatosFeitos(0);
+        setContatosNaoFeitos(0);
         setHasFetched(false);
       }
-      // Don't set isLoading=false here — auth may still be resolving
       return;
     }
 
@@ -72,8 +75,6 @@ export function useDashboardStats(congregationId?: string | null) {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // Fetch ALL members — same table and no is_active filter at query level
-        // so we can filter client-side exactly like Secretaria does (line 106 of Secretaria.tsx)
         let membersQuery = supabase
           .from("members")
           .select("id, full_name, birth_date, wedding_date, spiritual_status, network, gender, congregation_id, photo_url, baptism_date, is_active")
@@ -82,11 +83,10 @@ export function useDashboardStats(congregationId?: string | null) {
           .limit(5000);
         
         if (congregationId) {
-          // Include members assigned to this congregation OR members with no congregation assigned
           membersQuery = membersQuery.or(`congregation_id.eq.${congregationId},congregation_id.is.null`);
         }
         
-        const [membersRes, alertsRes, consolRes] = await Promise.all([
+        const [membersRes, alertsRes, consolRes, contatosFeitosRes, contatosNaoFeitosRes] = await Promise.all([
           membersQuery,
           supabase
             .from("member_alerts")
@@ -95,24 +95,38 @@ export function useDashboardStats(congregationId?: string | null) {
             .eq("is_read", false)
             .order("created_at", { ascending: false })
             .limit(10),
+          // Em Consolidação = status "acompanhamento" (novos convertidos em consolidação)
           supabase
             .from("consolidation_records")
             .select("id", { count: "exact", head: true })
             .eq("church_id", currentChurchId)
-            .in("status", ["contato", "acompanhamento", "integracao"]),
+            .eq("status", "acompanhamento"),
+          // Contatos feitos
+          supabase
+            .from("consolidation_records")
+            .select("id", { count: "exact", head: true })
+            .eq("church_id", currentChurchId)
+            .eq("contact_made", true),
+          // Contatos não feitos
+          supabase
+            .from("consolidation_records")
+            .select("id", { count: "exact", head: true })
+            .eq("church_id", currentChurchId)
+            .eq("contact_made", false)
+            .not("status", "eq", "concluido"),
         ]);
 
         if (cancelled) return;
 
-        // DIAGNOSTIC: Log errors if any
         if (membersRes.error) {
           console.error("[Dashboard] Members query ERROR:", membersRes.error);
         }
 
-        const fetchedMembers = (membersRes.data as Member[]) || [];
-        setMembers(fetchedMembers);
+        setMembers((membersRes.data as Member[]) || []);
         setAlerts((alertsRes.data as Alert[]) || []);
         setConsolidationCount(consolRes.count || 0);
+        setContatosFeitos(contatosFeitosRes.count || 0);
+        setContatosNaoFeitos(contatosNaoFeitosRes.count || 0);
         setHasFetched(true);
 
       } catch (error) {
@@ -137,10 +151,8 @@ export function useDashboardStats(congregationId?: string | null) {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
 
-    // Filter active members EXACTLY like Secretaria does (line 106 of Secretaria.tsx)
     const activeMembers = members.filter(m => m.is_active);
 
-    // Match Secretaria exactly (lines 109-116 of Secretaria.tsx)
     const totalMembers = activeMembers.filter(m => 
       m.spiritual_status === "membro" || m.spiritual_status === "lider" || 
       m.spiritual_status === "discipulador"
@@ -149,7 +161,6 @@ export function useDashboardStats(congregationId?: string | null) {
     const totalVisitantes = activeMembers.filter(m => m.spiritual_status === "visitante").length;
     const totalBaptized = activeMembers.filter(m => m.baptism_date !== null).length;
 
-    // Network stats - count only "membros" (membro/lider/discipulador) to match Secretaria
     const membrosForNetwork = activeMembers.filter(m =>
       m.spiritual_status === "membro" || m.spiritual_status === "lider" || m.spiritual_status === "discipulador"
     );
@@ -160,7 +171,6 @@ export function useDashboardStats(congregationId?: string | null) {
       kids: membrosForNetwork.filter(m => m.network === "kids").length,
     };
 
-    // Birthday calculations
     const birthdaysThisMonth = activeMembers.filter(m => {
       if (!m.birth_date) return false;
       const bd = new Date(m.birth_date + "T12:00:00");
@@ -201,6 +211,8 @@ export function useDashboardStats(congregationId?: string | null) {
       totalVisitantes,
       totalBaptized,
       totalConsolidacao: consolidationCount,
+      totalContatosFeitos: contatosFeitos,
+      totalContatosNaoFeitos: contatosNaoFeitos,
       networkStats,
       birthdaysThisMonth,
       birthdaysThisWeek,
@@ -208,7 +220,7 @@ export function useDashboardStats(congregationId?: string | null) {
       weddingAnniversariesThisWeek,
       recentAlerts: alerts,
     };
-  }, [members, alerts, consolidationCount]);
+  }, [members, alerts, consolidationCount, contatosFeitos, contatosNaoFeitos]);
 
   return {
     stats,

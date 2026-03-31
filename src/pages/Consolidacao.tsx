@@ -20,7 +20,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus, Users, UserCheck, UserPlus, Heart, Loader2, MoreHorizontal,
-  Phone, Mail, Eye, Droplets, Send, CheckCircle2,
+  Phone, Mail, Eye, Droplets, Send, CheckCircle2, PhoneOff,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConsolidation, ConsolidationRecord } from "@/hooks/useConsolidation";
@@ -43,7 +43,10 @@ export default function Consolidacao() {
   const [editingRecord, setEditingRecord] = useState<ConsolidationRecord | null>(null);
   const [editForm, setEditForm] = useState({ consolidator_id: "", notes: "", contact_date: "", status: "" });
   const [editingVisitor, setEditingVisitor] = useState<any>(null);
-  const [newVisitorStatus, setNewVisitorStatus] = useState<string>("");
+  
+  // Contact tracking
+  const [contactModal, setContactModal] = useState<{ memberId: string; type: "feito" | "nao_feito" } | null>(null);
+  const [contactReason, setContactReason] = useState("");
 
   const now = new Date();
   const [periodMode, setPeriodMode] = useState<PeriodMode>("month");
@@ -96,26 +99,64 @@ export default function Consolidacao() {
 
   // Check if visitor has a consolidation contact
   const getVisitorFollowUp = (member: typeof members[0]) => {
-    const hasConsolidation = records.some(r => r.member_id === member.id);
+    const record = records.find(r => r.member_id === member.id);
     const createdAt = new Date(member.created_at || "");
     const diffDays = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-    return { diffDays, hasConsolidation };
+    return { 
+      diffDays, 
+      hasConsolidation: !!record,
+      contactMade: record?.contact_made === true,
+      contactReason: record?.contact_reason,
+    };
   };
 
-  // Iniciar contato para visitante
-  const handleStartContact = async (memberId: string) => {
-    await createRecord({
-      member_id: memberId,
-      status: "contato" as any,
-      contact_date: new Date().toISOString().split("T")[0],
-    });
+  // Marcar contato feito
+  const handleContactMade = async (memberId: string) => {
+    const existingRecord = records.find(r => r.member_id === memberId);
+    if (existingRecord) {
+      await updateRecord(existingRecord.id, {
+        contact_made: true,
+        contact_date: new Date().toISOString().split("T")[0],
+      } as any);
+    } else {
+      await createRecord({
+        member_id: memberId,
+        status: "contato" as any,
+        contact_date: new Date().toISOString().split("T")[0],
+        contact_made: true,
+      } as any);
+    }
+    setActiveTab("visitantes");
+  };
+
+  // Marcar contato NÃO feito (com motivo obrigatório)
+  const handleContactNotMade = async () => {
+    if (!contactModal || !contactReason.trim()) return;
+    const memberId = contactModal.memberId;
+    const existingRecord = records.find(r => r.member_id === memberId);
+    if (existingRecord) {
+      await updateRecord(existingRecord.id, {
+        contact_made: false,
+        contact_reason: contactReason,
+        contact_date: new Date().toISOString().split("T")[0],
+      } as any);
+    } else {
+      await createRecord({
+        member_id: memberId,
+        status: "contato" as any,
+        contact_date: new Date().toISOString().split("T")[0],
+        contact_made: false,
+        contact_reason: contactReason,
+      } as any);
+    }
+    setContactModal(null);
+    setContactReason("");
     setActiveTab("visitantes");
   };
 
   // Converter visitante para novo convertido → vai para aba "Em Consolidação"
   const handleConvertToNewConvert = async (member: any) => {
     await updateMember(member.id, { spiritual_status: "novo_convertido" } as any);
-    // Also create/update consolidation record with status "acompanhamento"
     const existingRecord = records.find(r => r.member_id === member.id);
     if (existingRecord) {
       await updateStatus(existingRecord.id, "acompanhamento" as any);
@@ -169,8 +210,13 @@ export default function Consolidacao() {
   if (!churchId) return null;
 
   // Stats
+  const contatosFeitos = records.filter(r => r.contact_made === true).length;
+  const contatosNaoFeitos = records.filter(r => r.contact_made === false).length;
+
   const funnelSteps = [
     { label: "Visitantes", value: visitors.length, icon: Eye, color: "bg-muted text-muted-foreground" },
+    { label: "Contatos Feitos", value: contatosFeitos, icon: Phone, color: "bg-success/20 text-success" },
+    { label: "Contatos Pendentes", value: contatosNaoFeitos, icon: PhoneOff, color: "bg-destructive/20 text-destructive" },
     { label: "Em Consolidação", value: emConsolidacao.length, icon: UserCheck, color: "bg-secondary/20 text-secondary" },
     { label: "Consolidados", value: consolidados.length, icon: Heart, color: "bg-success/20 text-success" },
     { label: "Batizados", value: members.filter(m => m.is_active && (m as any).is_baptized).length, icon: Droplets, color: "bg-info/20 text-info" },
@@ -275,7 +321,7 @@ export default function Consolidacao() {
         </div>
 
         {/* Funnel */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {funnelSteps.map((step) => {
             const Icon = step.icon;
             return (
@@ -314,12 +360,12 @@ export default function Consolidacao() {
                         <TableHead>Visitante</TableHead>
                         <TableHead className="hidden md:table-cell">Contato</TableHead>
                         <TableHead>Acompanhamento</TableHead>
-                        <TableHead className="w-[200px]">Ação</TableHead>
+                        <TableHead className="w-[280px]">Ação</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {visitors.map((visitor) => {
-                        const { diffDays, hasConsolidation } = getVisitorFollowUp(visitor);
+                        const { diffDays, hasConsolidation, contactMade, contactReason: reason } = getVisitorFollowUp(visitor);
                         return (
                           <TableRow key={visitor.id}>
                             <TableCell>
@@ -342,20 +388,32 @@ export default function Consolidacao() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 flex-wrap">
                                 <Badge variant="default" className="text-[10px] py-0 h-4">Visita</Badge>
-                                {hasConsolidation && <Badge variant="default" className="text-[10px] py-0 h-4 bg-info/80">Contatado</Badge>}
+                                {hasConsolidation && contactMade && (
+                                  <Badge className="text-[10px] py-0 h-4 bg-success/80 text-white">✔ Contato feito</Badge>
+                                )}
+                                {hasConsolidation && contactMade === false && (
+                                  <Badge variant="destructive" className="text-[10px] py-0 h-4" title={reason || ""}>
+                                    ✘ Não contatado
+                                  </Badge>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="flex gap-1">
+                              <div className="flex gap-1 flex-wrap">
                                 {!hasConsolidation && (
-                                  <Button size="sm" variant="outline" onClick={() => handleStartContact(visitor.id)}>
-                                    <Send className="w-3 h-3 mr-1" /> Contato
-                                  </Button>
+                                  <>
+                                    <Button size="sm" variant="outline" onClick={() => handleContactMade(visitor.id)}>
+                                      <Phone className="w-3 h-3 mr-1" /> Contato ✔
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setContactModal({ memberId: visitor.id, type: "nao_feito" })}>
+                                      <PhoneOff className="w-3 h-3 mr-1" /> Não feito
+                                    </Button>
+                                  </>
                                 )}
-                                <Button size="sm" variant="default" onClick={() => { setEditingVisitor(visitor); setNewVisitorStatus("novo_convertido"); }}>
-                                  <Heart className="w-3 h-3 mr-1" /> Novo Convertido
+                                <Button size="sm" variant="default" onClick={() => setEditingVisitor(visitor)}>
+                                  <Heart className="w-3 h-3 mr-1" /> Decidiu
                                 </Button>
                               </div>
                             </TableCell>
@@ -459,6 +517,37 @@ export default function Consolidacao() {
               <Button variant="outline" onClick={() => setEditingVisitor(null)}>Cancelar</Button>
               <Button onClick={() => handleConvertToNewConvert(editingVisitor)}>
                 <Heart className="w-4 h-4 mr-2" /> Confirmar Decisão
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Contact Not Made Modal - requires reason */}
+        <Dialog open={!!contactModal} onOpenChange={(open) => { if (!open) { setContactModal(null); setContactReason(""); } }}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Contato Não Realizado</DialogTitle></DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Informe o motivo pelo qual o contato não foi realizado.
+              </p>
+              <div className="space-y-2">
+                <Label>Motivo *</Label>
+                <Select value={contactReason} onValueChange={setContactReason}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o motivo..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sem_telefone">Sem telefone cadastrado</SelectItem>
+                    <SelectItem value="numero_invalido">Número inválido</SelectItem>
+                    <SelectItem value="nao_atendeu">Não atendeu</SelectItem>
+                    <SelectItem value="caixa_postal">Caixa postal</SelectItem>
+                    <SelectItem value="outro">Outro motivo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setContactModal(null); setContactReason(""); }}>Cancelar</Button>
+              <Button onClick={handleContactNotMade} disabled={!contactReason}>
+                Confirmar
               </Button>
             </DialogFooter>
           </DialogContent>
