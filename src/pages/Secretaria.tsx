@@ -316,6 +316,7 @@ export default function Secretaria() {
             <TabsTrigger value="visitantes">Visitantes ({stats.visitantes})</TabsTrigger>
             <TabsTrigger value="inativos">Inativos ({stats.inativos})</TabsTrigger>
             <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
+            <TabsTrigger value="usuarios">Usuários do App</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-4">
