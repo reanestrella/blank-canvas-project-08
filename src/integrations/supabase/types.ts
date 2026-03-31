@@ -1062,6 +1062,8 @@ export type Database = {
           church_id: string
           consolidator_id: string | null
           contact_date: string | null
+          contact_made: boolean | null
+          contact_reason: string | null
           created_at: string | null
           created_by: string | null
           decision_date: string | null
@@ -1079,6 +1081,8 @@ export type Database = {
           church_id: string
           consolidator_id?: string | null
           contact_date?: string | null
+          contact_made?: boolean | null
+          contact_reason?: string | null
           created_at?: string | null
           created_by?: string | null
           decision_date?: string | null
@@ -1096,6 +1100,8 @@ export type Database = {
           church_id?: string
           consolidator_id?: string | null
           contact_date?: string | null
+          contact_made?: boolean | null
+          contact_reason?: string | null
           created_at?: string | null
           created_by?: string | null
           decision_date?: string | null
