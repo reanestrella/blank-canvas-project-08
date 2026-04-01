@@ -332,7 +332,7 @@ export default function Secretaria() {
             <TabsTrigger value="usuarios">Usuários do App</TabsTrigger>
           </TabsList>
 
-          <TabsContent value={activeTab} className="mt-4">
+          {activeTab !== "pendentes" && activeTab !== "usuarios" && <TabsContent value={activeTab} className="mt-4" forceMount>
             {/* Table Card */}
             <div className="card-elevated">
               {/* Table Header */}
