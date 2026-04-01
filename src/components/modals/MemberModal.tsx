@@ -94,6 +94,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit }: MemberModa
       age_group: "",
       wedding_date: "",
       pastoral_notes: "",
+      congregation_id: "",
       is_active: true,
     },
   });
