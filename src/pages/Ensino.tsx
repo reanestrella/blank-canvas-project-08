@@ -51,7 +51,7 @@ export default function Ensino() {
   const [editingCourse, setEditingCourse] = useState<Course | undefined>();
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
   const [lessonsCourse, setLessonsCourse] = useState<Course | null>(null);
-  
+  const [studentsCourse, setStudentsCourse] = useState<Course | null>(null);
   const { profile } = useAuth();
   const churchId = profile?.church_id;
   const { courses, isLoading, createCourse, updateCourse, deleteCourse } = useCourses(churchId || undefined);
