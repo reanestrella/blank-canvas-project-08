@@ -68,6 +68,9 @@ interface MemberModalProps {
 }
 
 export function MemberModal({ open, onOpenChange, member, onSubmit }: MemberModalProps) {
+  const { profile } = useAuth();
+  const churchId = profile?.church_id;
+  const { congregations } = useCongregations(churchId || undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<MemberFormData>({
