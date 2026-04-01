@@ -25,6 +25,7 @@ import { CellReportWithAttendanceModal } from "@/components/modals/CellReportWit
 import { CellMembersModal } from "@/components/modals/CellMembersModal";
 import { CellReportsOverview } from "@/components/cells/CellReportsOverview";
 import { CellLeaderPillars } from "@/components/cells/CellLeaderPillars";
+import { CellVisitorsTab } from "@/components/cells/CellVisitorsTab";
 import { EditCellReportModal } from "@/components/modals/EditCellReportModal";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 import { useAuth } from "@/contexts/AuthContext";
