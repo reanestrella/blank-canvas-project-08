@@ -61,6 +61,7 @@ export function useDashboardStats(congregationId?: string | null) {
         setMembers([]);
         setAlerts([]);
         setConsolidationCount(0);
+        setConsolidadosCount(0);
         setHasFetched(false);
       }
       return;
