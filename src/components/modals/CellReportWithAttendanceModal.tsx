@@ -95,6 +95,7 @@ export function CellReportWithAttendanceModal({
     if (!selectedCellId) {
       setMembers([]);
       setPresencas({});
+      setRegisteredVisitors([]);
       return;
     }
 
@@ -103,31 +104,47 @@ export function CellReportWithAttendanceModal({
     const fetchMembers = async () => {
       try {
         setLoadingMembers(true);
-        const { data, error } = await supabase
-          .from("cell_members")
-          .select("id, member_id, member:members(id, full_name)")
-          .eq("cell_id", selectedCellId);
+        const [membersResult, visitorsResult] = await Promise.all([
+          supabase
+            .from("cell_members")
+            .select("id, member_id, member:members(id, full_name)")
+            .eq("cell_id", selectedCellId),
+          supabase
+            .from("cell_visitors")
+            .select("id, full_name")
+            .eq("cell_id", selectedCellId)
+            .order("full_name"),
+        ]);
 
         if (cancelled) return;
-        if (error) {
-          console.error("Erro ao buscar membros da célula:", error);
+        
+        if (membersResult.error) {
+          console.error("Erro ao buscar membros da célula:", membersResult.error);
           setMembers([]);
-          return;
-        }
-
-        const safe: MemberEntry[] = [];
-        if (Array.isArray(data)) {
-          for (const row of data) {
-            if (!row?.member_id) continue;
-            const member = Array.isArray(row.member) ? row.member[0] : row.member;
-            safe.push({
-              id: row.id ?? row.member_id,
-              memberId: row.member_id,
-              memberName: member?.full_name ?? "Membro",
-            });
+        } else {
+          const safe: MemberEntry[] = [];
+          if (Array.isArray(membersResult.data)) {
+            for (const row of membersResult.data) {
+              if (!row?.member_id) continue;
+              const member = Array.isArray(row.member) ? row.member[0] : row.member;
+              safe.push({
+                id: row.id ?? row.member_id,
+                memberId: row.member_id,
+                memberName: member?.full_name ?? "Membro",
+              });
+            }
           }
+          setMembers(safe);
         }
-        setMembers(safe);
+        
+        // Deduplicate registered visitors by name
+        const uniqueVisitors = new Map<string, { id: string; full_name: string }>();
+        (visitorsResult.data || []).forEach((v: any) => {
+          const key = v.full_name.toLowerCase().trim();
+          if (!uniqueVisitors.has(key)) uniqueVisitors.set(key, v);
+        });
+        setRegisteredVisitors(Array.from(uniqueVisitors.values()));
+        
         setPresencas({});
       } catch (err) {
         console.error("Erro ao buscar membros:", err);
