@@ -129,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("[Auth] fetchUserData for:", userId);
       // 1. Fetch profile — single source of church_id
-      const { data: profileData, error: profileError } = await supabase
+      let { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("user_id", userId)
