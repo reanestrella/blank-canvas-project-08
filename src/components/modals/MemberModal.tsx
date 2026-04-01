@@ -54,6 +54,7 @@ const memberSchema = z.object({
   age_group: z.string().optional().or(z.literal("")),
   wedding_date: z.string().optional().or(z.literal("")),
   pastoral_notes: z.string().max(1000).optional().or(z.literal("")),
+  congregation_id: z.string().optional().or(z.literal("")),
   is_active: z.boolean().default(true),
 });
 
