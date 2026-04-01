@@ -321,9 +321,31 @@ export function CellReportWithAttendanceModal({
                 {/* Visitors */}
                 <div className="border rounded-lg p-3 space-y-2">
                   <FormLabel>Visitantes</FormLabel>
+                  
+                  {/* Registered visitors quick-add */}
+                  {registeredVisitors.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Visitantes cadastrados na célula:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {registeredVisitors
+                          .filter(rv => !visitorNames.includes(rv.full_name))
+                          .map(rv => (
+                            <Badge
+                              key={rv.id}
+                              variant="outline"
+                              className="cursor-pointer hover:bg-secondary/20 transition-colors"
+                              onClick={() => setVisitorNames(prev => [...prev, rv.full_name])}
+                            >
+                              <Plus className="w-3 h-3 mr-1" />{rv.full_name}
+                            </Badge>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Nome do visitante"
+                      placeholder="Nome do visitante (novo)"
                       value={newVisitor}
                       onChange={(e) => setNewVisitor(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addVisitor(); } }}
