@@ -122,7 +122,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
         age_group: member?.age_group || "",
         wedding_date: member?.wedding_date || "",
         pastoral_notes: member?.pastoral_notes || "",
-        congregation_id: member?.congregation_id || "",
+        congregation_id: member?.congregation_id || selectedCongregationId || "",
         is_active: member?.is_active ?? true,
       });
     }
