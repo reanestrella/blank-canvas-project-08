@@ -226,7 +226,7 @@ export default function Secretaria() {
         </div>
 
         {/* Stats by Type */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="stat-card">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10 text-primary">
@@ -268,6 +268,17 @@ export default function Secretaria() {
               <div>
                 <p className="text-2xl font-bold">{stats.batizados}</p>
                 <p className="text-sm text-muted-foreground">Batizados</p>
+              </div>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-accent/10 text-accent-foreground">
+                <Smartphone className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{appUsersCount}</p>
+                <p className="text-sm text-muted-foreground">App instalado</p>
               </div>
             </div>
           </div>
