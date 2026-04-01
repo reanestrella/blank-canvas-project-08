@@ -149,6 +149,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit }: MemberModa
         age_group: data.age_group || undefined,
         wedding_date: data.wedding_date || undefined,
         pastoral_notes: data.pastoral_notes || undefined,
+        congregation_id: data.congregation_id || undefined,
         is_active: data.is_active,
       };
       
