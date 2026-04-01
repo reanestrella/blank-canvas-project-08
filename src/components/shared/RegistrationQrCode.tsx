@@ -4,20 +4,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Download, QrCode, Link2, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+
+interface Congregation {
+  id: string;
+  name: string;
+}
 
 interface RegistrationQrCodeProps {
   compact?: boolean;
   churchId?: string;
+  congregations?: Congregation[];
 }
 
-export function RegistrationQrCode({ compact, churchId }: RegistrationQrCodeProps) {
+export function RegistrationQrCode({ compact, churchId, congregations }: RegistrationQrCodeProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
+  const [selectedCongregation, setSelectedCongregation] = useState<string>("");
 
   // Use published URL or env var, never preview URL
   const baseUrl = import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin;
   const registrationUrl = churchId
-    ? `${baseUrl}/cadastro?church=${churchId}`
+    ? `${baseUrl}/cadastro?church=${churchId}${selectedCongregation ? `&congregation=${selectedCongregation}` : ""}`
     : `${baseUrl}/cadastro`;
 
   const handleCopy = async () => {
@@ -70,6 +80,22 @@ export function RegistrationQrCode({ compact, churchId }: RegistrationQrCodeProp
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {congregations && congregations.length > 0 && (
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Congregação (opcional)</label>
+            <Select value={selectedCongregation} onValueChange={setSelectedCongregation}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Todas / Sede" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todas / Sede</SelectItem>
+                {congregations.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <div className="flex items-center gap-2 p-3 rounded-lg bg-muted border border-border">
           <Link2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
           <code className="text-sm flex-1 truncate">{registrationUrl}</code>

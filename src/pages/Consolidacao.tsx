@@ -60,8 +60,9 @@ export default function Consolidacao() {
 
   // Filter records by time period
   const filteredRecords = useMemo(() => {
-    if (periodMode === "all") return records;
     return records.filter((r) => {
+      if (r.status !== "concluido" && r.status !== "desistente") return true;
+      if (periodMode === "all") return true;
       const d = new Date(r.contact_date || r.created_at || "");
       if (periodMode === "year") return d.getFullYear() === filterYear;
       return d.getFullYear() === filterYear && d.getMonth() === filterMonth;

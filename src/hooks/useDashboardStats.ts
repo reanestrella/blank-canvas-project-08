@@ -8,8 +8,6 @@ interface DashboardStats {
   totalVisitantes: number;
   totalBaptized: number;
   totalConsolidacao: number;
-  totalContatosFeitos: number;
-  totalContatosNaoFeitos: number;
   networkStats: {
     homens: number;
     mulheres: number;
@@ -50,8 +48,6 @@ export function useDashboardStats(congregationId?: string | null) {
   const [members, setMembers] = useState<Member[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [consolidationCount, setConsolidationCount] = useState(0);
-  const [contatosFeitos, setContatosFeitos] = useState(0);
-  const [contatosNaoFeitos, setContatosNaoFeitos] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [hasFetched, setHasFetched] = useState(false);
   
@@ -63,8 +59,6 @@ export function useDashboardStats(congregationId?: string | null) {
         setMembers([]);
         setAlerts([]);
         setConsolidationCount(0);
-        setContatosFeitos(0);
-        setContatosNaoFeitos(0);
         setHasFetched(false);
       }
       return;
@@ -86,7 +80,7 @@ export function useDashboardStats(congregationId?: string | null) {
           membersQuery = membersQuery.or(`congregation_id.eq.${congregationId},congregation_id.is.null`);
         }
         
-        const [membersRes, alertsRes, consolRes, contatosFeitosRes, contatosNaoFeitosRes] = await Promise.all([
+        const [membersRes, alertsRes, consolRes] = await Promise.all([
           membersQuery,
           supabase
             .from("member_alerts")
@@ -101,19 +95,6 @@ export function useDashboardStats(congregationId?: string | null) {
             .select("id", { count: "exact", head: true })
             .eq("church_id", currentChurchId)
             .eq("status", "acompanhamento"),
-          // Contatos feitos
-          supabase
-            .from("consolidation_records")
-            .select("id", { count: "exact", head: true })
-            .eq("church_id", currentChurchId)
-            .eq("contact_made", true),
-          // Contatos não feitos
-          supabase
-            .from("consolidation_records")
-            .select("id", { count: "exact", head: true })
-            .eq("church_id", currentChurchId)
-            .eq("contact_made", false)
-            .not("status", "eq", "concluido"),
         ]);
 
         if (cancelled) return;
@@ -125,8 +106,6 @@ export function useDashboardStats(congregationId?: string | null) {
         setMembers((membersRes.data as Member[]) || []);
         setAlerts((alertsRes.data as Alert[]) || []);
         setConsolidationCount(consolRes.count || 0);
-        setContatosFeitos(contatosFeitosRes.count || 0);
-        setContatosNaoFeitos(contatosNaoFeitosRes.count || 0);
         setHasFetched(true);
 
       } catch (error) {
@@ -211,8 +190,6 @@ export function useDashboardStats(congregationId?: string | null) {
       totalVisitantes,
       totalBaptized,
       totalConsolidacao: consolidationCount,
-      totalContatosFeitos: contatosFeitos,
-      totalContatosNaoFeitos: contatosNaoFeitos,
       networkStats,
       birthdaysThisMonth,
       birthdaysThisWeek,
@@ -220,7 +197,7 @@ export function useDashboardStats(congregationId?: string | null) {
       weddingAnniversariesThisWeek,
       recentAlerts: alerts,
     };
-  }, [members, alerts, consolidationCount, contatosFeitos, contatosNaoFeitos]);
+  }, [members, alerts, consolidationCount]);
 
   return {
     stats,

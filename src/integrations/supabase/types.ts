@@ -2794,6 +2794,7 @@ export type Database = {
         Row: {
           birth_date: string | null
           church_id: string
+          congregation_id: string | null
           created_at: string
           email: string | null
           full_name: string
@@ -2806,6 +2807,7 @@ export type Database = {
         Insert: {
           birth_date?: string | null
           church_id: string
+          congregation_id?: string | null
           created_at?: string
           email?: string | null
           full_name: string
@@ -2818,6 +2820,7 @@ export type Database = {
         Update: {
           birth_date?: string | null
           church_id?: string
+          congregation_id?: string | null
           created_at?: string
           email?: string | null
           full_name?: string
@@ -2833,6 +2836,13 @@ export type Database = {
             columns: ["church_id"]
             isOneToOne: false
             referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_users_congregation_id_fkey"
+            columns: ["congregation_id"]
+            isOneToOne: false
+            referencedRelation: "congregations"
             referencedColumns: ["id"]
           },
           {
@@ -2912,6 +2922,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          is_linked: boolean
           member_id: string | null
           ministry_network_id: string | null
           phone: string | null
@@ -2927,6 +2938,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_linked?: boolean
           member_id?: string | null
           ministry_network_id?: string | null
           phone?: string | null
@@ -2942,6 +2954,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_linked?: boolean
           member_id?: string | null
           ministry_network_id?: string | null
           phone?: string | null
