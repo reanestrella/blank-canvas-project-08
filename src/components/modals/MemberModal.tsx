@@ -32,6 +32,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import type { Member, CreateMemberData } from "@/hooks/useMembers";
+import { useCongregations, Congregation } from "@/hooks/useCongregations";
+import { useAuth } from "@/contexts/AuthContext";
 
 const memberSchema = z.object({
   full_name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
