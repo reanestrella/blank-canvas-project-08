@@ -411,6 +411,7 @@ export default function Celulas() {
           <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="cells">Células</TabsTrigger>
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
+            <TabsTrigger value="visitors">Visitantes</TabsTrigger>
             {isOnlyCellLeader && cells.length > 0 && (
               <TabsTrigger value="tools">Ferramentas do Líder</TabsTrigger>
             )}
