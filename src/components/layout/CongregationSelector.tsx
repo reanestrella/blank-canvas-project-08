@@ -50,7 +50,7 @@ export function CongregationSelector({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[200px]">
         <DropdownMenuItem
-          onClick={() => onSelect("")}
+          onClick={() => onSelect(null)}
           className="flex items-center justify-between"
         >
           <span>Todas as unidades</span>
