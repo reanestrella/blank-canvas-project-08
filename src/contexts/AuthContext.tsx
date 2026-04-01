@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { queryClient } from "@/lib/queryClient";
+import { getRegistrationBinding, syncSelfRegistrationProfile } from "@/lib/selfRegistration";
 
 interface Profile {
   id: string;
@@ -128,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("[Auth] fetchUserData for:", userId);
       // 1. Fetch profile — single source of church_id
-      const { data: profileData, error: profileError } = await supabase
+      let { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("user_id", userId)
@@ -159,15 +160,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (profileData) {
         let resolvedProfile = profileData as Profile;
 
+        // Self-healing: if profile has no church_id, try to recover from auth metadata
+        if (!profileData.church_id) {
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          if (authUser) {
+            const binding = getRegistrationBinding(authUser);
+            if (binding.churchId) {
+              console.log("[Auth] Self-healing: recovering church_id from metadata:", binding.churchId);
+              try {
+                const result = await syncSelfRegistrationProfile(authUser, {
+                  churchId: binding.churchId,
+                  congregationId: binding.congregationId,
+                  fullName: binding.fullName,
+                  phone: binding.phone,
+                  ensurePendingUser: true,
+                });
+                if (result.churchId) {
+                  // Re-fetch profile after fix
+                  const { data: fixedProfile } = await supabase
+                    .from("profiles")
+                    .select("*")
+                    .eq("user_id", userId)
+                    .single();
+                  if (fixedProfile) {
+                    resolvedProfile = fixedProfile as Profile;
+                    profileData = fixedProfile;
+                  }
+                }
+              } catch (healErr) {
+                console.error("[Auth] Self-healing failed:", healErr);
+              }
+            }
+          }
+        }
+
         // Auto-resolve member_id if missing (for existing users without linkage)
-        if (!profileData.member_id && profileData.church_id) {
-          // Try matching by profile email first, then by auth email
-          const emailToMatch = profileData.email || session?.user?.email;
+        if (!resolvedProfile.member_id && resolvedProfile.church_id) {
+          const emailToMatch = resolvedProfile.email || session?.user?.email;
           if (emailToMatch) {
             const { data: memberMatch } = await supabase
               .from("members")
               .select("id")
-              .eq("church_id", profileData.church_id)
+              .eq("church_id", resolvedProfile.church_id)
               .eq("email", emailToMatch)
               .limit(1)
               .maybeSingle();
