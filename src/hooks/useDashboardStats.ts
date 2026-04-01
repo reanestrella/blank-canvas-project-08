@@ -96,6 +96,12 @@ export function useDashboardStats(congregationId?: string | null) {
             .select("id", { count: "exact", head: true })
             .eq("church_id", currentChurchId)
             .eq("status", "acompanhamento"),
+          // Consolidados = status "concluido"
+          supabase
+            .from("consolidation_records")
+            .select("id", { count: "exact", head: true })
+            .eq("church_id", currentChurchId)
+            .eq("status", "concluido"),
         ]);
 
         if (cancelled) return;
