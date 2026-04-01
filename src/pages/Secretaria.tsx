@@ -199,7 +199,7 @@ export default function Secretaria() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <RegistrationQrCode compact churchId={churchId} />
+            <RegistrationQrCode compact churchId={churchId} congregations={congregations} />
             <FinancialFilters mode={periodMode} month={filterMonth} year={filterYear} onModeChange={(m) => setPeriodMode(m)} onMonthChange={setFilterMonth} onYearChange={setFilterYear} />
             <CongregationSelector
               congregations={congregations}

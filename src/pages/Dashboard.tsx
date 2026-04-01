@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Heart, Grid3X3, TrendingUp, Eye, Loader2, DollarSign, ChevronDown, ChevronUp, Sparkles, Brain, UserCheck, Droplets, Phone, PhoneOff } from "lucide-react";
+import { Users, Heart, Grid3X3, TrendingUp, Eye, Loader2, DollarSign, ChevronDown, ChevronUp, Sparkles, Brain, UserCheck, Droplets } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { SpiritualFunnel } from "@/components/dashboard/SpiritualFunnel";
@@ -39,11 +39,6 @@ function PastorDashboard() {
     { title: "Batizados", value: stats.totalBaptized.toString(), change: "Total batizados", changeType: "positive" as const, icon: Droplets, iconColor: "bg-info/10 text-info" },
   ];
 
-  const contactCards = [
-    { title: "Contatos Feitos", value: stats.totalContatosFeitos.toString(), change: "Realizados", changeType: "positive" as const, icon: Phone, iconColor: "bg-success/10 text-success" },
-    { title: "Contatos Pendentes", value: stats.totalContatosNaoFeitos.toString(), change: "Não realizados", changeType: "negative" as const, icon: PhoneOff, iconColor: "bg-destructive/10 text-destructive" },
-  ];
-
   if (isLoading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
@@ -61,13 +56,6 @@ function PastorDashboard() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {statCards.map((stat, index) => (
           <StatCard key={stat.title} {...stat} className="animate-slide-up" style={{ animationDelay: `${index * 100}ms` } as React.CSSProperties} />
-        ))}
-      </div>
-
-      {/* Contact stats */}
-      <div className="grid grid-cols-2 gap-4">
-        {contactCards.map((stat) => (
-          <StatCard key={stat.title} {...stat} />
         ))}
       </div>
 

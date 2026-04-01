@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { Link, useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -37,6 +37,8 @@ export default function Cadastrar() {
   const navigate = useNavigate();
 
   const churchId = searchParams.get("church");
+  const congregationId = searchParams.get("congregation");
+  console.log("[Cadastrar] churchId capturado:", churchId, "congregationId:", congregationId);
 
   const form = useForm<CadastroFormData>({
     resolver: zodResolver(cadastroSchema),
@@ -59,17 +61,28 @@ export default function Cadastrar() {
           data: {
             full_name: data.fullName,
             church_id: churchId,
+            congregation_id: congregationId || null,
           },
         },
       });
       if (authError) throw authError;
 
-      // 2. Update profile with church_id
+      // 2. Update profile with church_id immediately
       if (authData.user) {
-        await supabase.from("profiles").update({
+        const profileUpdate: any = {
           church_id: churchId,
           full_name: data.fullName,
-        } as any).eq("user_id", authData.user.id);
+          phone: data.phone || null,
+          registration_status: "pendente",
+          is_linked: false,
+        };
+        if (congregationId) profileUpdate.congregation_id = congregationId;
+        const { error: profileError } = await supabase.from("profiles").update(profileUpdate).eq("user_id", authData.user.id);
+        if (profileError) {
+          console.error("[Cadastrar] profile update error:", profileError);
+          await supabase.from("profiles").upsert({ user_id: authData.user.id, ...profileUpdate } as any, { onConflict: "user_id" });
+        }
+        console.log("[Cadastrar] profile updated with church_id:", churchId);
 
         // 3. Assign membro role
         await supabase.from("user_roles").insert({
@@ -86,6 +99,7 @@ export default function Cadastrar() {
         phone: data.phone || null,
         birth_date: data.birthDate || null,
         church_id: churchId,
+        congregation_id: congregationId || null,
         tipo: data.tipo,
         status: "pendente",
       });
