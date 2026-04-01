@@ -75,6 +75,7 @@ export function CellReportWithAttendanceModal({
   const [decidedNames, setDecidedNames] = useState<string[]>([]);
   const [newVisitor, setNewVisitor] = useState("");
   const [newDecided, setNewDecided] = useState("");
+  const [registeredVisitors, setRegisteredVisitors] = useState<{ id: string; full_name: string }[]>([]);
   const { toast } = useToast();
 
   const form = useForm<ReportFormData>({
@@ -94,6 +95,7 @@ export function CellReportWithAttendanceModal({
     if (!selectedCellId) {
       setMembers([]);
       setPresencas({});
+      setRegisteredVisitors([]);
       return;
     }
 
@@ -102,31 +104,47 @@ export function CellReportWithAttendanceModal({
     const fetchMembers = async () => {
       try {
         setLoadingMembers(true);
-        const { data, error } = await supabase
-          .from("cell_members")
-          .select("id, member_id, member:members(id, full_name)")
-          .eq("cell_id", selectedCellId);
+        const [membersResult, visitorsResult] = await Promise.all([
+          supabase
+            .from("cell_members")
+            .select("id, member_id, member:members(id, full_name)")
+            .eq("cell_id", selectedCellId),
+          supabase
+            .from("cell_visitors")
+            .select("id, full_name")
+            .eq("cell_id", selectedCellId)
+            .order("full_name"),
+        ]);
 
         if (cancelled) return;
-        if (error) {
-          console.error("Erro ao buscar membros da célula:", error);
+        
+        if (membersResult.error) {
+          console.error("Erro ao buscar membros da célula:", membersResult.error);
           setMembers([]);
-          return;
-        }
-
-        const safe: MemberEntry[] = [];
-        if (Array.isArray(data)) {
-          for (const row of data) {
-            if (!row?.member_id) continue;
-            const member = Array.isArray(row.member) ? row.member[0] : row.member;
-            safe.push({
-              id: row.id ?? row.member_id,
-              memberId: row.member_id,
-              memberName: member?.full_name ?? "Membro",
-            });
+        } else {
+          const safe: MemberEntry[] = [];
+          if (Array.isArray(membersResult.data)) {
+            for (const row of membersResult.data) {
+              if (!row?.member_id) continue;
+              const member = Array.isArray(row.member) ? row.member[0] : row.member;
+              safe.push({
+                id: row.id ?? row.member_id,
+                memberId: row.member_id,
+                memberName: member?.full_name ?? "Membro",
+              });
+            }
           }
+          setMembers(safe);
         }
-        setMembers(safe);
+        
+        // Deduplicate registered visitors by name
+        const uniqueVisitors = new Map<string, { id: string; full_name: string }>();
+        (visitorsResult.data || []).forEach((v: any) => {
+          const key = v.full_name.toLowerCase().trim();
+          if (!uniqueVisitors.has(key)) uniqueVisitors.set(key, v);
+        });
+        setRegisteredVisitors(Array.from(uniqueVisitors.values()));
+        
         setPresencas({});
       } catch (err) {
         console.error("Erro ao buscar membros:", err);
@@ -303,9 +321,31 @@ export function CellReportWithAttendanceModal({
                 {/* Visitors */}
                 <div className="border rounded-lg p-3 space-y-2">
                   <FormLabel>Visitantes</FormLabel>
+                  
+                  {/* Registered visitors quick-add */}
+                  {registeredVisitors.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Visitantes cadastrados na célula:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {registeredVisitors
+                          .filter(rv => !visitorNames.includes(rv.full_name))
+                          .map(rv => (
+                            <Badge
+                              key={rv.id}
+                              variant="outline"
+                              className="cursor-pointer hover:bg-secondary/20 transition-colors"
+                              onClick={() => setVisitorNames(prev => [...prev, rv.full_name])}
+                            >
+                              <Plus className="w-3 h-3 mr-1" />{rv.full_name}
+                            </Badge>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Nome do visitante"
+                      placeholder="Nome do visitante (novo)"
                       value={newVisitor}
                       onChange={(e) => setNewVisitor(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addVisitor(); } }}

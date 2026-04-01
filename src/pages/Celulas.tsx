@@ -25,6 +25,7 @@ import { CellReportWithAttendanceModal } from "@/components/modals/CellReportWit
 import { CellMembersModal } from "@/components/modals/CellMembersModal";
 import { CellReportsOverview } from "@/components/cells/CellReportsOverview";
 import { CellLeaderPillars } from "@/components/cells/CellLeaderPillars";
+import { CellVisitorsTab } from "@/components/cells/CellVisitorsTab";
 import { EditCellReportModal } from "@/components/modals/EditCellReportModal";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 import { useAuth } from "@/contexts/AuthContext";
@@ -410,6 +411,7 @@ export default function Celulas() {
           <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="cells">Células</TabsTrigger>
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
+            <TabsTrigger value="visitors">Visitantes</TabsTrigger>
             {isOnlyCellLeader && cells.length > 0 && (
               <TabsTrigger value="tools">Ferramentas do Líder</TabsTrigger>
             )}
@@ -478,6 +480,10 @@ export default function Celulas() {
               onEditReport={setEditingReport}
               isLeader={isOnlyCellLeader}
             />
+          </TabsContent>
+
+          <TabsContent value="visitors" className="mt-4">
+            {churchId && <CellVisitorsTab cells={cells} churchId={churchId} />}
           </TabsContent>
 
           {isOnlyCellLeader && cells.length > 0 && (

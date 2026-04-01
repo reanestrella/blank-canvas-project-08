@@ -32,6 +32,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import type { Member, CreateMemberData } from "@/hooks/useMembers";
+import { useCongregations, Congregation } from "@/hooks/useCongregations";
+import { useAuth } from "@/contexts/AuthContext";
 
 const memberSchema = z.object({
   full_name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
@@ -52,6 +54,7 @@ const memberSchema = z.object({
   age_group: z.string().optional().or(z.literal("")),
   wedding_date: z.string().optional().or(z.literal("")),
   pastoral_notes: z.string().max(1000).optional().or(z.literal("")),
+  congregation_id: z.string().optional().or(z.literal("")),
   is_active: z.boolean().default(true),
 });
 
@@ -65,6 +68,9 @@ interface MemberModalProps {
 }
 
 export function MemberModal({ open, onOpenChange, member, onSubmit }: MemberModalProps) {
+  const { profile } = useAuth();
+  const churchId = profile?.church_id;
+  const { congregations } = useCongregations(churchId || undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<MemberFormData>({
@@ -88,6 +94,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit }: MemberModa
       age_group: "",
       wedding_date: "",
       pastoral_notes: "",
+      congregation_id: "",
       is_active: true,
     },
   });
@@ -114,6 +121,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit }: MemberModa
         age_group: member?.age_group || "",
         wedding_date: member?.wedding_date || "",
         pastoral_notes: member?.pastoral_notes || "",
+        congregation_id: member?.congregation_id || "",
         is_active: member?.is_active ?? true,
       });
     }
@@ -141,6 +149,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit }: MemberModa
         age_group: data.age_group || undefined,
         wedding_date: data.wedding_date || undefined,
         pastoral_notes: data.pastoral_notes || undefined,
+        congregation_id: data.congregation_id || undefined,
         is_active: data.is_active,
       };
       
@@ -317,6 +326,33 @@ export function MemberModal({ open, onOpenChange, member, onSubmit }: MemberModa
                       </FormItem>
                     )}
                   />
+
+                  {congregations.length > 1 && (
+                    <FormField
+                      control={form.control}
+                      name="congregation_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Congregação</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione a congregação" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {congregations.map(c => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.name}{c.is_main ? " (Sede)" : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
                   <FormField
                     control={form.control}

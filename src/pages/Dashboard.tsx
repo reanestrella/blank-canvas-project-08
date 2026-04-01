@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Users, Heart, Grid3X3, TrendingUp, Eye, Loader2, DollarSign, ChevronDown, ChevronUp, Sparkles, Brain, UserCheck, Droplets } from "lucide-react";
+import { Users, Heart, Eye, Loader2, ChevronDown, ChevronUp, Sparkles, UserCheck, Droplets, CheckCircle2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { SpiritualFunnel } from "@/components/dashboard/SpiritualFunnel";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
-import { CellsOverview } from "@/components/dashboard/CellsOverview";
 import { CellChartsCard } from "@/components/dashboard/CellChartsCard";
 import { FinanceOverview } from "@/components/dashboard/FinanceOverview";
 import { UpcomingEvents } from "@/components/dashboard/UpcomingEvents";
@@ -36,7 +35,8 @@ function PastorDashboard() {
     { title: "Membros", value: stats.totalMembers.toString(), change: "Membros ativos", changeType: "positive" as const, icon: Users, iconColor: "bg-primary/10 text-primary" },
     { title: "Decididos", value: stats.totalDecididos.toString(), change: "Novos convertidos", changeType: "positive" as const, icon: Heart, iconColor: "bg-success/10 text-success" },
     { title: "Visitantes", value: stats.totalVisitantes.toString(), change: "Cadastrados", changeType: "neutral" as const, icon: Eye, iconColor: "bg-secondary/10 text-secondary" },
-    { title: "Em Consolidação", value: stats.totalConsolidacao.toString(), change: "Novos convertidos em acompanhamento", changeType: "positive" as const, icon: UserCheck, iconColor: "bg-accent/10 text-accent-foreground" },
+    { title: "Em Consolidação", value: stats.totalConsolidacao.toString(), change: "Em acompanhamento", changeType: "positive" as const, icon: UserCheck, iconColor: "bg-accent/10 text-accent-foreground" },
+    { title: "Consolidados", value: stats.totalConsolidados.toString(), change: "Processo concluído", changeType: "positive" as const, icon: CheckCircle2, iconColor: "bg-success/10 text-success" },
     { title: "Batizados", value: stats.totalBaptized.toString(), change: "Total batizados", changeType: "positive" as const, icon: Droplets, iconColor: "bg-info/10 text-info" },
   ];
 
@@ -54,7 +54,8 @@ function PastorDashboard() {
         <CongregationSelector congregations={congregations} selectedId={selectedCongregation} onSelect={setSelectedCongregation} />
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {statCards.map((stat, index) => (
           <StatCard key={stat.title} {...stat} className="animate-slide-up" style={{ animationDelay: `${index * 100}ms` } as React.CSSProperties} />
         ))}
@@ -80,21 +81,26 @@ function PastorDashboard() {
         </CollapsibleContent>
       </Collapsible>
 
+      {/* Network Overview */}
+      <NetworkOverview stats={stats.networkStats} totalMembers={stats.totalMembers + stats.totalDecididos + stats.totalVisitantes} />
+
+      {/* Spiritual Funnel */}
+      <SpiritualFunnel />
+
+      {/* Cell Charts + Highlights */}
       <CellChartsCard />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <NetworkOverview stats={stats.networkStats} totalMembers={stats.totalMembers + stats.totalDecididos + stats.totalVisitantes} />
-          <CellsOverview />
-          <UpcomingEvents />
-        </div>
-        <div className="space-y-6">
-          <BirthdayCard birthdaysThisMonth={stats.birthdaysThisMonth} birthdaysThisWeek={stats.birthdaysThisWeek} />
-          <WeddingAnniversaryCard anniversariesThisMonth={stats.weddingAnniversariesThisMonth} anniversariesThisWeek={stats.weddingAnniversariesThisWeek} />
-          <SpiritualFunnel />
-          <FinanceOverview />
-        </div>
+      {/* Bottom grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <BirthdayCard birthdaysThisMonth={stats.birthdaysThisMonth} birthdaysThisWeek={stats.birthdaysThisWeek} />
+        <WeddingAnniversaryCard anniversariesThisMonth={stats.weddingAnniversariesThisMonth} anniversariesThisWeek={stats.weddingAnniversariesThisWeek} />
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <UpcomingEvents />
+        <FinanceOverview />
+      </div>
+
       <RecentActivity />
     </>
   );
