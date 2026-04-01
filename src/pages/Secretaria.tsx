@@ -77,6 +77,7 @@ export default function Secretaria() {
   const churchId = profile?.church_id;
   const { congregations, selectedCongregation, setSelectedCongregation } = useCongregations(churchId || undefined);
   const { members, isLoading, createMember, updateMember, deleteMember, fetchMembers } = useMembers(churchId || undefined);
+  const { count: appUsersCount } = useAppUsersCount(churchId);
 
   // Filter members by tab, search, network, period, and active status
   const filteredMembers = useMemo(() => {
