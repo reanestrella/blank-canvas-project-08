@@ -26,8 +26,8 @@ export function NetworkOverview({ stats, totalMembers }: NetworkOverviewProps) {
       name: "Mulheres", 
       value: stats.mulheres, 
       icon: UserCheck, 
-      color: "bg-secondary/10",
-      textColor: "text-secondary"
+      color: "bg-pink-100 dark:bg-pink-900/20",
+      textColor: "text-pink-600 dark:text-pink-400"
     },
     { 
       name: "Jovens", 
