@@ -506,6 +506,7 @@ export default function Secretaria() {
         onOpenChange={handleCloseModal}
         member={editingMember}
         onSubmit={editingMember ? handleUpdateMember : handleCreateMember}
+        selectedCongregationId={selectedCongregation}
       />
 
       {/* Delete Confirmation */}

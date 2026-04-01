@@ -2,32 +2,20 @@ import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-  GraduationCap,
-  BookOpen,
-  Users,
-  Trophy,
-  Plus,
-  Clock,
-  Calendar,
-  ChevronRight,
-  Loader2,
-  MoreHorizontal,
+  GraduationCap, BookOpen, Users, Trophy, Plus, Clock,
+  Calendar, Loader2, MoreHorizontal,
 } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useCourses, CreateCourseData } from "@/hooks/useCourses";
 import { useMembers } from "@/hooks/useMembers";
 import { CourseModal } from "@/components/modals/CourseModal";
 import { CourseLessonsModal } from "@/components/modals/CourseLessonsModal";
-import { CourseStudentsModal } from "@/components/modals/CourseStudentsModal";
+import { CourseDetailView } from "@/components/ensino/CourseDetailView";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Course } from "@/hooks/useCourses";
@@ -51,7 +39,7 @@ export default function Ensino() {
   const [editingCourse, setEditingCourse] = useState<Course | undefined>();
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
   const [lessonsCourse, setLessonsCourse] = useState<Course | null>(null);
-  const [studentsCourse, setStudentsCourse] = useState<Course | null>(null);
+  const [viewingCourse, setViewingCourse] = useState<Course | null>(null);
   const { profile } = useAuth();
   const churchId = profile?.church_id;
   const { courses, isLoading, createCourse, updateCourse, deleteCourse } = useCourses(churchId || undefined);
@@ -59,8 +47,7 @@ export default function Ensino() {
 
   const getMemberName = (memberId: string | null) => {
     if (!memberId) return "Sem professor";
-    const member = members.find(m => m.id === memberId);
-    return member?.full_name || "Desconhecido";
+    return members.find(m => m.id === memberId)?.full_name || "Desconhecido";
   };
 
   const handleCreateCourse = async (data: Partial<Course>) => {
@@ -89,10 +76,23 @@ export default function Ensino() {
 
   const handleCloseModal = (open: boolean) => {
     setCourseModalOpen(open);
-    if (!open) {
-      setEditingCourse(undefined);
-    }
+    if (!open) setEditingCourse(undefined);
   };
+
+  // If viewing a course detail
+  if (viewingCourse && churchId) {
+    return (
+      <AppLayout>
+        <div className="space-y-6">
+          <CourseDetailView
+            course={viewingCourse}
+            churchId={churchId}
+            onBack={() => setViewingCourse(null)}
+          />
+        </div>
+      </AppLayout>
+    );
+  }
 
   const stats = [
     { label: "Cursos Ativos", value: courses.filter(c => c.is_active).length, icon: BookOpen, color: "text-primary" },
@@ -102,27 +102,20 @@ export default function Ensino() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">Ensino & Discipulado</h1>
-            <p className="text-muted-foreground">
-              Gerencie cursos, EBD e trilhas espirituais
-            </p>
+            <p className="text-muted-foreground">Gerencie cursos, EBD e trilhas espirituais</p>
           </div>
-          <Button 
+          <Button
             className="gradient-accent text-secondary-foreground shadow-lg hover:shadow-xl transition-all"
-            onClick={() => {
-              setEditingCourse(undefined);
-              setCourseModalOpen(true);
-            }}
+            onClick={() => { setEditingCourse(undefined); setCourseModalOpen(true); }}
           >
             <Plus className="w-4 h-4 mr-2" />
             Novo Curso
           </Button>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {stats.map((stat) => (
             <div key={stat.label} className="stat-card">
@@ -139,7 +132,6 @@ export default function Ensino() {
           ))}
         </div>
 
-        {/* Courses */}
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Cursos</h2>
           {isLoading ? (
@@ -151,19 +143,20 @@ export default function Ensino() {
               <CardContent className="flex flex-col items-center justify-center p-12 text-center">
                 <BookOpen className="w-12 h-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium">Nenhum curso</h3>
-                <p className="text-muted-foreground mb-4">
-                  Comece criando o primeiro curso.
-                </p>
+                <p className="text-muted-foreground mb-4">Comece criando o primeiro curso.</p>
                 <Button onClick={() => setCourseModalOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Criar Curso
+                  <Plus className="w-4 h-4 mr-2" />Criar Curso
                 </Button>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4">
               {courses.map((course) => (
-                <Card key={course.id} className="hover:shadow-md transition-shadow">
+                <Card
+                  key={course.id}
+                  className="hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => setViewingCourse(course)}
+                >
                   <CardContent className="p-5">
                     <div className="flex items-start gap-4">
                       <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
@@ -173,44 +166,27 @@ export default function Ensino() {
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <div>
                             <h3 className="font-semibold">{course.name}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {course.description || "Sem descrição"}
-                            </p>
+                            <p className="text-sm text-muted-foreground">{course.description || "Sem descrição"}</p>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                             {course.track && (
-                              <Badge
-                                variant="secondary"
-                                className={trackColors[course.track] || ""}
-                              >
+                              <Badge variant="secondary" className={trackColors[course.track] || ""}>
                                 {trackLabels[course.track] || course.track}
                               </Badge>
                             )}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="w-4 h-4" />
-                                </Button>
+                                <Button variant="ghost" size="icon"><MoreHorizontal className="w-4 h-4" /></Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleOpenEdit(course)}>
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setLessonsCourse(course)}>
-                                  Gerenciar Aulas
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setStudentsCourse(course)}>Ver alunos</DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  className="text-destructive"
-                                  onClick={() => setDeletingCourse(course)}
-                                >
-                                  Remover
-                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleOpenEdit(course)}>Editar</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setLessonsCourse(course)}>Gerenciar Aulas</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setViewingCourse(course)}>Ver detalhes</DropdownMenuItem>
+                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingCourse(course)}>Remover</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
                         </div>
-
                         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-3">
                           {course.start_date && (
                             <span className="flex items-center gap-1">
@@ -225,16 +201,13 @@ export default function Ensino() {
                             </span>
                           )}
                         </div>
-
                         <div className="flex items-center gap-2 pt-3 border-t">
                           <Avatar className="w-6 h-6">
                             <AvatarFallback className="text-xs bg-muted">
                               {getMemberName(course.teacher_id).split(" ").map((n) => n[0]).join("").slice(0, 2)}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-sm text-muted-foreground">
-                            {getMemberName(course.teacher_id)}
-                          </span>
+                          <span className="text-sm text-muted-foreground">{getMemberName(course.teacher_id)}</span>
                           <Badge variant={course.is_active ? "default" : "secondary"} className="ml-auto">
                             {course.is_active ? "Ativo" : "Inativo"}
                           </Badge>
@@ -249,7 +222,6 @@ export default function Ensino() {
         </div>
       </div>
 
-      {/* Course Modal */}
       <CourseModal
         open={courseModalOpen}
         onOpenChange={handleCloseModal}
@@ -258,7 +230,6 @@ export default function Ensino() {
         onSubmit={editingCourse ? handleUpdateCourse : handleCreateCourse}
       />
 
-      {/* Delete Confirmation */}
       <DeleteConfirmModal
         open={!!deletingCourse}
         onOpenChange={(open) => !open && setDeletingCourse(null)}
@@ -267,24 +238,12 @@ export default function Ensino() {
         onConfirm={() => deleteCourse(deletingCourse!.id)}
       />
 
-      {/* Course Lessons Modal */}
       <CourseLessonsModal
         open={!!lessonsCourse}
         onOpenChange={(open) => !open && setLessonsCourse(null)}
         courseId={lessonsCourse?.id || ""}
         courseName={lessonsCourse?.name || ""}
       />
-
-      {/* Course Students Modal */}
-      {churchId && (
-        <CourseStudentsModal
-          open={!!studentsCourse}
-          onOpenChange={(open) => !open && setStudentsCourse(null)}
-          courseId={studentsCourse?.id || ""}
-          courseName={studentsCourse?.name || ""}
-          churchId={churchId}
-        />
-      )}
     </AppLayout>
   );
 }
