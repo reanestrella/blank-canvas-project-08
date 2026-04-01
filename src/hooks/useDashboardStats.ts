@@ -200,6 +200,7 @@ export function useDashboardStats(congregationId?: string | null) {
       totalVisitantes,
       totalBaptized,
       totalConsolidacao: consolidationCount,
+      totalConsolidados: consolidadosCount,
       networkStats,
       birthdaysThisMonth,
       birthdaysThisWeek,
@@ -207,7 +208,7 @@ export function useDashboardStats(congregationId?: string | null) {
       weddingAnniversariesThisWeek,
       recentAlerts: alerts,
     };
-  }, [members, alerts, consolidationCount]);
+  }, [members, alerts, consolidationCount, consolidadosCount]);
 
   return {
     stats,
