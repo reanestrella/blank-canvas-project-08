@@ -332,161 +332,163 @@ export default function Secretaria() {
             <TabsTrigger value="usuarios">Usuários do App</TabsTrigger>
           </TabsList>
 
-          <TabsContent value={activeTab} className="mt-4">
-            {/* Table Card */}
-            <div className="card-elevated">
-              {/* Table Header */}
-              <div className="p-4 border-b flex flex-col md:flex-row md:items-center gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nome, email ou telefone..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  {networkFilter !== "all" && (
-                    <Button variant="ghost" size="sm" onClick={() => setNetworkFilter("all")}>
-                      Limpar filtro
-                    </Button>
-                  )}
-                  <Button variant="outline" size="sm">
-                    <Download className="w-4 h-4 mr-2" />
-                    Exportar
-                  </Button>
-                </div>
-              </div>
-
-              {/* Table */}
-              {isLoading ? (
-                <div className="flex items-center justify-center p-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
-              ) : filteredMembers.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-12 text-center">
-                  <Users className="w-12 h-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium">Nenhuma pessoa encontrada</h3>
-                  <p className="text-muted-foreground mb-4">
-                    {searchTerm || networkFilter !== "all" 
-                      ? "Tente ajustar os filtros." 
-                      : "Comece cadastrando a primeira pessoa."}
-                  </p>
-                  {!searchTerm && networkFilter === "all" && (
-                    <Button onClick={() => setMemberModalOpen(true)}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Cadastrar
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Pessoa</TableHead>
-                      <TableHead className="hidden md:table-cell">Contato</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead className="hidden md:table-cell">Rede</TableHead>
-                      <TableHead className="hidden lg:table-cell">Status</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredMembers.map((member) => (
-                      <TableRow key={member.id} className={`hover:bg-muted/50 ${!member.is_active ? "opacity-50" : ""}`}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar>
-                              <AvatarImage src={member.photo_url || ""} />
-                              <AvatarFallback className="bg-primary/10 text-primary">
-                                {member.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium">{member.full_name}</p>
-                              <p className="text-sm text-muted-foreground md:hidden">
-                                {member.phone || member.email || "-"}
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <div>
-                            <p className="text-sm">{member.email || "-"}</p>
-                            <p className="text-sm text-muted-foreground">{member.phone || "-"}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="secondary"
-                            className={statusConfig[member.spiritual_status]?.color || ""}
-                          >
-                            {statusConfig[member.spiritual_status]?.label || member.spiritual_status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {member.network ? (
-                            <Badge variant="outline">
-                              {networkConfig[member.network as keyof typeof networkConfig]?.label || member.network}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          {member.baptism_date ? (
-                            <Badge variant="outline" className="bg-info/10 text-info border-info/30">
-                              Batizado
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline">Não batizado</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleOpenEdit(member)}>
-                                Editar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>Ver perfil completo</DropdownMenuItem>
-                              <DropdownMenuItem>Histórico espiritual</DropdownMenuItem>
-                              <DropdownMenuItem 
-                                className="text-destructive"
-                                onClick={() => setDeletingMember(member)}
-                              >
-                                Remover
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-
-              {/* Pagination placeholder */}
-              {filteredMembers.length > 0 && (
-                <div className="p-4 border-t flex items-center justify-between text-sm text-muted-foreground">
-                  <span>Mostrando {filteredMembers.length} de {members.length} pessoas</span>
+          {["todos", "membros", "decididos", "visitantes", "inativos"].map(tab => (
+            <TabsContent key={tab} value={tab} className="mt-4">
+              {/* Table Card */}
+              <div className="card-elevated">
+                {/* Table Header */}
+                <div className="p-4 border-b flex flex-col md:flex-row md:items-center gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por nome, email ou telefone..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" disabled>
-                      Anterior
-                    </Button>
+                    {networkFilter !== "all" && (
+                      <Button variant="ghost" size="sm" onClick={() => setNetworkFilter("all")}>
+                        Limpar filtro
+                      </Button>
+                    )}
                     <Button variant="outline" size="sm">
-                      Próximo
+                      <Download className="w-4 h-4 mr-2" />
+                      Exportar
                     </Button>
                   </div>
                 </div>
-              )}
-            </div>
-          </TabsContent>
+
+                {/* Table */}
+                {isLoading ? (
+                  <div className="flex items-center justify-center p-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                ) : filteredMembers.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-12 text-center">
+                    <Users className="w-12 h-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium">Nenhuma pessoa encontrada</h3>
+                    <p className="text-muted-foreground mb-4">
+                      {searchTerm || networkFilter !== "all" 
+                        ? "Tente ajustar os filtros." 
+                        : "Comece cadastrando a primeira pessoa."}
+                    </p>
+                    {!searchTerm && networkFilter === "all" && (
+                      <Button onClick={() => setMemberModalOpen(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Cadastrar
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Pessoa</TableHead>
+                        <TableHead className="hidden md:table-cell">Contato</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead className="hidden md:table-cell">Rede</TableHead>
+                        <TableHead className="hidden lg:table-cell">Status</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredMembers.map((member) => (
+                        <TableRow key={member.id} className={`hover:bg-muted/50 ${!member.is_active ? "opacity-50" : ""}`}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar>
+                                <AvatarImage src={member.photo_url || ""} />
+                                <AvatarFallback className="bg-primary/10 text-primary">
+                                  {member.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium">{member.full_name}</p>
+                                <p className="text-sm text-muted-foreground md:hidden">
+                                  {member.phone || member.email || "-"}
+                                </p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <div>
+                              <p className="text-sm">{member.email || "-"}</p>
+                              <p className="text-sm text-muted-foreground">{member.phone || "-"}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="secondary"
+                              className={statusConfig[member.spiritual_status]?.color || ""}
+                            >
+                              {statusConfig[member.spiritual_status]?.label || member.spiritual_status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {member.network ? (
+                              <Badge variant="outline">
+                                {networkConfig[member.network as keyof typeof networkConfig]?.label || member.network}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            {member.baptism_date ? (
+                              <Badge variant="outline" className="bg-info/10 text-info border-info/30">
+                                Batizado
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline">Não batizado</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleOpenEdit(member)}>
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>Ver perfil completo</DropdownMenuItem>
+                                <DropdownMenuItem>Histórico espiritual</DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  className="text-destructive"
+                                  onClick={() => setDeletingMember(member)}
+                                >
+                                  Remover
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+
+                {/* Pagination placeholder */}
+                {filteredMembers.length > 0 && (
+                  <div className="p-4 border-t flex items-center justify-between text-sm text-muted-foreground">
+                    <span>Mostrando {filteredMembers.length} de {members.length} pessoas</span>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" disabled>
+                        Anterior
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        Próximo
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          ))}
 
           <TabsContent value="pendentes" className="mt-4">
             {churchId && <PendingUsersTab churchId={churchId} />}

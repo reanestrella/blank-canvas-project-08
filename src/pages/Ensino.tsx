@@ -27,6 +27,7 @@ import { useCourses, CreateCourseData } from "@/hooks/useCourses";
 import { useMembers } from "@/hooks/useMembers";
 import { CourseModal } from "@/components/modals/CourseModal";
 import { CourseLessonsModal } from "@/components/modals/CourseLessonsModal";
+import { CourseStudentsModal } from "@/components/modals/CourseStudentsModal";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Course } from "@/hooks/useCourses";
@@ -50,7 +51,7 @@ export default function Ensino() {
   const [editingCourse, setEditingCourse] = useState<Course | undefined>();
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
   const [lessonsCourse, setLessonsCourse] = useState<Course | null>(null);
-  
+  const [studentsCourse, setStudentsCourse] = useState<Course | null>(null);
   const { profile } = useAuth();
   const churchId = profile?.church_id;
   const { courses, isLoading, createCourse, updateCourse, deleteCourse } = useCourses(churchId || undefined);
@@ -198,7 +199,7 @@ export default function Ensino() {
                                 <DropdownMenuItem onClick={() => setLessonsCourse(course)}>
                                   Gerenciar Aulas
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>Ver alunos</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setStudentsCourse(course)}>Ver alunos</DropdownMenuItem>
                                 <DropdownMenuItem 
                                   className="text-destructive"
                                   onClick={() => setDeletingCourse(course)}
@@ -273,6 +274,17 @@ export default function Ensino() {
         courseId={lessonsCourse?.id || ""}
         courseName={lessonsCourse?.name || ""}
       />
+
+      {/* Course Students Modal */}
+      {churchId && (
+        <CourseStudentsModal
+          open={!!studentsCourse}
+          onOpenChange={(open) => !open && setStudentsCourse(null)}
+          courseId={studentsCourse?.id || ""}
+          courseName={studentsCourse?.name || ""}
+          churchId={churchId}
+        />
+      )}
     </AppLayout>
   );
 }

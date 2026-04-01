@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +11,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, UserPlus, Loader2, Eye, Phone } from "lucide-react";
+import { Plus, UserPlus, Loader2, Eye, Phone, RotateCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Cell } from "@/hooks/useCells";
 
@@ -28,6 +27,18 @@ interface CellVisitorRecord {
   follow_up_status: string;
   notes: string | null;
   created_at: string;
+}
+
+interface GroupedVisitor {
+  full_name: string;
+  phone: string | null;
+  cell_id: string;
+  visit_count: number;
+  last_visit_date: string;
+  first_visit_date: string;
+  accepted_christ: boolean;
+  follow_up_status: string;
+  latest_id: string;
 }
 
 interface CellVisitorsTabProps {
@@ -51,7 +62,7 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
       .select("*")
       .eq("church_id", churchId)
       .order("visit_date", { ascending: false })
-      .limit(500);
+      .limit(2000);
     if (!error) setVisitors((data as CellVisitorRecord[]) || []);
     setIsLoading(false);
   };
@@ -60,16 +71,48 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
     if (churchId) fetchVisitors();
   }, [churchId]);
 
-  const filteredVisitors = selectedCellFilter === "all"
-    ? visitors
-    : visitors.filter(v => v.cell_id === selectedCellFilter);
+  // Group visitors by name+cell to get unique visitors with visit counts
+  const groupedVisitors = useMemo(() => {
+    const filtered = selectedCellFilter === "all"
+      ? visitors
+      : visitors.filter(v => v.cell_id === selectedCellFilter);
 
-  // Count visits per visitor name (case insensitive)
-  const visitCounts = visitors.reduce((acc, v) => {
-    const key = v.full_name.toLowerCase().trim();
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+    const groups = new Map<string, GroupedVisitor>();
+    
+    for (const v of filtered) {
+      const key = `${v.full_name.toLowerCase().trim()}|${v.cell_id}`;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.visit_count += 1;
+        if (v.visit_date > existing.last_visit_date) {
+          existing.last_visit_date = v.visit_date;
+          existing.latest_id = v.id;
+          existing.follow_up_status = v.follow_up_status;
+          existing.accepted_christ = v.accepted_christ || existing.accepted_christ;
+          existing.phone = v.phone || existing.phone;
+        }
+        if (v.visit_date < existing.first_visit_date) {
+          existing.first_visit_date = v.visit_date;
+        }
+      } else {
+        groups.set(key, {
+          full_name: v.full_name,
+          phone: v.phone,
+          cell_id: v.cell_id,
+          visit_count: 1,
+          last_visit_date: v.visit_date,
+          first_visit_date: v.visit_date,
+          accepted_christ: v.accepted_christ,
+          follow_up_status: v.follow_up_status,
+          latest_id: v.id,
+        });
+      }
+    }
+
+    return Array.from(groups.values()).sort((a, b) => 
+      b.last_visit_date.localeCompare(a.last_visit_date)
+    );
+  }, [visitors, selectedCellFilter]);
 
   const handleAddVisitor = async () => {
     if (!newVisitor.full_name.trim() || !newVisitor.cell_id) return;
@@ -94,6 +137,27 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
     }
   };
 
+  const handleRegisterReturnVisit = async (visitor: GroupedVisitor) => {
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from("cell_visitors").insert([{
+        full_name: visitor.full_name,
+        phone: visitor.phone || null,
+        cell_id: visitor.cell_id,
+        church_id: churchId,
+        visit_date: new Date().toISOString().split("T")[0],
+        follow_up_status: visitor.follow_up_status,
+      }]);
+      if (error) throw error;
+      toast({ title: "Retorno registrado!", description: `${visitor.full_name} — visita #${visitor.visit_count + 1}` });
+      fetchVisitors();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const getCellName = (cellId: string) => cells.find(c => c.id === cellId)?.name || "—";
 
   const statusLabels: Record<string, { label: string; color: string }> = {
@@ -108,8 +172,7 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
     fetchVisitors();
   };
 
-  // Unique visitor count
-  const uniqueVisitorNames = new Set(visitors.map(v => v.full_name.toLowerCase().trim()));
+  const uniqueVisitorNames = new Set(visitors.map(v => `${v.full_name.toLowerCase().trim()}|${v.cell_id}`));
 
   if (isLoading) {
     return (
@@ -201,10 +264,10 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
         </Card>
       )}
 
-      {/* Visitors Table */}
+      {/* Visitors Table - grouped by unique visitor */}
       <Card>
         <CardContent className="p-0">
-          {filteredVisitors.length === 0 ? (
+          {groupedVisitors.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center">
               <Eye className="w-12 h-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium">Nenhum visitante cadastrado</h3>
@@ -219,15 +282,15 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
                   <TableHead className="hidden md:table-cell">Telefone</TableHead>
                   <TableHead>Visitas</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="hidden md:table-cell">Data</TableHead>
+                  <TableHead className="hidden md:table-cell">Última Visita</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredVisitors.map(visitor => {
-                  const count = visitCounts[visitor.full_name.toLowerCase().trim()] || 1;
+                {groupedVisitors.map(visitor => {
                   const st = statusLabels[visitor.follow_up_status] || statusLabels.pendente;
                   return (
-                    <TableRow key={visitor.id}>
+                    <TableRow key={visitor.latest_id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="w-8 h-8">
@@ -245,10 +308,12 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
                         ) : "—"}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="font-bold">{count}x</Badge>
+                        <Badge variant="outline" className={`font-bold ${visitor.visit_count >= 3 ? "bg-success/10 text-success border-success/30" : ""}`}>
+                          {visitor.visit_count}x
+                        </Badge>
                       </TableCell>
                       <TableCell>
-                        <Select value={visitor.follow_up_status} onValueChange={v => updateStatus(visitor.id, v)}>
+                        <Select value={visitor.follow_up_status} onValueChange={v => updateStatus(visitor.latest_id, v)}>
                           <SelectTrigger className="w-[140px] h-8 text-xs">
                             <SelectValue />
                           </SelectTrigger>
@@ -261,7 +326,18 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
                         </Select>
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-sm">
-                        {new Date(visitor.visit_date + "T12:00:00").toLocaleDateString("pt-BR")}
+                        {new Date(visitor.last_visit_date + "T12:00:00").toLocaleDateString("pt-BR")}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Registrar retorno"
+                          disabled={isSubmitting}
+                          onClick={() => handleRegisterReturnVisit(visitor)}
+                        >
+                          <RotateCw className="w-4 h-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );
