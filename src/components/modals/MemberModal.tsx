@@ -121,6 +121,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit }: MemberModa
         age_group: member?.age_group || "",
         wedding_date: member?.wedding_date || "",
         pastoral_notes: member?.pastoral_notes || "",
+        congregation_id: member?.congregation_id || "",
         is_active: member?.is_active ?? true,
       });
     }
