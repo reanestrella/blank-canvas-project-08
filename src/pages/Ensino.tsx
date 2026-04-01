@@ -27,6 +27,7 @@ import { useCourses, CreateCourseData } from "@/hooks/useCourses";
 import { useMembers } from "@/hooks/useMembers";
 import { CourseModal } from "@/components/modals/CourseModal";
 import { CourseLessonsModal } from "@/components/modals/CourseLessonsModal";
+import { CourseStudentsModal } from "@/components/modals/CourseStudentsModal";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Course } from "@/hooks/useCourses";
