@@ -482,6 +482,10 @@ export default function Celulas() {
             />
           </TabsContent>
 
+          <TabsContent value="visitors" className="mt-4">
+            {churchId && <CellVisitorsTab cells={cells} churchId={churchId} />}
+          </TabsContent>
+
           {isOnlyCellLeader && cells.length > 0 && (
             <TabsContent value="tools" className="mt-4">
               <div className="space-y-6">
