@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useSearchParams, useNavigate, useLocation } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,6 +15,7 @@ import {
 import { Church, Loader2, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { syncSelfRegistrationProfile } from "@/lib/selfRegistration";
 
 const cadastroSchema = z.object({
   fullName: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
@@ -38,7 +39,6 @@ export default function Cadastrar() {
 
   const churchId = searchParams.get("church");
   const congregationId = searchParams.get("congregation");
-  console.log("[Cadastrar] churchId capturado:", churchId, "congregationId:", congregationId);
 
   const form = useForm<CadastroFormData>({
     resolver: zodResolver(cadastroSchema),
@@ -53,7 +53,10 @@ export default function Cadastrar() {
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      // 1. Create auth user
+      // 1. Create auth user - the handle_new_user trigger will:
+      //    - Create profile with church_id
+      //    - Assign 'membro' role
+      //    - Create pending_users record
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -62,56 +65,39 @@ export default function Cadastrar() {
             full_name: data.fullName,
             church_id: churchId,
             congregation_id: congregationId || null,
+            phone: data.phone || null,
+            birth_date: data.birthDate || null,
+            tipo: data.tipo,
           },
         },
       });
       if (authError) throw authError;
 
-      // 2. Update profile with church_id immediately
+      // 2. Fallback sync - ensures profile is correct even if trigger had issues
       if (authData.user) {
-        const profileUpdate: any = {
-          church_id: churchId,
-          full_name: data.fullName,
-          phone: data.phone || null,
-          registration_status: "pendente",
-          is_linked: false,
-        };
-        if (congregationId) profileUpdate.congregation_id = congregationId;
-        const { error: profileError } = await supabase.from("profiles").update(profileUpdate).eq("user_id", authData.user.id);
-        if (profileError) {
-          console.error("[Cadastrar] profile update error:", profileError);
-          await supabase.from("profiles").upsert({ user_id: authData.user.id, ...profileUpdate } as any, { onConflict: "user_id" });
+        try {
+          await syncSelfRegistrationProfile(authData.user, {
+            churchId,
+            congregationId,
+            fullName: data.fullName,
+            phone: data.phone || null,
+            birthDate: data.birthDate || null,
+            tipo: data.tipo,
+            ensurePendingUser: true,
+          });
+        } catch (syncErr) {
+          console.error("[Cadastrar] sync fallback error:", syncErr);
+          // Non-fatal - trigger should have handled it
         }
-        console.log("[Cadastrar] profile updated with church_id:", churchId);
-
-        // 3. Assign membro role
-        await supabase.from("user_roles").insert({
-          user_id: authData.user.id,
-          church_id: churchId,
-          role: "membro",
-        } as any).select();
       }
 
-      // 4. Save to pending_users for admin approval/linking
-      await supabase.from("pending_users" as any).insert({
-        full_name: data.fullName,
-        email: data.email,
-        phone: data.phone || null,
-        birth_date: data.birthDate || null,
-        church_id: churchId,
-        congregation_id: congregationId || null,
-        tipo: data.tipo,
-        status: "pendente",
-      });
-
-      // 5. Auto sign-in and redirect to app
+      // 3. Auto sign-in and redirect
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });
       
       if (signInError) {
-        // If auto sign-in fails, show success with login link
         setSuccess(true);
         toast({ title: "Cadastro realizado! Faça login para acessar." });
       } else {
@@ -120,7 +106,11 @@ export default function Cadastrar() {
       }
     } catch (error: any) {
       console.error("[Cadastrar] error:", error);
-      setErrorMsg(error.message || "Erro ao enviar cadastro.");
+      if (error.message?.includes("already registered")) {
+        setErrorMsg("Este email já está cadastrado. Faça login.");
+      } else {
+        setErrorMsg(error.message || "Erro ao enviar cadastro.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -152,7 +142,7 @@ export default function Cadastrar() {
             </div>
             <CardTitle>Cadastro Realizado!</CardTitle>
             <CardDescription>
-              Sua conta foi criada com sucesso. Você já pode fazer login e acessar o app. A liderança da igreja irá finalizar seu vínculo.
+              Sua conta foi criada com sucesso. Você já pode fazer login e acessar o app.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
@@ -188,7 +178,6 @@ export default function Cadastrar() {
                   <FormMessage />
                 </FormItem>
               )} />
-
               <FormField control={form.control} name="email" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Email *</FormLabel>
@@ -196,7 +185,6 @@ export default function Cadastrar() {
                   <FormMessage />
                 </FormItem>
               )} />
-
               <FormField control={form.control} name="password" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Senha *</FormLabel>
@@ -204,7 +192,6 @@ export default function Cadastrar() {
                   <FormMessage />
                 </FormItem>
               )} />
-
               <FormField control={form.control} name="phone" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Telefone</FormLabel>
@@ -212,7 +199,6 @@ export default function Cadastrar() {
                   <FormMessage />
                 </FormItem>
               )} />
-
               <FormField control={form.control} name="birthDate" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Data de Nascimento</FormLabel>
@@ -220,7 +206,6 @@ export default function Cadastrar() {
                   <FormMessage />
                 </FormItem>
               )} />
-
               <FormField control={form.control} name="tipo" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tipo *</FormLabel>
@@ -236,7 +221,6 @@ export default function Cadastrar() {
                   <FormMessage />
                 </FormItem>
               )} />
-
               <FormField control={form.control} name="isBaptized" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Batizado? *</FormLabel>
@@ -252,14 +236,12 @@ export default function Cadastrar() {
                   <FormMessage />
                 </FormItem>
               )} />
-
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Criar Conta
               </Button>
             </form>
           </Form>
-
           <div className="mt-4 text-center">
             <p className="text-xs text-muted-foreground">
               Já tem conta?{" "}
