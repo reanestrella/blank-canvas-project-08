@@ -274,6 +274,17 @@ export default function Ensino() {
         courseId={lessonsCourse?.id || ""}
         courseName={lessonsCourse?.name || ""}
       />
+
+      {/* Course Students Modal */}
+      {churchId && (
+        <CourseStudentsModal
+          open={!!studentsCourse}
+          onOpenChange={(open) => !open && setStudentsCourse(null)}
+          courseId={studentsCourse?.id || ""}
+          courseName={studentsCourse?.name || ""}
+          churchId={churchId}
+        />
+      )}
     </AppLayout>
   );
 }
