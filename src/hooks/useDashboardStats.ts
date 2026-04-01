@@ -115,6 +115,7 @@ export function useDashboardStats(congregationId?: string | null) {
         setMembers((membersRes.data as Member[]) || []);
         setAlerts((alertsRes.data as Alert[]) || []);
         setConsolidationCount(consolRes.count || 0);
+        setConsolidadosCount(consolidadosRes.count || 0);
         setHasFetched(true);
 
       } catch (error) {
