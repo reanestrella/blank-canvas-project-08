@@ -199,7 +199,7 @@ export default function Ensino() {
                                 <DropdownMenuItem onClick={() => setLessonsCourse(course)}>
                                   Gerenciar Aulas
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>Ver alunos</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setStudentsCourse(course)}>Ver alunos</DropdownMenuItem>
                                 <DropdownMenuItem 
                                   className="text-destructive"
                                   onClick={() => setDeletingCourse(course)}
