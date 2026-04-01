@@ -327,6 +327,33 @@ export function MemberModal({ open, onOpenChange, member, onSubmit }: MemberModa
                     )}
                   />
 
+                  {congregations.length > 1 && (
+                    <FormField
+                      control={form.control}
+                      name="congregation_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Congregação</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione a congregação" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {congregations.map(c => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.name}{c.is_main ? " (Sede)" : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
                   <FormField
                     control={form.control}
                     name="address"
