@@ -75,6 +75,7 @@ export function CellReportWithAttendanceModal({
   const [decidedNames, setDecidedNames] = useState<string[]>([]);
   const [newVisitor, setNewVisitor] = useState("");
   const [newDecided, setNewDecided] = useState("");
+  const [registeredVisitors, setRegisteredVisitors] = useState<{ id: string; full_name: string }[]>([]);
   const { toast } = useToast();
 
   const form = useForm<ReportFormData>({
