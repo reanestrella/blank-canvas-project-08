@@ -49,10 +49,9 @@ export function useCongregations(churchId?: string) {
       if (error) throw error;
       setCongregations((data as Congregation[]) || []);
       
-      // Set main congregation as default if none selected
-      if (!selectedCongregation && data && data.length > 0) {
-        const main = data.find((c: any) => c.is_main);
-        setSelectedCongregation(main?.id || data[0].id);
+      // Default to "all" (null) — user can filter by specific congregation
+      if (selectedCongregation === null && data && data.length > 0) {
+        // Keep null = "Todas"
       }
     } catch (error: any) {
       console.error("Error fetching congregations:", error);

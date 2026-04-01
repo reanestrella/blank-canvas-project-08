@@ -43,12 +43,19 @@ export function CongregationSelector({
         >
           <div className="flex items-center gap-2">
             <Building2 className="w-4 h-4 text-muted-foreground" />
-            <span className="truncate">{selected?.name || "Selecionar"}</span>
+            <span className="truncate">{selected?.name || "Todas"}</span>
           </div>
           <ChevronDown className="w-4 h-4 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[200px]">
+        <DropdownMenuItem
+          onClick={() => onSelect("")}
+          className="flex items-center justify-between"
+        >
+          <span>Todas as unidades</span>
+          {!selectedId && <Check className="w-4 h-4 text-primary" />}
+        </DropdownMenuItem>
         {congregations.map((congregation) => (
           <DropdownMenuItem
             key={congregation.id}

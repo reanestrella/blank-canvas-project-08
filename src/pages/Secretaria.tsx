@@ -486,7 +486,7 @@ export default function Secretaria() {
                 </div>
               )}
             </div>
-          </TabsContent>
+          }
 
           <TabsContent value="pendentes" className="mt-4">
             {churchId && <PendingUsersTab churchId={churchId} />}
