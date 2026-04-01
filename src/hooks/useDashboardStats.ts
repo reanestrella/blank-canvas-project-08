@@ -81,7 +81,7 @@ export function useDashboardStats(congregationId?: string | null) {
           membersQuery = membersQuery.or(`congregation_id.eq.${congregationId},congregation_id.is.null`);
         }
         
-        const [membersRes, alertsRes, consolRes] = await Promise.all([
+        const [membersRes, alertsRes, consolRes, consolidadosRes] = await Promise.all([
           membersQuery,
           supabase
             .from("member_alerts")
