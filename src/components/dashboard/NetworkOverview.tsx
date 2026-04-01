@@ -1,6 +1,5 @@
 import { Users, UserCheck, Baby, GraduationCap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 
 interface NetworkStats {
   homens: number;
@@ -20,28 +19,28 @@ export function NetworkOverview({ stats, totalMembers }: NetworkOverviewProps) {
       name: "Homens", 
       value: stats.homens, 
       icon: Users, 
-      color: "bg-primary",
+      color: "bg-primary/10",
       textColor: "text-primary"
     },
     { 
       name: "Mulheres", 
       value: stats.mulheres, 
       icon: UserCheck, 
-      color: "bg-secondary",
+      color: "bg-secondary/10",
       textColor: "text-secondary"
     },
     { 
       name: "Jovens", 
       value: stats.jovens, 
       icon: GraduationCap, 
-      color: "bg-info",
+      color: "bg-info/10",
       textColor: "text-info"
     },
     { 
       name: "Kids", 
       value: stats.kids, 
       icon: Baby, 
-      color: "bg-success",
+      color: "bg-success/10",
       textColor: "text-success"
     },
   ];
@@ -50,31 +49,22 @@ export function NetworkOverview({ stats, totalMembers }: NetworkOverviewProps) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pb-2">
         <CardTitle className="text-lg">Redes da Igreja</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {networks.map((network) => {
-          const percentage = total > 0 ? (network.value / total) * 100 : 0;
-          return (
-            <div key={network.name} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={`p-1.5 rounded-md ${network.color}/10`}>
-                    <network.icon className={`w-4 h-4 ${network.textColor}`} />
-                  </div>
-                  <span className="text-sm font-medium">{network.name}</span>
-                </div>
-                <span className="text-sm font-semibold">{network.value}</span>
-              </div>
-              <Progress value={percentage} className="h-2" />
+      <CardContent>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {networks.map((network) => (
+            <div key={network.name} className={`p-4 rounded-xl ${network.color} text-center`}>
+              <network.icon className={`w-6 h-6 ${network.textColor} mx-auto mb-2`} />
+              <p className="text-2xl font-bold">{network.value}</p>
+              <p className="text-xs text-muted-foreground">{network.name}</p>
             </div>
-          );
-        })}
-        <div className="pt-2 border-t">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Total em Redes</span>
-            <span className="font-semibold">{total}</span>
+          ))}
+          <div className="p-4 rounded-xl bg-muted/50 text-center">
+            <Users className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+            <p className="text-2xl font-bold">{total}</p>
+            <p className="text-xs text-muted-foreground">Total em Redes</p>
           </div>
         </div>
       </CardContent>
