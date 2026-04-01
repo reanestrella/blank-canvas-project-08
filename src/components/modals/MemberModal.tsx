@@ -65,9 +65,10 @@ interface MemberModalProps {
   onOpenChange: (open: boolean) => void;
   member?: Member;
   onSubmit: (data: CreateMemberData) => Promise<{ data: Member | null; error: any }>;
+  selectedCongregationId?: string | null;
 }
 
-export function MemberModal({ open, onOpenChange, member, onSubmit }: MemberModalProps) {
+export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCongregationId }: MemberModalProps) {
   const { profile } = useAuth();
   const churchId = profile?.church_id;
   const { congregations } = useCongregations(churchId || undefined);
