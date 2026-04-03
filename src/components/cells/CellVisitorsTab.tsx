@@ -137,26 +137,7 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
     }
   };
 
-  const handleRegisterReturnVisit = async (visitor: GroupedVisitor) => {
-    setIsSubmitting(true);
-    try {
-      const { error } = await supabase.from("cell_visitors").insert([{
-        full_name: visitor.full_name,
-        phone: visitor.phone || null,
-        cell_id: visitor.cell_id,
-        church_id: churchId,
-        visit_date: new Date().toISOString().split("T")[0],
-        follow_up_status: visitor.follow_up_status,
-      }]);
-      if (error) throw error;
-      toast({ title: "Retorno registrado!", description: `${visitor.full_name} — visita #${visitor.visit_count + 1}` });
-      fetchVisitors();
-    } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  // Visit count is now calculated automatically from cell_visitors records
 
   const getCellName = (cellId: string) => cells.find(c => c.id === cellId)?.name || "—";
 
