@@ -51,6 +51,7 @@ export function useDashboardStats(congregationId?: string | null) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [consolidationCount, setConsolidationCount] = useState(0);
   const [consolidadosCount, setConsolidadosCount] = useState(0);
+  const [desistentesCount, setDesistentesCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [hasFetched, setHasFetched] = useState(false);
   
