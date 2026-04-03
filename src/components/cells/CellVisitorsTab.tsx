@@ -308,17 +308,6 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
                       <TableCell className="hidden md:table-cell text-sm">
                         {new Date(visitor.last_visit_date + "T12:00:00").toLocaleDateString("pt-BR")}
                       </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title="Registrar retorno"
-                          disabled={isSubmitting}
-                          onClick={() => handleRegisterReturnVisit(visitor)}
-                        >
-                          <RotateCw className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   );
                 })}
