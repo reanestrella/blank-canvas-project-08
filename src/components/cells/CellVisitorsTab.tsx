@@ -264,7 +264,6 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
                   <TableHead>Visitas</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden md:table-cell">Última Visita</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
