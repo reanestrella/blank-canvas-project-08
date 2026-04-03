@@ -14,6 +14,7 @@ import {
 import { Plus, UserPlus, Loader2, Eye, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Cell } from "@/hooks/useCells";
+import { buildCellVisitorKey } from "@/lib/cellVisitors";
 
 interface CellVisitorRecord {
   id: string;
@@ -45,15 +46,6 @@ interface CellVisitorsTabProps {
   cells: Cell[];
   churchId: string;
 }
-
-const normalizeVisitorText = (value: string | null | undefined) =>
-  (value ?? "").trim().toLowerCase();
-
-const getVisitorIdentity = (fullName: string, phone: string | null) =>
-  `${normalizeVisitorText(fullName)}|${normalizeVisitorText(phone)}`;
-
-const getVisitorKey = (fullName: string, phone: string | null, cellId: string) =>
-  `${getVisitorIdentity(fullName, phone)}|${cellId}`;
 
 export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
   const [visitors, setVisitors] = useState<CellVisitorRecord[]>([]);
@@ -91,7 +83,7 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
     const groups = new Map<string, GroupedVisitor>();
     
     for (const v of filteredVisitors) {
-      const key = getVisitorKey(v.full_name, v.phone, v.cell_id);
+      const key = buildCellVisitorKey(v.full_name, v.phone, v.cell_id);
       const existing = groups.get(key);
       if (existing) {
         existing.visit_count += 1;
