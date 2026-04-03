@@ -5,7 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Shield, History, Users } from "lucide-react";
+import { Loader2, Shield, History, Users, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 interface UserRole {
   user_id: string;
@@ -50,6 +52,26 @@ export function RolesPanel({ churchId }: { churchId: string }) {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [logsLoading, setLogsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleRemoveRole = async (userId: string, role: string) => {
+    if (role === "membro") {
+      toast({ title: "Aviso", description: "Não é possível remover o cargo de membro base.", variant: "destructive" });
+      return;
+    }
+    const { error } = await supabase
+      .from("user_roles")
+      .delete()
+      .eq("user_id", userId)
+      .eq("church_id", churchId)
+      .eq("role", role);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      setUserRoles(prev => prev.filter(r => !(r.user_id === userId && r.role === role)));
+      toast({ title: "Cargo removido com sucesso!" });
+    }
+  };
 
   useEffect(() => {
     const fetchRoles = async () => {
@@ -143,16 +165,27 @@ export function RolesPanel({ churchId }: { churchId: string }) {
                 <CardContent className="pt-0">
                   <div className="flex flex-wrap gap-2">
                     {users.map(u => (
-                      <div key={`${u.user_id}-${u.role}`} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border">
+                      <div key={`${u.user_id}-${u.role}`} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border group">
                         <Avatar className="w-7 h-7">
                           <AvatarFallback className="text-xs bg-primary/10 text-primary">
                             {(u.full_name || "?").split(" ").map(n => n[0]).join("").slice(0, 2)}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium">{u.full_name}</p>
                           {u.email && <p className="text-[10px] text-muted-foreground">{u.email}</p>}
                         </div>
+                        {role !== "membro" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleRemoveRole(u.user_id, role)}
+                            title="Remover cargo"
+                          >
+                            <Trash2 className="w-3 h-3 text-destructive" />
+                          </Button>
+                        )}
                       </div>
                     ))}
                   </div>

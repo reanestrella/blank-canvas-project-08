@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus, X } from "lucide-react";
+import { Loader2, Plus, X, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CellReportErrorBoundary } from "@/components/cells/ErrorBoundary";
@@ -72,8 +72,11 @@ export function CellReportWithAttendanceModal({
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [presencas, setPresencas] = useState<Record<string, boolean>>({});
   const [visitorNames, setVisitorNames] = useState<string[]>([]);
+  const [visitorPhones, setVisitorPhones] = useState<string[]>([]);
+  const [selectedRegisteredVisitors, setSelectedRegisteredVisitors] = useState<string[]>([]);
   const [decidedNames, setDecidedNames] = useState<string[]>([]);
   const [newVisitor, setNewVisitor] = useState("");
+  const [newVisitorPhone, setNewVisitorPhone] = useState("");
   const [newDecided, setNewDecided] = useState("");
   const [registeredVisitors, setRegisteredVisitors] = useState<{ id: string; full_name: string }[]>([]);
   const { toast } = useToast();
@@ -182,12 +185,25 @@ export function CellReportWithAttendanceModal({
     const name = newVisitor.trim();
     if (name) {
       setVisitorNames(prev => [...prev, name]);
+      setVisitorPhones(prev => [...prev, newVisitorPhone.trim()]);
       setNewVisitor("");
+      setNewVisitorPhone("");
     }
   }, [newVisitor]);
 
+  const addRegisteredVisitor = useCallback((visitor: { id: string; full_name: string }) => {
+    if (!selectedRegisteredVisitors.includes(visitor.full_name)) {
+      setSelectedRegisteredVisitors(prev => [...prev, visitor.full_name]);
+    }
+  }, [selectedRegisteredVisitors]);
+
+  const removeRegisteredVisitor = useCallback((name: string) => {
+    setSelectedRegisteredVisitors(prev => prev.filter(n => n !== name));
+  }, []);
+
   const removeVisitor = useCallback((index: number) => {
     setVisitorNames(prev => prev.filter((_, i) => i !== index));
+    setVisitorPhones(prev => prev.filter((_, i) => i !== index));
   }, []);
 
   const addDecided = useCallback(() => {
@@ -207,17 +223,36 @@ export function CellReportWithAttendanceModal({
     setIsSubmitting(true);
     try {
       const presentCount = Object.values(presencas).filter(Boolean).length;
+      const totalVisitors = visitorNames.length + selectedRegisteredVisitors.length;
 
       const cleanedData: CreateCellReportData = {
         cell_id: data.cell_id,
         report_date: data.report_date,
-        attendance: presentCount + visitorNames.length,
-        visitors: visitorNames.length,
+        attendance: presentCount + totalVisitors,
+        visitors: totalVisitors,
         conversions: decidedNames.length,
         offering: data.offering ? parseFloat(data.offering) : undefined,
         notes: data.notes || undefined,
         decided: decidedNames.length > 0 ? decidedNames : undefined,
-        visitor_names: visitorNames.length > 0 ? visitorNames : undefined,
+        visitor_entries: [
+          ...visitorNames.map((name, i) => ({
+            full_name: name,
+            phone: visitorPhones[i] || null,
+          })),
+          ...selectedRegisteredVisitors.map(name => ({
+            full_name: name,
+            phone: null,
+          })),
+        ].length > 0 ? [
+          ...visitorNames.map((name, i) => ({
+            full_name: name,
+            phone: visitorPhones[i] || null,
+          })),
+          ...selectedRegisteredVisitors.map(name => ({
+            full_name: name,
+            phone: null,
+          })),
+        ] : undefined,
       };
 
       const result = await onSubmit(cleanedData);
@@ -239,6 +274,8 @@ export function CellReportWithAttendanceModal({
       setPresencas({});
       setMembers([]);
       setVisitorNames([]);
+      setVisitorPhones([]);
+      setSelectedRegisteredVisitors([]);
       setDecidedNames([]);
       onOpenChange(false);
     } catch (err) {
@@ -251,7 +288,7 @@ export function CellReportWithAttendanceModal({
     } finally {
       setIsSubmitting(false);
     }
-  }, [isSubmitting, presencas, visitorNames, decidedNames, onSubmit, saveAttendance, form, onOpenChange, toast]);
+  }, [isSubmitting, presencas, visitorNames, visitorPhones, selectedRegisteredVisitors, decidedNames, onSubmit, saveAttendance, form, onOpenChange, toast]);
 
   const activeCells = useMemo(() => (cells ?? []).filter((c) => c.is_active), [cells]);
 
@@ -328,28 +365,52 @@ export function CellReportWithAttendanceModal({
                       <p className="text-xs text-muted-foreground">Visitantes cadastrados na célula:</p>
                       <div className="flex flex-wrap gap-1">
                         {registeredVisitors
-                          .filter(rv => !visitorNames.includes(rv.full_name))
+                          .filter(rv => !visitorNames.includes(rv.full_name) && !selectedRegisteredVisitors.includes(rv.full_name))
                           .map(rv => (
                             <Badge
                               key={rv.id}
                               variant="outline"
                               className="cursor-pointer hover:bg-secondary/20 transition-colors"
-                              onClick={() => setVisitorNames(prev => [...prev, rv.full_name])}
+                              onClick={() => addRegisteredVisitor(rv)}
                             >
                               <Plus className="w-3 h-3 mr-1" />{rv.full_name}
                             </Badge>
                           ))}
                       </div>
+                      {selectedRegisteredVisitors.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {selectedRegisteredVisitors.map(name => (
+                            <Badge key={name} variant="secondary" className="gap-1 bg-info/10 text-info">
+                              {name}
+                              <button type="button" onClick={() => removeRegisteredVisitor(name)}>
+                                <X className="w-3 h-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                   
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Nome do visitante (novo)"
-                      value={newVisitor}
-                      onChange={(e) => setNewVisitor(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addVisitor(); } }}
-                    />
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1 space-y-1">
+                      <span className="text-xs text-muted-foreground">Nome *</span>
+                      <Input
+                        placeholder="Nome do visitante"
+                        value={newVisitor}
+                        onChange={(e) => setNewVisitor(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addVisitor(); } }}
+                      />
+                    </div>
+                    <div className="w-[140px] space-y-1">
+                      <span className="text-xs text-muted-foreground">Telefone</span>
+                      <Input
+                        placeholder="(00) 00000-0000"
+                        value={newVisitorPhone}
+                        onChange={(e) => setNewVisitorPhone(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addVisitor(); } }}
+                      />
+                    </div>
                     <Button type="button" variant="outline" size="icon" onClick={addVisitor}>
                       <Plus className="w-4 h-4" />
                     </Button>
@@ -357,8 +418,8 @@ export function CellReportWithAttendanceModal({
                   {visitorNames.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {visitorNames.map((name, i) => (
-                        <Badge key={i} variant="secondary" className="gap-1">
-                          {name}
+                        <Badge key={i} variant="secondary" className="gap-1 text-xs">
+                          {name}{visitorPhones[i] ? ` • ${visitorPhones[i]}` : ""}
                           <button type="button" onClick={() => removeVisitor(i)}>
                             <X className="w-3 h-3" />
                           </button>
@@ -366,7 +427,7 @@ export function CellReportWithAttendanceModal({
                       ))}
                     </div>
                   )}
-                  <p className="text-xs text-muted-foreground">{visitorNames.length} visitante(s)</p>
+                  <p className="text-xs text-muted-foreground">{visitorNames.length + selectedRegisteredVisitors.length} visitante(s)</p>
                 </div>
 
                 {/* Decided */}
