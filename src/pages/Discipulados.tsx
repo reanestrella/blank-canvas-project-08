@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { Discipleship } from "@/hooks/useDiscipleships";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,8 +63,13 @@ export default function Discipulados() {
   const { discipleships, isLoading, createDiscipleship, deleteDiscipleship } = useDiscipleships(churchId || undefined);
   const { members } = useMembers(churchId || undefined);
 
-  const getMemberName = (id: string | null) => {
+  const getMemberName = (id: string | null, disc?: Discipleship | null) => {
     if (!id) return "Não definido";
+    // Try joined data first
+    if (disc) {
+      if (id === disc.disciple_id && disc.disciple?.full_name) return disc.disciple.full_name;
+      if (id === disc.discipler_id && disc.discipler?.full_name) return disc.discipler.full_name;
+    }
     return members.find(m => m.id === id)?.full_name || "Desconhecido";
   };
 
@@ -144,8 +150,8 @@ export default function Discipulados() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="text-muted-foreground">Discipulando:</span> <strong>{getMemberName(disc.disciple_id)}</strong></div>
-                <div><span className="text-muted-foreground">Discipulador:</span> <strong>{getMemberName(disc.discipler_id)}</strong></div>
+                <div><span className="text-muted-foreground">Discipulando:</span> <strong>{getMemberName(disc.disciple_id, disc)}</strong></div>
+                <div><span className="text-muted-foreground">Discipulador:</span> <strong>{getMemberName(disc.discipler_id, disc)}</strong></div>
                 {disc.start_date && <div><span className="text-muted-foreground">Início:</span> {new Date(disc.start_date).toLocaleDateString("pt-BR")}</div>}
                 {disc.notes && <div className="col-span-2"><span className="text-muted-foreground">Notas:</span> {disc.notes}</div>}
               </div>
@@ -254,23 +260,23 @@ export default function Discipulados() {
                     <div className="flex items-center gap-3">
                       <Avatar className="w-8 h-8">
                         <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                          {getMemberName(d.disciple_id).split(" ").map(n => n[0]).join("").slice(0, 2)}
+                          {getMemberName(d.disciple_id, d).split(" ").map(n => n[0]).join("").slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="text-xs text-muted-foreground">Discipulando</p>
-                        <p className="font-medium text-sm">{getMemberName(d.disciple_id)}</p>
+                        <p className="font-medium text-sm">{getMemberName(d.disciple_id, d)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <Avatar className="w-8 h-8">
                         <AvatarFallback className="bg-secondary/10 text-secondary text-xs">
-                          {getMemberName(d.discipler_id).split(" ").map(n => n[0]).join("").slice(0, 2)}
+                          {getMemberName(d.discipler_id, d).split(" ").map(n => n[0]).join("").slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="text-xs text-muted-foreground">Discipulador</p>
-                        <p className="font-medium text-sm">{getMemberName(d.discipler_id)}</p>
+                        <p className="font-medium text-sm">{getMemberName(d.discipler_id, d)}</p>
                       </div>
                     </div>
                     {d.start_date && (

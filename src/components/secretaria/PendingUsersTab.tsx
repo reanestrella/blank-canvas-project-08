@@ -138,6 +138,7 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
       if (mergeFields.phone && linkingUser.phone) updates.phone = linkingUser.phone;
       if (mergeFields.birth_date && linkingUser.birth_date) updates.birth_date = linkingUser.birth_date;
       if (mergeFields.email && linkingUser.email) updates.email = linkingUser.email;
+      if (mergeFields.full_name && linkingUser.full_name) updates.full_name = linkingUser.full_name;
       if (Object.keys(updates).length > 0) {
         await supabase.from("members").update(updates).eq("id", selectedMemberId);
       }
@@ -182,7 +183,7 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
     return (
       <div className="grid grid-cols-[120px_1fr_40px_1fr] items-center gap-2 py-2 border-b border-border/50 last:border-0">
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
-        <div className={`text-sm p-2 rounded ${pendingHasData ? "bg-amber-50 dark:bg-amber-900/20" : "bg-muted/30"}`}>
+        <div className={`text-sm p-2 rounded ${mergeFields[field] ? "bg-amber-100 dark:bg-amber-800/30 ring-2 ring-amber-400" : pendingHasData ? "bg-amber-50 dark:bg-amber-900/20" : "bg-muted/30"}`}>
           {pendingValue || <span className="text-muted-foreground italic">Vazio</span>}
         </div>
         <div className="flex justify-center">
@@ -200,7 +201,7 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
             <span className="text-xs text-muted-foreground">—</span>
           )}
         </div>
-        <div className={`text-sm p-2 rounded ${existingHasData ? "bg-emerald-50 dark:bg-emerald-900/20" : "bg-muted/30"}`}>
+        <div className={`text-sm p-2 rounded ${!mergeFields[field] && existingHasData ? "bg-emerald-100 dark:bg-emerald-800/30 ring-2 ring-emerald-400" : existingHasData ? "bg-emerald-50 dark:bg-emerald-900/20" : "bg-muted/30"}`}>
           {existingValue || <span className="text-muted-foreground italic">Vazio</span>}
         </div>
       </div>
@@ -356,7 +357,7 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Ative o switch para usar os dados do autocadastro no lugar dos dados existentes.
+                  Ative o switch para usar os dados do autocadastro. O campo destacado será o valor salvo.
                 </p>
               </div>
             )}
