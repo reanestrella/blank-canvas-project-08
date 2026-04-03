@@ -45,6 +45,13 @@ export interface CreateCellData {
   maps_link?: string;
 }
 
+export interface CellReportVisitorEntry {
+  full_name: string;
+  phone?: string | null;
+  accepted_christ?: boolean;
+  follow_up_status?: string | null;
+}
+
 export interface CreateCellReportData {
   cell_id: string;
   report_date: string;
@@ -55,6 +62,7 @@ export interface CreateCellReportData {
   notes?: string;
   decided?: string[];
   visitor_names?: string[];
+  visitor_entries?: CellReportVisitorEntry[];
 }
 
 export function useCells(churchId?: string, leaderUserId?: string | null) {
@@ -280,9 +288,39 @@ export function useCells(churchId?: string, leaderUserId?: string | null) {
         console.error("Supabase report insert error:", error.message, (error as any).details, (error as any).hint);
         throw error;
       }
+
+      const visitorEntries = data.visitor_entries ?? data.visitor_names?.map((full_name) => ({ full_name, phone: null })) ?? [];
+      let visitorSyncError: any = null;
+
+      if (visitorEntries.length > 0) {
+        const { error: visitorsError } = await supabase
+          .from("cell_visitors")
+          .insert(visitorEntries.map((visitor) => ({
+            church_id: churchId,
+            cell_id: data.cell_id,
+            full_name: visitor.full_name,
+            phone: visitor.phone ?? null,
+            visit_date: data.report_date,
+            accepted_christ: visitor.accepted_christ ?? false,
+            follow_up_status: visitor.follow_up_status ?? "pendente",
+          })) as any);
+
+        if (visitorsError) {
+          visitorSyncError = visitorsError;
+          console.error("Error syncing report visitors:", visitorsError);
+        }
+      }
       
       setReports((prev) => [newReport as CellReport, ...prev]);
-      toast({ title: "Sucesso", description: "Relatório enviado com sucesso!" });
+      if (visitorSyncError) {
+        toast({
+          title: "Relatório enviado com ressalvas",
+          description: "O relatório foi salvo, mas os visitantes da reunião não puderam ser registrados.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Sucesso", description: "Relatório enviado com sucesso!" });
+      }
       return { data: newReport as CellReport, error: null };
     } catch (error: any) {
       console.error("Error creating report:", error);

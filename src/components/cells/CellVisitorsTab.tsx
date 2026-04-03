@@ -46,6 +46,15 @@ interface CellVisitorsTabProps {
   churchId: string;
 }
 
+const normalizeVisitorText = (value: string | null | undefined) =>
+  (value ?? "").trim().toLowerCase();
+
+const getVisitorIdentity = (fullName: string, phone: string | null) =>
+  `${normalizeVisitorText(fullName)}|${normalizeVisitorText(phone)}`;
+
+const getVisitorKey = (fullName: string, phone: string | null, cellId: string) =>
+  `${getVisitorIdentity(fullName, phone)}|${cellId}`;
+
 export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
   const [visitors, setVisitors] = useState<CellVisitorRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,16 +80,18 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
     if (churchId) fetchVisitors();
   }, [churchId]);
 
-  // Group visitors by name+cell to get unique visitors with visit counts
-  const groupedVisitors = useMemo(() => {
-    const filtered = selectedCellFilter === "all"
+  const filteredVisitors = useMemo(() => {
+    return selectedCellFilter === "all"
       ? visitors
-      : visitors.filter(v => v.cell_id === selectedCellFilter);
+      : visitors.filter((visitor) => visitor.cell_id === selectedCellFilter);
+  }, [selectedCellFilter, visitors]);
 
+  // Group visitors by name+phone+cell to get unique visitors with visit counts
+  const groupedVisitors = useMemo(() => {
     const groups = new Map<string, GroupedVisitor>();
     
-    for (const v of filtered) {
-      const key = `${v.full_name.toLowerCase().trim()}|${v.cell_id}`;
+    for (const v of filteredVisitors) {
+      const key = getVisitorKey(v.full_name, v.phone, v.cell_id);
       const existing = groups.get(key);
       if (existing) {
         existing.visit_count += 1;
@@ -112,7 +123,7 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
     return Array.from(groups.values()).sort((a, b) => 
       b.last_visit_date.localeCompare(a.last_visit_date)
     );
-  }, [visitors, selectedCellFilter]);
+  }, [filteredVisitors]);
 
   const handleAddVisitor = async () => {
     if (!newVisitor.full_name.trim() || !newVisitor.cell_id) return;
@@ -153,7 +164,7 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
     fetchVisitors();
   };
 
-  const uniqueVisitorNames = new Set(visitors.map(v => `${v.full_name.toLowerCase().trim()}|${v.cell_id}`));
+  const uniqueVisitorCount = groupedVisitors.length;
 
   if (isLoading) {
     return (
@@ -175,19 +186,19 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">{uniqueVisitorNames.size}</p>
+            <p className="text-2xl font-bold">{uniqueVisitorCount}</p>
             <p className="text-xs text-muted-foreground">Visitantes Únicos</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">{visitors.filter(v => v.accepted_christ).length}</p>
+            <p className="text-2xl font-bold">{groupedVisitors.filter(v => v.accepted_christ).length}</p>
             <p className="text-xs text-muted-foreground">Aceitaram Cristo</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">{visitors.filter(v => v.follow_up_status === "integrado").length}</p>
+            <p className="text-2xl font-bold">{groupedVisitors.filter(v => v.follow_up_status === "integrado").length}</p>
             <p className="text-xs text-muted-foreground">Integrados</p>
           </CardContent>
         </Card>
