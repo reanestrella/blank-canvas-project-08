@@ -358,19 +358,12 @@ export default function Configuracoes() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="w-5 h-5" />
-                  Funções e Permissões
+                  Funções, Permissões e Log de Ações
                 </CardTitle>
-                <CardDescription>Configure as permissões por função</CardDescription>
+                <CardDescription>Veja quem ocupa cada cargo e acompanhe as ações realizadas no sistema</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {Object.entries(roleLabels).map(([role, label]) => (
-                    <div key={role} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-                      <span>{label}</span>
-                      <Button variant="ghost" size="sm">Editar</Button>
-                    </div>
-                  ))}
-                </div>
+                {churchId && <RolesPanel churchId={churchId} />}
               </CardContent>
             </Card>
           </TabsContent>
