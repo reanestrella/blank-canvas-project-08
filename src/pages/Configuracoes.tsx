@@ -33,6 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { InviteUserModal } from "@/components/modals/InviteUserModal";
 import { CongregationModal } from "@/components/modals/CongregationModal";
+import { RolesPanel } from "@/components/admin/RolesPanel";
 import type { Congregation, CreateCongregationData } from "@/hooks/useCongregations";
 
 const plans = [
