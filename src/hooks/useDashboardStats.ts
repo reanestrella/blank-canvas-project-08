@@ -122,6 +122,7 @@ export function useDashboardStats(congregationId?: string | null) {
         setAlerts((alertsRes.data as Alert[]) || []);
         setConsolidationCount(consolRes.count || 0);
         setConsolidadosCount(consolidadosRes.count || 0);
+        setDesistentesCount(desistentesRes.count || 0);
         setHasFetched(true);
 
       } catch (error) {
