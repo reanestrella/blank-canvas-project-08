@@ -11,7 +11,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, UserPlus, Loader2, Eye, Phone, RotateCw } from "lucide-react";
+import { Plus, UserPlus, Loader2, Eye, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Cell } from "@/hooks/useCells";
 
