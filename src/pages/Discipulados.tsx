@@ -82,11 +82,13 @@ export default function Discipulados() {
       status,
       notes: notes || undefined,
     });
-    if (!result.error) {
+    if (!result.error && result.data) {
       setModalOpen(false);
       setDisciplerId("");
       setDiscipleId("");
       setNotes("");
+      setSelectedId(result.data.id);
+      loadLogs(result.data.id);
     }
   };
 
@@ -145,7 +147,7 @@ export default function Discipulados() {
             <CardContent className="p-5">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h2 className="text-xl font-bold">Discipulado</h2>
+                  <h2 className="text-xl font-bold">Discipulado de {getMemberName(disc.disciple_id, disc)}</h2>
                   <Badge className={statusColors[disc.status] || ""}>{statusLabels[disc.status] || disc.status}</Badge>
                 </div>
               </div>
@@ -161,20 +163,22 @@ export default function Discipulados() {
           {/* Add log */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Registrar Acompanhamento</CardTitle>
+              <CardTitle className="text-base">Continuar discipulado</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Input type="date" value={logForm.log_date} onChange={e => setLogForm(f => ({ ...f, log_date: e.target.value }))} className="w-auto" />
-                <Input
+              <div className="space-y-3">
+                <Input type="date" value={logForm.log_date} onChange={e => setLogForm(f => ({ ...f, log_date: e.target.value }))} className="w-full sm:w-auto" />
+                <Textarea
                   value={logForm.description}
                   onChange={e => setLogForm(f => ({ ...f, description: e.target.value }))}
-                  placeholder="Ex: Nos reunimos e estudamos João 3..."
-                  className="flex-1"
+                  placeholder="Ex: tivemos uma reunião, oração, estudo bíblico ou acompanhamento pastoral..."
+                  rows={4}
                 />
-                <Button onClick={handleAddLog} disabled={!logForm.description.trim()}>
-                  <Send className="w-4 h-4 mr-1" /> Registrar
-                </Button>
+                <div className="flex justify-end">
+                  <Button onClick={handleAddLog} disabled={!logForm.description.trim()}>
+                    <Send className="w-4 h-4 mr-1" /> Salvar encontro
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -285,7 +289,9 @@ export default function Discipulados() {
                       </p>
                     )}
                     {d.notes && <p className="text-sm text-muted-foreground line-clamp-2">{d.notes}</p>}
-                    <p className="text-xs text-primary font-medium">Clique para ver histórico →</p>
+                    <Button variant="outline" className="w-full" onClick={(e) => { e.stopPropagation(); handleOpenDetail(d.id); }}>
+                      Continuar discipulado
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

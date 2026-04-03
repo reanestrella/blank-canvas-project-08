@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { dedupeVisitorEntries } from "@/lib/cellVisitors";
 
 export interface Cell {
   id: string;
@@ -56,6 +57,7 @@ export interface CreateCellReportData {
   cell_id: string;
   report_date: string;
   attendance: number;
+  member_attendance_count?: number;
   visitors: number;
   conversions: number;
   offering?: number;
@@ -266,11 +268,19 @@ export function useCells(churchId?: string, leaderUserId?: string | null) {
       return { data: null, error: new Error("church_id missing") };
     }
     try {
+      const visitorEntries = dedupeVisitorEntries(
+        data.visitor_entries ?? data.visitor_names?.map((full_name) => ({ full_name, phone: null })) ?? []
+      );
+      const visitorCount = visitorEntries.length > 0 ? visitorEntries.length : data.visitors;
+      const memberAttendanceCount = typeof data.member_attendance_count === "number"
+        ? Math.max(0, data.member_attendance_count)
+        : Math.max(0, data.attendance - data.visitors);
+
       const payload: Record<string, any> = {
         cell_id: data.cell_id,
         report_date: data.report_date,
-        attendance: data.attendance,
-        visitors: data.visitors,
+        attendance: memberAttendanceCount + visitorCount,
+        visitors: visitorCount,
         conversions: data.conversions,
         church_id: churchId,
       };
@@ -289,7 +299,6 @@ export function useCells(churchId?: string, leaderUserId?: string | null) {
         throw error;
       }
 
-      const visitorEntries = data.visitor_entries ?? data.visitor_names?.map((full_name) => ({ full_name, phone: null })) ?? [];
       let visitorSyncError: any = null;
 
       if (visitorEntries.length > 0) {

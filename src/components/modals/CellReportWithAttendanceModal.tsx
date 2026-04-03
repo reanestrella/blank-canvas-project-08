@@ -36,6 +36,7 @@ import { CellReportErrorBoundary } from "@/components/cells/ErrorBoundary";
 import { AttendanceList } from "@/components/cells/AttendanceList";
 import { batchUpsertAttendance } from "@/services/attendance";
 import type { Cell, CellReport, CreateCellReportData } from "@/hooks/useCells";
+import { buildVisitorIdentityKey, dedupeVisitorEntries } from "@/lib/cellVisitors";
 
 const reportSchema = z.object({
   cell_id: z.string().min(1, "Selecione uma célula"),
@@ -50,6 +51,12 @@ interface MemberEntry {
   id: string;
   memberId: string;
   memberName: string;
+}
+
+interface RegisteredVisitorEntry {
+  id: string;
+  full_name: string;
+  phone: string | null;
 }
 
 interface CellReportWithAttendanceModalProps {
@@ -73,12 +80,12 @@ export function CellReportWithAttendanceModal({
   const [presencas, setPresencas] = useState<Record<string, boolean>>({});
   const [visitorNames, setVisitorNames] = useState<string[]>([]);
   const [visitorPhones, setVisitorPhones] = useState<string[]>([]);
-  const [selectedRegisteredVisitors, setSelectedRegisteredVisitors] = useState<string[]>([]);
+  const [selectedRegisteredVisitors, setSelectedRegisteredVisitors] = useState<RegisteredVisitorEntry[]>([]);
   const [decidedNames, setDecidedNames] = useState<string[]>([]);
   const [newVisitor, setNewVisitor] = useState("");
   const [newVisitorPhone, setNewVisitorPhone] = useState("");
   const [newDecided, setNewDecided] = useState("");
-  const [registeredVisitors, setRegisteredVisitors] = useState<{ id: string; full_name: string }[]>([]);
+  const [registeredVisitors, setRegisteredVisitors] = useState<RegisteredVisitorEntry[]>([]);
   const { toast } = useToast();
 
   const form = useForm<ReportFormData>({
@@ -114,7 +121,7 @@ export function CellReportWithAttendanceModal({
             .eq("cell_id", selectedCellId),
           supabase
             .from("cell_visitors")
-            .select("id, full_name")
+            .select("id, full_name, phone")
             .eq("cell_id", selectedCellId)
             .order("full_name"),
         ]);
@@ -140,13 +147,7 @@ export function CellReportWithAttendanceModal({
           setMembers(safe);
         }
         
-        // Deduplicate registered visitors by name
-        const uniqueVisitors = new Map<string, { id: string; full_name: string }>();
-        (visitorsResult.data || []).forEach((v: any) => {
-          const key = v.full_name.toLowerCase().trim();
-          if (!uniqueVisitors.has(key)) uniqueVisitors.set(key, v);
-        });
-        setRegisteredVisitors(Array.from(uniqueVisitors.values()));
+        setRegisteredVisitors(dedupeVisitorEntries((visitorsResult.data as RegisteredVisitorEntry[]) || []));
         
         setPresencas({});
       } catch (err) {
@@ -189,16 +190,17 @@ export function CellReportWithAttendanceModal({
       setNewVisitor("");
       setNewVisitorPhone("");
     }
-  }, [newVisitor]);
+  }, [newVisitor, newVisitorPhone]);
 
-  const addRegisteredVisitor = useCallback((visitor: { id: string; full_name: string }) => {
-    if (!selectedRegisteredVisitors.includes(visitor.full_name)) {
-      setSelectedRegisteredVisitors(prev => [...prev, visitor.full_name]);
+  const addRegisteredVisitor = useCallback((visitor: RegisteredVisitorEntry) => {
+    const visitorKey = buildVisitorIdentityKey(visitor.full_name, visitor.phone);
+    if (!selectedRegisteredVisitors.some((item) => buildVisitorIdentityKey(item.full_name, item.phone) === visitorKey)) {
+      setSelectedRegisteredVisitors(prev => [...prev, visitor]);
     }
   }, [selectedRegisteredVisitors]);
 
-  const removeRegisteredVisitor = useCallback((name: string) => {
-    setSelectedRegisteredVisitors(prev => prev.filter(n => n !== name));
+  const removeRegisteredVisitor = useCallback((visitorKey: string) => {
+    setSelectedRegisteredVisitors(prev => prev.filter((visitor) => buildVisitorIdentityKey(visitor.full_name, visitor.phone) !== visitorKey));
   }, []);
 
   const removeVisitor = useCallback((index: number) => {
@@ -218,41 +220,40 @@ export function CellReportWithAttendanceModal({
     setDecidedNames(prev => prev.filter((_, i) => i !== index));
   }, []);
 
+  const visitorEntries = useMemo(() => dedupeVisitorEntries([
+    ...visitorNames.map((name, i) => ({
+      full_name: name,
+      phone: visitorPhones[i] || null,
+    })),
+    ...selectedRegisteredVisitors.map((visitor) => ({
+      full_name: visitor.full_name,
+      phone: visitor.phone,
+    })),
+  ]), [selectedRegisteredVisitors, visitorNames, visitorPhones]);
+
+  const manualVisitorKeys = useMemo(
+    () => new Set(visitorEntries.map((visitor) => buildVisitorIdentityKey(visitor.full_name, visitor.phone))),
+    [visitorEntries]
+  );
+
   const handleSubmit = useCallback(async (data: ReportFormData) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
       const presentCount = Object.values(presencas).filter(Boolean).length;
-      const totalVisitors = visitorNames.length + selectedRegisteredVisitors.length;
+      const totalVisitors = visitorEntries.length;
 
       const cleanedData: CreateCellReportData = {
         cell_id: data.cell_id,
         report_date: data.report_date,
+        member_attendance_count: presentCount,
         attendance: presentCount + totalVisitors,
         visitors: totalVisitors,
         conversions: decidedNames.length,
         offering: data.offering ? parseFloat(data.offering) : undefined,
         notes: data.notes || undefined,
         decided: decidedNames.length > 0 ? decidedNames : undefined,
-        visitor_entries: [
-          ...visitorNames.map((name, i) => ({
-            full_name: name,
-            phone: visitorPhones[i] || null,
-          })),
-          ...selectedRegisteredVisitors.map(name => ({
-            full_name: name,
-            phone: null,
-          })),
-        ].length > 0 ? [
-          ...visitorNames.map((name, i) => ({
-            full_name: name,
-            phone: visitorPhones[i] || null,
-          })),
-          ...selectedRegisteredVisitors.map(name => ({
-            full_name: name,
-            phone: null,
-          })),
-        ] : undefined,
+        visitor_entries: visitorEntries.length > 0 ? visitorEntries : undefined,
       };
 
       const result = await onSubmit(cleanedData);
@@ -288,7 +289,7 @@ export function CellReportWithAttendanceModal({
     } finally {
       setIsSubmitting(false);
     }
-  }, [isSubmitting, presencas, visitorNames, visitorPhones, selectedRegisteredVisitors, decidedNames, onSubmit, saveAttendance, form, onOpenChange, toast]);
+  }, [isSubmitting, presencas, visitorEntries, decidedNames, onSubmit, saveAttendance, form, onOpenChange, toast]);
 
   const activeCells = useMemo(() => (cells ?? []).filter((c) => c.is_active), [cells]);
 
@@ -365,7 +366,7 @@ export function CellReportWithAttendanceModal({
                       <p className="text-xs text-muted-foreground">Visitantes cadastrados na célula:</p>
                       <div className="flex flex-wrap gap-1">
                         {registeredVisitors
-                          .filter(rv => !visitorNames.includes(rv.full_name) && !selectedRegisteredVisitors.includes(rv.full_name))
+                          .filter((rv) => !manualVisitorKeys.has(buildVisitorIdentityKey(rv.full_name, rv.phone)))
                           .map(rv => (
                             <Badge
                               key={rv.id}
@@ -379,14 +380,16 @@ export function CellReportWithAttendanceModal({
                       </div>
                       {selectedRegisteredVisitors.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {selectedRegisteredVisitors.map(name => (
-                            <Badge key={name} variant="secondary" className="gap-1 bg-info/10 text-info">
-                              {name}
-                              <button type="button" onClick={() => removeRegisteredVisitor(name)}>
+                          {selectedRegisteredVisitors.map((visitor) => {
+                            const visitorKey = buildVisitorIdentityKey(visitor.full_name, visitor.phone);
+                            return (
+                            <Badge key={visitorKey} variant="secondary" className="gap-1 bg-info/10 text-info">
+                              {visitor.full_name}{visitor.phone ? ` • ${visitor.phone}` : ""}
+                              <button type="button" onClick={() => removeRegisteredVisitor(visitorKey)}>
                                 <X className="w-3 h-3" />
                               </button>
                             </Badge>
-                          ))}
+                          )})}
                         </div>
                       )}
                     </div>
@@ -427,7 +430,7 @@ export function CellReportWithAttendanceModal({
                       ))}
                     </div>
                   )}
-                  <p className="text-xs text-muted-foreground">{visitorNames.length + selectedRegisteredVisitors.length} visitante(s)</p>
+                  <p className="text-xs text-muted-foreground">{visitorEntries.length} visitante(s)</p>
                 </div>
 
                 {/* Decided */}
