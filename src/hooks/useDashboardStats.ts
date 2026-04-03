@@ -86,7 +86,7 @@ export function useDashboardStats(congregationId?: string | null) {
           membersQuery = membersQuery.or(`congregation_id.eq.${congregationId},congregation_id.is.null`);
         }
         
-        const [membersRes, alertsRes, consolRes, consolidadosRes] = await Promise.all([
+        const [membersRes, alertsRes, consolRes, consolidadosRes, desistentesRes] = await Promise.all([
           membersQuery,
           supabase
             .from("member_alerts")
@@ -95,18 +95,21 @@ export function useDashboardStats(congregationId?: string | null) {
             .eq("is_read", false)
             .order("created_at", { ascending: false })
             .limit(10),
-          // Em Consolidação = status "acompanhamento" (novos convertidos em consolidação)
           supabase
             .from("consolidation_records")
             .select("id", { count: "exact", head: true })
             .eq("church_id", currentChurchId)
             .eq("status", "acompanhamento"),
-          // Consolidados = status "concluido"
           supabase
             .from("consolidation_records")
             .select("id", { count: "exact", head: true })
             .eq("church_id", currentChurchId)
             .eq("status", "concluido"),
+          supabase
+            .from("consolidation_records")
+            .select("id", { count: "exact", head: true })
+            .eq("church_id", currentChurchId)
+            .eq("status", "desistente"),
         ]);
 
         if (cancelled) return;
