@@ -455,8 +455,17 @@ export default function Secretaria() {
                                 <DropdownMenuItem onClick={() => handleOpenEdit(member)}>
                                   Editar
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>Ver perfil completo</DropdownMenuItem>
-                                <DropdownMenuItem>Histórico espiritual</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  handleOpenEdit(member);
+                                }}>
+                                  Ver perfil completo
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  const newStatus = member.is_active ? false : true;
+                                  updateMember(member.id, { is_active: newStatus } as any);
+                                }}>
+                                  {member.is_active ? "Tornar Inativo" : "Reativar"}
+                                </DropdownMenuItem>
                                 <DropdownMenuItem 
                                   className="text-destructive"
                                   onClick={() => setDeletingMember(member)}
