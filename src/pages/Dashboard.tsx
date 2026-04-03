@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Heart, Eye, Loader2, ChevronDown, ChevronUp, Sparkles, UserCheck, Droplets, CheckCircle2 } from "lucide-react";
+import { Users, Heart, Eye, Loader2, ChevronDown, ChevronUp, Sparkles, UserCheck, Droplets, CheckCircle2, UserX } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { SpiritualFunnel } from "@/components/dashboard/SpiritualFunnel";
