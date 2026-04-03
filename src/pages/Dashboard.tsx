@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Heart, Eye, Loader2, ChevronDown, ChevronUp, Sparkles, UserCheck, Droplets, CheckCircle2 } from "lucide-react";
+import { Users, Heart, Eye, Loader2, ChevronDown, ChevronUp, Sparkles, UserCheck, Droplets, CheckCircle2, UserX } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { SpiritualFunnel } from "@/components/dashboard/SpiritualFunnel";
@@ -37,6 +37,7 @@ function PastorDashboard() {
     { title: "Visitantes", value: stats.totalVisitantes.toString(), change: "Cadastrados", changeType: "neutral" as const, icon: Eye, iconColor: "bg-secondary/10 text-secondary" },
     { title: "Em Consolidação", value: stats.totalConsolidacao.toString(), change: "Em acompanhamento", changeType: "positive" as const, icon: UserCheck, iconColor: "bg-accent/10 text-accent-foreground" },
     { title: "Consolidados", value: stats.totalConsolidados.toString(), change: "Processo concluído", changeType: "positive" as const, icon: CheckCircle2, iconColor: "bg-success/10 text-success" },
+    { title: "Desistentes", value: stats.totalDesistentes.toString(), change: "Desistiram", changeType: "negative" as const, icon: UserX, iconColor: "bg-destructive/10 text-destructive" },
     { title: "Batizados", value: stats.totalBaptized.toString(), change: "Total batizados", changeType: "positive" as const, icon: Droplets, iconColor: "bg-info/10 text-info" },
   ];
 
@@ -55,7 +56,7 @@ function PastorDashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
         {statCards.map((stat, index) => (
           <StatCard key={stat.title} {...stat} className="animate-slide-up" style={{ animationDelay: `${index * 100}ms` } as React.CSSProperties} />
         ))}

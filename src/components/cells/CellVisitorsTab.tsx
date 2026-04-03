@@ -11,7 +11,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, UserPlus, Loader2, Eye, Phone, RotateCw } from "lucide-react";
+import { Plus, UserPlus, Loader2, Eye, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Cell } from "@/hooks/useCells";
 
@@ -137,26 +137,7 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
     }
   };
 
-  const handleRegisterReturnVisit = async (visitor: GroupedVisitor) => {
-    setIsSubmitting(true);
-    try {
-      const { error } = await supabase.from("cell_visitors").insert([{
-        full_name: visitor.full_name,
-        phone: visitor.phone || null,
-        cell_id: visitor.cell_id,
-        church_id: churchId,
-        visit_date: new Date().toISOString().split("T")[0],
-        follow_up_status: visitor.follow_up_status,
-      }]);
-      if (error) throw error;
-      toast({ title: "Retorno registrado!", description: `${visitor.full_name} — visita #${visitor.visit_count + 1}` });
-      fetchVisitors();
-    } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  // Visit count is now calculated automatically from cell_visitors records
 
   const getCellName = (cellId: string) => cells.find(c => c.id === cellId)?.name || "—";
 
@@ -283,7 +264,6 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
                   <TableHead>Visitas</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden md:table-cell">Última Visita</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -327,17 +307,6 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-sm">
                         {new Date(visitor.last_visit_date + "T12:00:00").toLocaleDateString("pt-BR")}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title="Registrar retorno"
-                          disabled={isSubmitting}
-                          onClick={() => handleRegisterReturnVisit(visitor)}
-                        >
-                          <RotateCw className="w-4 h-4" />
-                        </Button>
                       </TableCell>
                     </TableRow>
                   );
