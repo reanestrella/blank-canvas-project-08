@@ -14,6 +14,8 @@ export interface Discipleship {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  disciple?: { id: string; full_name: string } | null;
+  discipler?: { id: string; full_name: string } | null;
 }
 
 export interface CreateDiscipleshipData {
@@ -23,6 +25,12 @@ export interface CreateDiscipleshipData {
   status?: string;
   notes?: string;
 }
+
+const DISCIPLESHIP_SELECT = `
+  *,
+  disciple:members!discipleships_disciple_id_fkey(id, full_name),
+  discipler:members!discipleships_discipler_id_fkey(id, full_name)
+`;
 
 export function useDiscipleships(churchId?: string) {
   const [discipleships, setDiscipleships] = useState<Discipleship[]>([]);
@@ -35,7 +43,7 @@ export function useDiscipleships(churchId?: string) {
       setIsLoading(true);
       const { data, error } = await supabase
         .from("discipleships")
-        .select("*")
+        .select(DISCIPLESHIP_SELECT)
         .eq("church_id", churchId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -53,7 +61,7 @@ export function useDiscipleships(churchId?: string) {
       const { data: newItem, error } = await supabase
         .from("discipleships")
         .insert([{ ...data, church_id: churchId }])
-        .select()
+        .select(DISCIPLESHIP_SELECT)
         .single();
       if (error) throw error;
       setDiscipleships(prev => [newItem as Discipleship, ...prev]);
@@ -71,7 +79,7 @@ export function useDiscipleships(churchId?: string) {
         .from("discipleships")
         .update(data)
         .eq("id", id)
-        .select()
+        .select(DISCIPLESHIP_SELECT)
         .single();
       if (error) throw error;
       setDiscipleships(prev => prev.map(d => d.id === id ? (updated as Discipleship) : d));

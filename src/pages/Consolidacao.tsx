@@ -21,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus, Users, UserCheck, UserPlus, Heart, Loader2, MoreHorizontal,
   Phone, Mail, Eye, Droplets, Send, CheckCircle2, PhoneOff,
+  UserX,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConsolidation, ConsolidationRecord } from "@/hooks/useConsolidation";
@@ -55,7 +56,7 @@ export default function Consolidacao() {
 
   const { profile } = useAuth();
   const churchId = profile?.church_id;
-  const { records, isLoading, createRecord, updateRecord, updateStatus, deleteRecord } = useConsolidation(churchId || undefined);
+  const { records, stats: consolidationStats, isLoading, createRecord, updateRecord, updateStatus, deleteRecord } = useConsolidation(churchId || undefined);
   const { members, updateMember } = useMembers(churchId || undefined);
 
   // Filter records by time period
@@ -220,6 +221,7 @@ export default function Consolidacao() {
     { label: "Contatos Pendentes", value: contatosNaoFeitos, icon: PhoneOff, color: "bg-destructive/20 text-destructive" },
     { label: "Em Consolidação", value: emConsolidacao.length, icon: UserCheck, color: "bg-secondary/20 text-secondary" },
     { label: "Consolidados", value: consolidados.length, icon: Heart, color: "bg-success/20 text-success" },
+    { label: "Desistentes", value: consolidationStats.desistente, icon: UserX, color: "bg-destructive/20 text-destructive" },
     { label: "Batizados", value: members.filter(m => m.is_active && (m as any).is_baptized).length, icon: Droplets, color: "bg-info/20 text-info" },
   ];
 
@@ -322,7 +324,7 @@ export default function Consolidacao() {
         </div>
 
         {/* Funnel */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
           {funnelSteps.map((step) => {
             const Icon = step.icon;
             return (
