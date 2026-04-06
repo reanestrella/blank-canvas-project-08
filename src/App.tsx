@@ -191,6 +191,7 @@ const App = () => {
       </TooltipProvider>
     </QueryClientProvider>
   </GlobalErrorBoundary>
-);
+  );
+};
 
 export default App;
