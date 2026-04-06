@@ -62,7 +62,12 @@ function UnhandledRejectionHandler() {
   return null;
 }
 
-const App = () => (
+const App = () => {
+  useEffect(() => {
+    initOneSignal();
+  }, []);
+
+  return (
   <GlobalErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
