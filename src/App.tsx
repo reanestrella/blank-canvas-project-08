@@ -9,6 +9,7 @@ import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { RequireAnyRole } from "@/components/guards/RequireAnyRole";
 import { queryClient } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
+import { initOneSignal } from "@/lib/onesignal";
 
 // Lazy-loaded pages
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -61,7 +62,12 @@ function UnhandledRejectionHandler() {
   return null;
 }
 
-const App = () => (
+const App = () => {
+  useEffect(() => {
+    initOneSignal();
+  }, []);
+
+  return (
   <GlobalErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -185,6 +191,7 @@ const App = () => (
       </TooltipProvider>
     </QueryClientProvider>
   </GlobalErrorBoundary>
-);
+  );
+};
 
 export default App;
