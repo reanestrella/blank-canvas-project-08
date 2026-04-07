@@ -11,6 +11,23 @@ export async function initOneSignal() {
 
     notifyButton: {
       enable: true,
+      prenotify: true,
+      showCredit: false,
+      text: {
+        "tip.state.unsubscribed": "Inscreva-se para notificações",
+        "tip.state.subscribed": "Você está inscrito",
+        "tip.state.blocked": "Você bloqueou as notificações",
+        "message.prenotify": "Clique para se inscrever",
+        "message.action.subscribed": "Obrigado por se inscrever!",
+        "message.action.resubscribed": "Você está inscrito para notificações",
+        "message.action.subscribing": "Inscrevendo...",
+        "message.action.unsubscribed": "Você não receberá mais notificações",
+        "dialog.main.title": "Gerenciar notificações",
+        "dialog.main.button.subscribe": "INSCREVER",
+        "dialog.main.button.unsubscribe": "CANCELAR INSCRIÇÃO",
+        "dialog.blocked.title": "Desbloquear notificações",
+        "dialog.blocked.message": "Siga estas instruções para permitir notificações:",
+      },
     },
   });
 }
