@@ -20,6 +20,7 @@ export async function initOneSignal() {
         "message.prenotify": "Clique para se inscrever",
         "message.action.subscribed": "Obrigado por se inscrever!",
         "message.action.resubscribed": "Você está inscrito para notificações",
+        "message.action.subscribing": "Inscrevendo...",
         "message.action.unsubscribed": "Você não receberá mais notificações",
         "dialog.main.title": "Gerenciar notificações",
         "dialog.main.button.subscribe": "INSCREVER",
