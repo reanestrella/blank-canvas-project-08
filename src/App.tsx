@@ -9,10 +9,6 @@ import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { RequireAnyRole } from "@/components/guards/RequireAnyRole";
 import { queryClient } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
-
-// ✅ OneSignal correto
-import { initOneSignal, pedirPermissao } from "./onesignal";
-
 // Lazy-loaded pages
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const Login = lazy(() => import("./pages/Login"));
@@ -65,17 +61,7 @@ function UnhandledRejectionHandler() {
 }
 
 const App = () => {
-
-  // ✅ OneSignal rodando no lugar certo
-  useEffect(() => {
-    initOneSignal();
-
-    setTimeout(() => {
-      pedirPermissao();
-    }, 3000);
-  }, []);
-
-  return (
+return (
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
