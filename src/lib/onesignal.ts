@@ -2,7 +2,7 @@ import OneSignal from 'react-onesignal';
 
 export const initOneSignal = async () => {
   await OneSignal.init({
-    appId: "fbb0594c-d29a-4f6a-af12-cb279e18969e",
+    appId: "60dec75a-357c-4b1e-90fd-f3a0273c4076",
 
     notifyButton: {
       enable: true,
