@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
+import { initOneSignal, pedirPermissao } from "./onesignal";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -61,7 +62,23 @@ function UnhandledRejectionHandler() {
 }
 
 const App = () => {
-return (
+useEffect(() => {
+  const iniciar = async () => {
+    try {
+      await initOneSignal();
+
+      setTimeout(() => {
+        pedirPermissao();
+      }, 3000);
+
+    } catch (e) {
+      console.log("OneSignal erro:", e);
+    }
+  };
+
+  iniciar();
+}, []);
+  return (
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
