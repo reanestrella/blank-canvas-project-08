@@ -62,22 +62,24 @@ function UnhandledRejectionHandler() {
 }
 
 const App = () => {
-  useEffect(() => {
-    const iniciar = async () => {
-      try {
-        await initOneSignal();
+useEffect(() => {
+  const iniciar = async () => {
+    try {
+      await initOneSignal();
 
-        // Espera o app carregar melhor
-        setTimeout(() => {
+      setTimeout(() => {
+        if (Notification.permission !== "granted") {
           pedirPermissao();
-        }, 5000);
-      } catch (e) {
-        console.log("OneSignal erro:", e);
-      }
-    };
+        }
+      }, 5000);
 
-    iniciar();
-  }, []);
+    } catch (e) {
+      console.log("OneSignal erro:", e);
+    }
+  };
+
+  iniciar();
+}, []);
   return (
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
