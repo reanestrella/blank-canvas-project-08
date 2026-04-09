@@ -62,22 +62,22 @@ function UnhandledRejectionHandler() {
 }
 
 const App = () => {
-useEffect(() => {
-  const iniciar = async () => {
-    try {
-      await initOneSignal();
+  useEffect(() => {
+    const iniciar = async () => {
+      try {
+        await initOneSignal();
 
-      setTimeout(() => {
-        pedirPermissao();
-      }, 3000);
+        // Espera o app carregar melhor
+        setTimeout(() => {
+          pedirPermissao();
+        }, 5000);
+      } catch (e) {
+        console.log("OneSignal erro:", e);
+      }
+    };
 
-    } catch (e) {
-      console.log("OneSignal erro:", e);
-    }
-  };
-
-  iniciar();
-}, []);
+    iniciar();
+  }, []);
   return (
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -89,7 +89,6 @@ useEffect(() => {
             <BrowserRouter>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
-
                   {/* Públicas */}
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/login" element={<Login />} />
@@ -106,11 +105,14 @@ useEffect(() => {
 
                   {/* Rede */}
                   <Route path="/rede" element={<NetworkDashboard />} />
-                  <Route path="/gestao-app" element={
-                    <RequireAnyRole allowedRoles={["pastor"]}>
-                      <GestaoApp />
-                    </RequireAnyRole>
-                  } />
+                  <Route
+                    path="/gestao-app"
+                    element={
+                      <RequireAnyRole allowedRoles={["pastor"]}>
+                        <GestaoApp />
+                      </RequireAnyRole>
+                    }
+                  />
 
                   {/* Usuário */}
                   <Route path="/app" element={<Dashboard />} />
@@ -118,39 +120,53 @@ useEffect(() => {
                   <Route path="/perfil" element={<Perfil />} />
 
                   {/* Protegidas */}
-                  <Route path="/secretaria" element={
-                    <RequireAnyRole allowedRoles={["pastor", "secretario", "consolidacao"]}>
-                      <Secretaria />
-                    </RequireAnyRole>
-                  } />
+                  <Route
+                    path="/secretaria"
+                    element={
+                      <RequireAnyRole allowedRoles={["pastor", "secretario", "consolidacao"]}>
+                        <Secretaria />
+                      </RequireAnyRole>
+                    }
+                  />
 
-                  <Route path="/ministerios" element={
-                    <RequireAnyRole allowedRoles={["pastor", "lider_ministerio"]}>
-                      <Ministerios />
-                    </RequireAnyRole>
-                  } />
+                  <Route
+                    path="/ministerios"
+                    element={
+                      <RequireAnyRole allowedRoles={["pastor", "lider_ministerio"]}>
+                        <Ministerios />
+                      </RequireAnyRole>
+                    }
+                  />
 
-                  <Route path="/celulas" element={
-                    <RequireAnyRole allowedRoles={["pastor", "lider_celula", "consolidacao", "secretario"]}>
-                      <Celulas />
-                    </RequireAnyRole>
-                  } />
+                  <Route
+                    path="/celulas"
+                    element={
+                      <RequireAnyRole allowedRoles={["pastor", "lider_celula", "consolidacao", "secretario"]}>
+                        <Celulas />
+                      </RequireAnyRole>
+                    }
+                  />
 
-                  <Route path="/financeiro" element={
-                    <RequireAnyRole allowedRoles={["pastor", "tesoureiro"]}>
-                      <Financeiro />
-                    </RequireAnyRole>
-                  } />
+                  <Route
+                    path="/financeiro"
+                    element={
+                      <RequireAnyRole allowedRoles={["pastor", "tesoureiro"]}>
+                        <Financeiro />
+                      </RequireAnyRole>
+                    }
+                  />
 
-                  <Route path="/configuracoes" element={
-                    <RequireAnyRole allowedRoles={["pastor"]}>
-                      <Configuracoes />
-                    </RequireAnyRole>
-                  } />
+                  <Route
+                    path="/configuracoes"
+                    element={
+                      <RequireAnyRole allowedRoles={["pastor"]}>
+                        <Configuracoes />
+                      </RequireAnyRole>
+                    }
+                  />
 
                   {/* 404 */}
                   <Route path="*" element={<NotFound />} />
-
                 </Routes>
               </Suspense>
             </BrowserRouter>
