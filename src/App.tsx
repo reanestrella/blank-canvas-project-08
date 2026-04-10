@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
-import { initOneSignal, pedirPermissao } from "@/lib/onesignal";
+import { initOneSignal } from "@/lib/onesignal";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -66,19 +66,12 @@ useEffect(() => {
   const iniciar = async () => {
     try {
       await initOneSignal();
-
-      setTimeout(() => {
-        if (Notification.permission !== "granted") {
-          pedirPermissao();
-        }
-      }, 5000);
-
     } catch (e) {
       console.log("OneSignal erro:", e);
     }
   };
 
-  iniciar();
+  void iniciar();
 }, []);
   return (
     <GlobalErrorBoundary>
