@@ -1,3 +1,27 @@
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCongregations } from "@/hooks/useCongregations";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { pedirPermissao } from "@/lib/onesignal";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { CongregationSelector } from "@/components/layout/CongregationSelector";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { AlertsCard } from "@/components/dashboard/AlertsCard";
+import { AiAlertsCard } from "@/components/ai/AiAlertsCard";
+import { AiReportCard } from "@/components/dashboard/AiReportCard";
+import { NetworkOverview } from "@/components/dashboard/NetworkOverview";
+import { SpiritualFunnel } from "@/components/dashboard/SpiritualFunnel";
+import { CellChartsCard } from "@/components/dashboard/CellChartsCard";
+import { BirthdayCard } from "@/components/dashboard/BirthdayCard";
+import { WeddingAnniversaryCard } from "@/components/dashboard/WeddingAnniversaryCard";
+import { UpcomingEvents } from "@/components/dashboard/UpcomingEvents";
+import { FinanceOverview } from "@/components/dashboard/FinanceOverview";
+import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Users, Heart, Eye, UserCheck, CheckCircle2, Droplets, Loader2, Sparkles, ChevronUp, ChevronDown } from "lucide-react";
+
 function PastorDashboard() {
   const { profile } = useAuth();
   const churchId = profile?.church_id;
@@ -20,7 +44,6 @@ function PastorDashboard() {
 
   return (
     <>
-      {/* 🔔 BOTÃO INTELIGENTE DE NOTIFICAÇÃO */}
       {typeof Notification !== "undefined" && Notification.permission !== "granted" && (
         <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
@@ -48,7 +71,6 @@ function PastorDashboard() {
         <CongregationSelector congregations={congregations} selectedId={selectedCongregation} onSelect={setSelectedCongregation} />
       </div>
 
-      {/* Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
         {statCards.map((stat, index) => (
           <StatCard key={stat.title} {...stat} className="animate-slide-up" style={{ animationDelay: `${index * 100}ms` } as React.CSSProperties} />
@@ -57,7 +79,6 @@ function PastorDashboard() {
 
       {stats.recentAlerts.length > 0 && <AlertsCard alerts={stats.recentAlerts} />}
 
-      {/* AI Section */}
       <Collapsible open={aiOpen} onOpenChange={setAiOpen}>
         <CollapsibleTrigger asChild>
           <Button variant="outline" className="w-full flex items-center justify-between gap-2 py-3">
@@ -93,3 +114,13 @@ function PastorDashboard() {
     </>
   );
 }
+
+function Dashboard() {
+  return (
+    <AppLayout requireChurch>
+      <PastorDashboard />
+    </AppLayout>
+  );
+}
+
+export default Dashboard;
