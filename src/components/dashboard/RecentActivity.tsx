@@ -1,7 +1,8 @@
-import { Users, Loader2 } from "lucide-react";
+import { Users, Loader2, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ActivityItem {
   id: string;
@@ -38,42 +39,70 @@ export function RecentActivity() {
 
   if (isLoading) {
     return (
-      <div className="card-elevated p-6 animate-slide-up">
-        <h3 className="text-lg font-semibold mb-4">Atividade Recente</h3>
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-        </div>
-      </div>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Clock className="h-4 w-4" />
+            </div>
+            Atividade Recente
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </CardContent>
+      </Card>
     );
   }
 
   if (members.length === 0) {
     return (
-      <div className="card-elevated p-6 animate-slide-up">
-        <h3 className="text-lg font-semibold mb-4">Atividade Recente</h3>
-        <p className="text-sm text-muted-foreground text-center py-4">Sem atividade recente.</p>
-      </div>
+      <Card className="border-dashed">
+        <CardContent className="py-10 text-center">
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted mx-auto">
+            <Clock className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <p className="text-sm font-medium text-muted-foreground">Sem atividade recente</p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="card-elevated p-6 animate-slide-up">
-      <h3 className="text-lg font-semibold mb-4">Atividade Recente</h3>
-      <div className="space-y-3">
-        {members.map((item) => (
-          <div key={item.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary">
-              <Users className="w-4 h-4" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{item.description}</p>
-              <p className="text-xs text-muted-foreground">
-                {item.created_at ? new Date(item.created_at).toLocaleDateString("pt-BR") : ""}
-              </p>
-            </div>
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Clock className="h-4 w-4" />
           </div>
-        ))}
-      </div>
-    </div>
+          Atividade Recente
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="space-y-1">
+          {members.map((item, i) => (
+            <div
+              key={item.id}
+              className="flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-muted/40"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-success/10 text-success">
+                <Users className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium leading-tight truncate">{item.description}</p>
+                <p className="text-xs text-muted-foreground">
+                  {item.created_at ? new Date(item.created_at).toLocaleDateString("pt-BR") : ""}
+                </p>
+              </div>
+              {i === 0 && (
+                <span className="shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
+                  Novo
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
