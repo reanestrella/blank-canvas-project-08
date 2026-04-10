@@ -21,7 +21,7 @@ function PastorDashboard() {
   return (
     <>
       {/* 🔔 BOTÃO INTELIGENTE DE NOTIFICAÇÃO */}
-      {Notification.permission !== "granted" && (
+      {typeof Notification !== "undefined" && Notification.permission !== "granted" && (
         <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <h2 className="font-semibold text-sm md:text-base">
