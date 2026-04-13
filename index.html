@@ -29,8 +29,13 @@
     <!-- iOS Icon padrão (fallback) -->
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
 <script>
+  window.deferredPrompt = null;
+
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
+    console.log("🔥 beforeinstallprompt capturado");
+
+    // 🔥 GUARDA GLOBALMENTE
     window.deferredPrompt = e;
   });
 </script>
