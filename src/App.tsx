@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 import { initOneSignal } from "@/lib/onesignal";
+import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
