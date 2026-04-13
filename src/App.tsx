@@ -94,7 +94,7 @@ const App = () => {
     // Cria novo manifest dinâmico
     const link = document.createElement("link");
     link.rel = "manifest";
-    link.href = `/manifest?id=${igrejaId}`;
+    link.href = `https://ycaiusoyqoeccmmixgrf.supabase.co/functions/v1/manifest?id=${igrejaId}`;
 
     document.head.appendChild(link);
 
