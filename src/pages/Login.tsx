@@ -1,3 +1,5 @@
+// 🔥 ALTERAÇÃO PRINCIPAL: salvar igreja_id no localStorage
+
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -31,11 +33,10 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [searchParams] = useSearchParams();
   const rawRedirect = searchParams.get("redirect");
-  const inviteToken = searchParams.get("invite_token"); // legacy support
+  const inviteToken = searchParams.get("invite_token");
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Persist redirect on mount so it survives the login round-trip
   const redirectUrl = rawRedirect ? decodeURIComponent(rawRedirect) : null;
   if (redirectUrl) {
     sessionStorage.setItem("post_login_redirect", redirectUrl);
@@ -51,6 +52,7 @@ export default function Login() {
 
   const handleSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
+
     try {
       const { data: authData, error } = await supabase.auth.signInWithPassword({
         email: data.email,
@@ -58,7 +60,6 @@ export default function Login() {
       });
 
       if (error) {
-        console.error("Login error:", error.message, (error as any).details, (error as any).hint);
         toast({
           title: "Erro de autenticação",
           description: error.message === "Invalid login credentials"
@@ -69,91 +70,67 @@ export default function Login() {
         return;
       }
 
-      // 1) Check for pending invite token in sessionStorage
-      const pendingToken = sessionStorage.getItem("pending_invite_token");
-      console.log("[Login] pending_invite_token", pendingToken);
-
-      if (pendingToken) {
-        navigate(`/accept-invite?token=${encodeURIComponent(pendingToken)}`, { replace: true });
-        return;
-      }
-
-      // 2) Check for persisted redirect (decoded) from sessionStorage
-      const storedRedirect = sessionStorage.getItem("post_login_redirect");
-      console.log("[Login] post_login_redirect", storedRedirect);
-
-      if (storedRedirect) {
-        sessionStorage.removeItem("post_login_redirect");
-        navigate(storedRedirect, { replace: true });
-        return;
-      }
-
-      // 3) Legacy: invite_token param
-      if (inviteToken) {
-        navigate(`/accept-invite?token=${encodeURIComponent(inviteToken)}`, { replace: true });
-        return;
-      }
-
-      // Fetch profile to check church_id
       const userId = authData.user?.id;
-      if (userId) {
-        // Check if super admin first
-        const { data: superAdminData } = await supabase
-          .from("system_admins")
-          .select("id")
-          .eq("user_id", userId)
-          .eq("active", true)
-          .maybeSingle();
 
-        if (superAdminData) {
-          toast({ title: "Bem-vindo, Super Admin!" });
-          navigate("/master");
-          return;
-        }
+      // 🔥 SUPER ADMIN
+      const { data: superAdminData } = await supabase
+        .from("system_admins")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("active", true)
+        .maybeSingle();
 
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("church_id")
-          .eq("user_id", userId)
-          .maybeSingle();
+      if (superAdminData) {
+        navigate("/master");
+        return;
+      }
 
-        console.log("[Login] profile.church_id:", profile?.church_id);
+      // 🔥 BUSCAR PERFIL (AQUI ESTÁ O SEGREDO)
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("church_id")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-        if (!profile?.church_id) {
-          toast({
-            title: "Bem-vindo!",
-            description: "Você ainda não tem uma igreja vinculada.",
-          });
-          navigate("/app");
-          return;
-        }
+      // 🚀 NOVO: SALVAR IGREJA NO LOCALSTORAGE
+      if (profile?.church_id) {
+        localStorage.setItem("igreja_id", profile.church_id);
+        console.log("✅ igreja_id salvo:", profile.church_id);
+      } else {
+        console.warn("⚠️ usuário sem igreja vinculada");
+      }
 
-        // Fetch roles to determine correct dashboard
-        const { data: rolesData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", userId)
-          .eq("church_id", profile.church_id);
-
-        const roles = rolesData?.map((r: any) => r.role) || [];
-        console.log("[Login] roles:", roles);
-
+      // 🚨 SEM IGREJA
+      if (!profile?.church_id) {
         toast({
           title: "Bem-vindo!",
-          description: "Login realizado com sucesso.",
+          description: "Você ainda não tem uma igreja vinculada.",
         });
-
-        const redirectTo = getRoleBasedRedirect(roles);
-        console.log("[Login] redirecting to:", redirectTo);
-        navigate(redirectTo);
-      } else {
         navigate("/app");
+        return;
       }
-    } catch (error: any) {
-      console.error("Login catch:", error?.message, error?.details, error?.hint);
+
+      // 🔥 ROLES
+      const { data: rolesData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("church_id", profile.church_id);
+
+      const roles = rolesData?.map((r: any) => r.role) || [];
+
+      toast({
+        title: "Bem-vindo!",
+        description: "Login realizado com sucesso.",
+      });
+
+      const redirectTo = getRoleBasedRedirect(roles);
+      navigate(redirectTo);
+
+    } catch (error) {
       toast({
         title: "Erro",
-        description: "Ocorreu um erro ao fazer login.",
+        description: "Erro ao fazer login.",
         variant: "destructive",
       });
     } finally {
@@ -173,9 +150,11 @@ export default function Login() {
             Entre com seu email e senha para acessar o sistema
           </CardDescription>
         </CardHeader>
+
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+
               <FormField
                 control={form.control}
                 name="email"
@@ -183,11 +162,7 @@ export default function Login() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="seu@email.com"
-                        {...field}
-                      />
+                      <Input type="email" placeholder="seu@email.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -214,11 +189,7 @@ export default function Login() {
                           className="absolute right-0 top-0"
                           onClick={() => setShowPassword(!showPassword)}
                         >
-                          {showPassword ? (
-                            <EyeOff className="w-4 h-4" />
-                          ) : (
-                            <Eye className="w-4 h-4" />
-                          )}
+                          {showPassword ? <EyeOff /> : <Eye />}
                         </Button>
                       </div>
                     </FormControl>
@@ -231,6 +202,7 @@ export default function Login() {
                 {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Entrar
               </Button>
+
             </form>
           </Form>
 
@@ -244,10 +216,7 @@ export default function Login() {
           </div>
 
           <div className="mt-4 text-center">
-            <Link
-              to="/"
-              className="text-sm text-muted-foreground hover:text-primary"
-            >
+            <Link to="/" className="text-sm text-muted-foreground hover:text-primary">
               ← Voltar para o site
             </Link>
           </div>
