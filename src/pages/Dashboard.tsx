@@ -1,3 +1,4 @@
+import InstallButton from "@/components/InstallButton";
 import { useState, type CSSProperties } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCongregations } from "@/hooks/useCongregations";
