@@ -78,19 +78,42 @@ const App = () => {
 
   // 🚀 MANIFEST DINÂMICO
   useEffect(() => {
-    const igrejaId = localStorage.getItem("igreja_id");
-    if (!igrejaId) {
-      console.warn("❌ igreja_id não encontrado");
-      return;
+    useEffect(() => {
+  const igrejaId = localStorage.getItem("igreja_id");
+
+  if (!igrejaId) return;
+
+  const carregarLogo = async () => {
+    try {
+      const { data } = await supabase
+        .from("churches")
+        .select("logo_url")
+        .eq("id", igrejaId)
+        .single();
+
+      if (!data?.logo_url) return;
+
+      // 🔥 favicon
+      const favicon = document.getElementById("dynamic-favicon") as HTMLLinkElement;
+      if (favicon) {
+        favicon.href = data.logo_url;
+      }
+
+      // 🔥 apple icon (PWA iPhone)
+      const apple = document.getElementById("dynamic-apple-icon") as HTMLLinkElement;
+      if (apple) {
+        apple.href = data.logo_url;
+      }
+
+      console.log("🔥 logo aplicada no PWA");
+
+    } catch (err) {
+      console.error("Erro ao carregar logo:", err);
     }
-    console.log("🔥 carregando manifest dinâmico:", igrejaId);
-    const existing = document.querySelector('link[rel="manifest"]');
-    if (existing) existing.remove();
-    const link = document.createElement("link");
-    link.rel = "manifest";
-    link.href = `https://ycaiusoyqoeccmmixgrf.supabase.co/functions/v1/manifest?id=${igrejaId}`;
-    document.head.appendChild(link);
-  }, []);
+  };
+
+  carregarLogo();
+}, []);
 
   return (
     <GlobalErrorBoundary>
