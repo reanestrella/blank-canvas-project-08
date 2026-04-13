@@ -1,4 +1,4 @@
-// 🔥 ALTERAÇÃO PRINCIPAL: salvar igreja_id + FORÇAR RELOAD
+// 🔥 LOGIN CORRIGIDO COMPLETO
 
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -33,7 +33,6 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [searchParams] = useSearchParams();
   const rawRedirect = searchParams.get("redirect");
-  const inviteToken = searchParams.get("invite_token");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -82,19 +81,16 @@ export default function Login() {
         .maybeSingle();
 
       if (superAdminData) {
-        navigate("/master");
+        window.location.href = "/master";
         return;
       }
 
-      // 🔥 BUSCAR PERFIL
-      let profile: { church_id: string | null } | null = null;
-      const { data: existingProfile } = await supabase
+      // 🔥 BUSCAR OU CRIAR PROFILE
+      let { data: profile } = await supabase
         .from("profiles")
         .select("church_id")
         .eq("user_id", userId)
         .maybeSingle();
-
-      profile = existingProfile;
 
       if (!profile) {
         const { data: newProfile } = await supabase
@@ -102,17 +98,8 @@ export default function Login() {
           .insert({ user_id: userId })
           .select("church_id")
           .single();
+
         profile = newProfile;
-      }
-
-      // 🚀 SALVAR IGREJA + RELOAD (AQUI ESTÁ A MÁGICA)
-      if (profile?.church_id) {
-        localStorage.setItem("igreja_id", profile.church_id);
-        console.log("✅ igreja_id salvo:", profile.church_id);
-
-        // 🔥 FORÇA RECARREGAR PARA ATIVAR O MANIFEST
-        window.location.reload();
-        return;
       }
 
       // 🚨 SEM IGREJA
@@ -121,11 +108,15 @@ export default function Login() {
           title: "Bem-vindo!",
           description: "Você ainda não tem uma igreja vinculada.",
         });
-        navigate("/app");
+
+        window.location.href = "/app";
         return;
       }
 
-      // 🔥 ROLES
+      // 🔥 SALVA IGREJA (SEM RELOAD AQUI!)
+      localStorage.setItem("igreja_id", profile.church_id);
+
+      // 🔥 BUSCAR ROLES
       const { data: rolesData } = await supabase
         .from("user_roles")
         .select("role")
@@ -139,12 +130,14 @@ export default function Login() {
         description: "Login realizado com sucesso.",
       });
 
-     const redirectTo = getRoleBasedRedirect(roles);
+      const redirectTo = getRoleBasedRedirect(roles);
 
-// 🔥 FORÇA REDIRECIONAMENTO REAL
-window.location.href = redirectTo;
+      // 🔥 REDIRECIONAMENTO FINAL CORRETO
+      window.location.href = redirectTo;
 
     } catch (error) {
+      console.error("Erro login:", error);
+
       toast({
         title: "Erro",
         description: "Erro ao fazer login.",
