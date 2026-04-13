@@ -1,5 +1,6 @@
 // 🔥 LOGIN CORRIGIDO COMPLETO
 
+import { setDynamicManifest } from "@/lib/setDynamicManifest";
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -115,6 +116,9 @@ export default function Login() {
 
       // 🔥 SALVA IGREJA (SEM RELOAD AQUI!)
       localStorage.setItem("igreja_id", profile.church_id);
+
+      // 🔥 MANIFEST DINÂMICO POR IGREJA
+      setDynamicManifest(profile.church_id);
 
       // 🔥 BUSCAR ROLES
       const { data: rolesData } = await supabase
