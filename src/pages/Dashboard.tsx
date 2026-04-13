@@ -107,14 +107,10 @@ function Dashboard() {
   return (
     <AppLayout requireChurch>
 
-      {/* 🔥 BOTÃO DE INSTALAÇÃO (AGORA FUNCIONA) */}
-      <div className="p-4">
-        <InstallButton />
-      </div>
+      {/* 🔥 BOTÃO AQUI (SEM QUEBRAR NADA) */}
+      <InstallButton />
 
       <PastorDashboard />
     </AppLayout>
   );
 }
-
-export default Dashboard;
