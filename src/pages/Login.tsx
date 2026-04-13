@@ -93,6 +93,25 @@ export default function Login() {
         .eq("user_id", userId)
         .maybeSingle();
 
+      let { data: profile } = await supabase
+  .from("profiles")
+  .select("church_id")
+  .eq("user_id", userId)
+  .maybeSingle();
+
+// 🔥 CORREÇÃO
+if (!profile) {
+  const { data: newProfile } = await supabase
+    .from("profiles")
+    .insert({
+      user_id: userId,
+    })
+    .select()
+    .single();
+
+  profile = newProfile;
+}
+
       // 🚀 SALVAR IGREJA + RELOAD (AQUI ESTÁ A MÁGICA)
       if (profile?.church_id) {
         localStorage.setItem("igreja_id", profile.church_id);
