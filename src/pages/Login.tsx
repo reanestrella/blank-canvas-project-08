@@ -139,8 +139,10 @@ export default function Login() {
         description: "Login realizado com sucesso.",
       });
 
-      const redirectTo = getRoleBasedRedirect(roles);
-      navigate(redirectTo);
+     const redirectTo = getRoleBasedRedirect(roles);
+
+// 🔥 FORÇA REDIRECIONAMENTO REAL
+window.location.href = redirectTo;
 
     } catch (error) {
       toast({
