@@ -5,26 +5,29 @@ export default function InstallButton() {
   const [prompt, setPrompt] = useState<any>(null);
 
   useEffect(() => {
-    const handler = (e: any) => {
-      e.preventDefault();
-      setPrompt(e);
-    };
-
-    window.addEventListener("beforeinstallprompt", handler);
-
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    // 🔥 PEGA O EVENTO GLOBAL
+    if ((window as any).deferredPrompt) {
+      setPrompt((window as any).deferredPrompt);
+    }
   }, []);
 
   const instalar = async () => {
-    if (!prompt) return;
+    const deferred = (window as any).deferredPrompt;
 
-    prompt.prompt();
-    const choice = await prompt.userChoice;
-
-    if (choice.outcome === "accepted") {
-      console.log("✅ App instalado");
+    if (!deferred) {
+      alert("Instalação não disponível ainda");
+      return;
     }
 
+    deferred.prompt();
+
+    const choice = await deferred.userChoice;
+
+    if (choice.outcome === "accepted") {
+      console.log("✅ Instalado");
+    }
+
+    (window as any).deferredPrompt = null;
     setPrompt(null);
   };
 
