@@ -10,6 +10,7 @@ import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { RequireAnyRole } from "@/components/guards/RequireAnyRole";
 import { queryClient } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
+
 // Lazy-loaded pages
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const Login = lazy(() => import("./pages/Login"));
@@ -62,17 +63,45 @@ function UnhandledRejectionHandler() {
 }
 
 const App = () => {
-useEffect(() => {
-  const iniciar = async () => {
-    try {
-      await initOneSignal();
-    } catch (e) {
-      console.log("OneSignal erro:", e);
-    }
-  };
 
-  void iniciar();
-}, []);
+  // 🔔 OneSignal
+  useEffect(() => {
+    const iniciar = async () => {
+      try {
+        await initOneSignal();
+      } catch (e) {
+        console.log("OneSignal erro:", e);
+      }
+    };
+    void iniciar();
+  }, []);
+
+  // 🚀 MANIFEST DINÂMICO (AQUI ESTÁ O MAIS IMPORTANTE)
+  useEffect(() => {
+    const igrejaId = localStorage.getItem("igreja_id");
+
+    if (!igrejaId) {
+      console.warn("⚠️ igreja_id não encontrado. Manifest não carregado.");
+      return;
+    }
+
+    // Remove manifest antigo (evita conflito)
+    const oldManifest = document.querySelector('link[rel="manifest"]');
+    if (oldManifest) {
+      oldManifest.remove();
+    }
+
+    // Cria novo manifest dinâmico
+    const link = document.createElement("link");
+    link.rel = "manifest";
+    link.href = `/manifest?id=${igrejaId}`;
+
+    document.head.appendChild(link);
+
+    console.log("✅ Manifest carregado para igreja:", igrejaId);
+
+  }, []);
+
   return (
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -84,6 +113,7 @@ useEffect(() => {
             <BrowserRouter>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
+
                   {/* Públicas */}
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/login" element={<Login />} />
@@ -162,6 +192,7 @@ useEffect(() => {
 
                   {/* 404 */}
                   <Route path="*" element={<NotFound />} />
+
                 </Routes>
               </Suspense>
             </BrowserRouter>
@@ -170,6 +201,9 @@ useEffect(() => {
       </QueryClientProvider>
     </GlobalErrorBoundary>
   );
+};
+
+export default App;
 };
 
 export default App;
