@@ -103,13 +103,10 @@ function PastorDashboard() {
   );
 }
 
-function Dashboard() {
+export default function Dashboard() {
   return (
     <AppLayout requireChurch>
-
-      {/* 🔥 BOTÃO AQUI (SEM QUEBRAR NADA) */}
       <InstallButton />
-
       <PastorDashboard />
     </AppLayout>
   );
