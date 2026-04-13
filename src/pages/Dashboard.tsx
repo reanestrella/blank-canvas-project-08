@@ -1,14 +1,3 @@
-import InstallButton from "@/components/InstallButton";
-
-export default function Dashboard() {
-  return (
-    <>
-      <InstallButton />
-
-      {/* resto do seu conteúdo */}
-    </>
-  );
-}
 import { useState, type CSSProperties } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCongregations } from "@/hooks/useCongregations";
