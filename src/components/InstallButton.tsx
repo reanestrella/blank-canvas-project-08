@@ -5,27 +5,37 @@ export default function InstallButton() {
   const [prompt, setPrompt] = useState<any>(null);
 
   useEffect(() => {
-    if ((window as any).deferredPrompt) {
-      setPrompt((window as any).deferredPrompt);
+    try {
+      const deferred = (window as any)?.deferredPrompt;
+
+      if (deferred) {
+        setPrompt(deferred);
+      }
+    } catch (error) {
+      console.log("Erro ao capturar deferredPrompt:", error);
     }
   }, []);
 
   const instalar = async () => {
-    const deferred = (window as any).deferredPrompt;
+    try {
+      const deferred = (window as any)?.deferredPrompt;
 
-    if (!deferred) {
-      alert("Instalação não disponível");
-      return;
+      if (!deferred) {
+        console.log("Prompt não disponível");
+        return;
+      }
+
+      deferred.prompt();
+      await deferred.userChoice;
+
+      (window as any).deferredPrompt = null;
+      setPrompt(null);
+    } catch (error) {
+      console.log("Erro ao instalar:", error);
     }
-
-    deferred.prompt();
-
-    await deferred.userChoice;
-
-    (window as any).deferredPrompt = null;
-    setPrompt(null);
   };
 
+  // 🔥 PROTEÇÃO TOTAL (IMPEDIR QUEBRAR REACT)
   if (!prompt) return null;
 
   return (
