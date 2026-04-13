@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 export default function InstallButton() {
   const [prompt, setPrompt] = useState<any>(null);
 
   useEffect(() => {
-    // 🔥 PEGA O EVENTO GLOBAL
     if ((window as any).deferredPrompt) {
       setPrompt((window as any).deferredPrompt);
     }
@@ -15,17 +14,13 @@ export default function InstallButton() {
     const deferred = (window as any).deferredPrompt;
 
     if (!deferred) {
-      alert("Instalação não disponível ainda");
+      alert("Instalação não disponível");
       return;
     }
 
     deferred.prompt();
 
-    const choice = await deferred.userChoice;
-
-    if (choice.outcome === "accepted") {
-      console.log("✅ Instalado");
-    }
+    await deferred.userChoice;
 
     (window as any).deferredPrompt = null;
     setPrompt(null);
@@ -34,8 +29,10 @@ export default function InstallButton() {
   if (!prompt) return null;
 
   return (
-    <Button onClick={instalar}>
-      Instalar App
-    </Button>
+    <div style={{ padding: 16 }}>
+      <Button onClick={instalar}>
+        Instalar App
+      </Button>
+    </div>
   );
 }
