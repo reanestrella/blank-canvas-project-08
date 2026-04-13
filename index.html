@@ -2,12 +2,14 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
+
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
 
     <title>Igreja Conectada - Gestão Completa</title>
+
     <meta
       name="description"
       content="Sistema completo de gestão para igrejas: membros, células, financeiro, ministérios e eventos."
@@ -21,11 +23,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Igreja" />
 
-    <!-- iOS Icons -->
+    <!-- ⚠️ IMPORTANTE: NÃO colocar manifest fixo aqui -->
+    <!-- O manifest será injetado dinamicamente via React -->
+
+    <!-- iOS Icon padrão (fallback) -->
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <!-- Favicon padrão -->
+    <link rel="icon" type="image/png" href="/icons/icon-192x192.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
 
     <!-- Open Graph -->
     <meta property="og:title" content="Igreja Conectada - Gestão Completa" />
@@ -38,11 +44,12 @@
     <meta name="twitter:title" content="Igreja Conectada" />
     <meta name="twitter:image" content="/icons/icon-512x512.png" />
 
-    <!-- OneSignal is initialized via react-onesignal in App.tsx -->
+    <!-- OneSignal via React -->
   </head>
 
   <body>
     <div id="root"></div>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
