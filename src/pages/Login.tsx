@@ -1,6 +1,6 @@
 // 🔥 LOGIN CORRIGIDO COMPLETO
 
-import { useState } from "react";
+import { setDynamicManifest } from "@/lib/setDynamicManifest";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
