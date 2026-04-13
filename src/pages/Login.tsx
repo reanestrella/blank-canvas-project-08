@@ -1,4 +1,4 @@
-// 🔥 ALTERAÇÃO PRINCIPAL: salvar igreja_id no localStorage
+// 🔥 ALTERAÇÃO PRINCIPAL: salvar igreja_id + FORÇAR RELOAD
 
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -62,9 +62,10 @@ export default function Login() {
       if (error) {
         toast({
           title: "Erro de autenticação",
-          description: error.message === "Invalid login credentials"
-            ? "Email ou senha incorretos."
-            : error.message,
+          description:
+            error.message === "Invalid login credentials"
+              ? "Email ou senha incorretos."
+              : error.message,
           variant: "destructive",
         });
         return;
@@ -85,19 +86,21 @@ export default function Login() {
         return;
       }
 
-      // 🔥 BUSCAR PERFIL (AQUI ESTÁ O SEGREDO)
+      // 🔥 BUSCAR PERFIL
       const { data: profile } = await supabase
         .from("profiles")
         .select("church_id")
         .eq("user_id", userId)
         .maybeSingle();
 
-      // 🚀 NOVO: SALVAR IGREJA NO LOCALSTORAGE
+      // 🚀 SALVAR IGREJA + RELOAD (AQUI ESTÁ A MÁGICA)
       if (profile?.church_id) {
         localStorage.setItem("igreja_id", profile.church_id);
         console.log("✅ igreja_id salvo:", profile.church_id);
-      } else {
-        console.warn("⚠️ usuário sem igreja vinculada");
+
+        // 🔥 FORÇA RECARREGAR PARA ATIVAR O MANIFEST
+        window.location.reload();
+        return;
       }
 
       // 🚨 SEM IGREJA
