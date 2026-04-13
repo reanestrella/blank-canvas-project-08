@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
   const manifest = {
     name: church.name,
     short_name: church.name,
-    start_url: `/app/${id}`,
+    start_url: "/app",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#000000",
