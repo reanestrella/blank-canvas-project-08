@@ -76,30 +76,21 @@ const App = () => {
     void iniciar();
   }, []);
 
-  // 🚀 MANIFEST DINÂMICO (AQUI ESTÁ O MAIS IMPORTANTE)
+  // 🚀 MANIFEST DINÂMICO
   useEffect(() => {
-    useEffect(() => {
-  const igrejaId = localStorage.getItem("igreja_id");
-
-  if (!igrejaId) {
-    console.warn("❌ igreja_id não encontrado");
-    return;
-  }
-
-  console.log("🔥 carregando manifest dinâmico:", igrejaId);
-
-  // REMOVE QUALQUER MANIFEST ANTIGO
-  const existing = document.querySelector('link[rel="manifest"]');
-  if (existing) existing.remove();
-
-  // CRIA NOVO
-  const link = document.createElement("link");
-  link.rel = "manifest";
-  link.href = `https://ycaiusoyqoeccmmixgrf.supabase.co/functions/v1/manifest?id=${igrejaId}`;
-
-  document.head.appendChild(link);
-
-}, []);
+    const igrejaId = localStorage.getItem("igreja_id");
+    if (!igrejaId) {
+      console.warn("❌ igreja_id não encontrado");
+      return;
+    }
+    console.log("🔥 carregando manifest dinâmico:", igrejaId);
+    const existing = document.querySelector('link[rel="manifest"]');
+    if (existing) existing.remove();
+    const link = document.createElement("link");
+    link.rel = "manifest";
+    link.href = `https://ycaiusoyqoeccmmixgrf.supabase.co/functions/v1/manifest?id=${igrejaId}`;
+    document.head.appendChild(link);
+  }, []);
 
   return (
     <GlobalErrorBoundary>
