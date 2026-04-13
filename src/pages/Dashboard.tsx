@@ -238,11 +238,5 @@ function Dashboard() {
     </AppLayout>
   );
 }
-return (
-  <div>
-    <InstallButton />
 
-    <h1>Dashboard</h1>
-  </div>
-);
 export default Dashboard;
