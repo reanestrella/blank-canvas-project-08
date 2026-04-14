@@ -99,8 +99,11 @@ export function ChurchLogoUpload({ churchId, currentLogoUrl, onLogoUpdated }: Ch
 
       if (dbError) throw dbError;
 
-      // 5. Update PWA assets
+      // 5. Update apple-touch-icon (iOS) and favicon
       setDynamicManifest(churchId, logoUrl);
+
+      // Reset reload flag so next load captures new icon on iOS
+      localStorage.removeItem(`pwaIconReloaded_${churchId}`);
 
       toast({ title: "Logo atualizada!", description: "A logo foi processada e salva com sucesso." });
       onLogoUpdated();
