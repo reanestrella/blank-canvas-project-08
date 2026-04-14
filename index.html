@@ -15,7 +15,7 @@
     />
     <meta name="author" content="Igreja Conectada" />
 
-    <!-- PWA Manifest -->
+    <!-- PWA Manifest — MUST remain static for Chrome install prompt -->
     <link rel="manifest" href="/manifest.json" />
 
     <!-- PWA Meta Tags -->
@@ -28,14 +28,14 @@
     <!-- Favicon -->
     <link id="dynamic-favicon" rel="icon" href="/favicon.ico" />
 
-    <!-- PWA: injetar apple-touch-icon ANTES do React carregar -->
+    <!-- PWA: inject apple-touch-icon BEFORE React loads (iOS Safari) -->
     <script>
       (function () {
         var logo = localStorage.getItem("churchLogo");
         if (logo) {
           var link = document.createElement("link");
           link.rel = "apple-touch-icon";
-          link.href = logo + "?v=" + Date.now();
+          link.href = logo + "?v=" + Date.now() + "&ios=true";
           document.head.appendChild(link);
         }
       })();

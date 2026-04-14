@@ -2,11 +2,11 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-// Capturar evento de instalação PWA (uma única vez)
+// Capture PWA install prompt — keep reference for InstallButton
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   (window as any).deferredPrompt = e;
-  console.log("✅ beforeinstallprompt capturado");
+  console.log("✅ beforeinstallprompt captured");
 });
 
 createRoot(document.getElementById("root")!).render(<App />);
