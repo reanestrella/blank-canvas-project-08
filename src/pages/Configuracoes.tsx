@@ -34,6 +34,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { InviteUserModal } from "@/components/modals/InviteUserModal";
 import { CongregationModal } from "@/components/modals/CongregationModal";
 import { RolesPanel } from "@/components/admin/RolesPanel";
+import { ChurchLogoUpload } from "@/components/settings/ChurchLogoUpload";
 import type { Congregation, CreateCongregationData } from "@/hooks/useCongregations";
 
 const plans = [
@@ -86,7 +87,7 @@ export default function Configuracoes() {
   const churchId = profile?.church_id;
   const { invitations, isLoading, createInvitation, deleteInvitation, getInviteLink } = useInvitations();
   const { congregations, isLoading: loadingCongregations, createCongregation, updateCongregation } = useCongregations(churchId || undefined);
-  const { church, isLoading: loadingChurch, isSaving, updateChurch } = useChurchSettings();
+  const { church, isLoading: loadingChurch, isSaving, updateChurch, fetchChurch } = useChurchSettings();
 
   // Initialize form with church data
   useEffect(() => {
@@ -245,6 +246,17 @@ export default function Configuracoes() {
                 )}
               </CardContent>
             </Card>
+
+            {churchId && (
+              <ChurchLogoUpload
+                churchId={churchId}
+                currentLogoUrl={church?.logo_url || null}
+                onLogoUpdated={() => {
+                  fetchChurch();
+                  refreshChurch();
+                }}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="filiais" className="space-y-6 mt-6">
