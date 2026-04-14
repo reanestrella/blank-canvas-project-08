@@ -3,6 +3,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { queryClient } from "@/lib/queryClient";
 import { getRegistrationBinding, syncSelfRegistrationProfile } from "@/lib/selfRegistration";
+import { setDynamicManifest } from "@/lib/setDynamicManifest";
 
 interface Profile {
   id: string;
@@ -230,6 +231,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           if (churchData) {
             setChurch(churchData as Church);
+            // Atualizar manifest e apple-touch-icon dinâmico
+            setDynamicManifest(profileData.church_id, churchData.logo_url ?? undefined);
           }
 
           // 3. Fetch roles FILTERED by this church_id
