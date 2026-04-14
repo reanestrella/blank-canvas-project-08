@@ -117,8 +117,14 @@ export default function Login() {
       // 🔥 SALVA IGREJA (SEM RELOAD AQUI!)
       localStorage.setItem("igreja_id", profile.church_id);
 
-      // 🔥 MANIFEST DINÂMICO POR IGREJA
-      setDynamicManifest(profile.church_id);
+      // 🔥 MANIFEST + ÍCONE DINÂMICO POR IGREJA
+      const { data: churchData } = await supabase
+        .from("churches")
+        .select("logo_url")
+        .eq("id", profile.church_id)
+        .single();
+
+      setDynamicManifest(profile.church_id, churchData?.logo_url ?? undefined);
 
       // 🔥 BUSCAR ROLES
       const { data: rolesData } = await supabase
