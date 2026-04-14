@@ -1,5 +1,5 @@
 import InstallButton from "@/components/InstallButton";
-import { useState, type CSSProperties } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCongregations } from "@/hooks/useCongregations";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
@@ -57,12 +57,6 @@ function PastorDashboard() {
     { title: "Batizados", value: stats.totalBaptized.toString(), change: "Total batizados", changeType: "positive" as const, icon: Droplets, iconColor: "bg-info/10 text-info" },
   ];
 
-  const quickHighlights = [
-    { label: "Membros visíveis", value: members.length.toString(), icon: Users },
-    { label: "Alertas recentes", value: stats.recentAlerts.length.toString(), icon: Sparkles },
-    { label: "Aniversários na semana", value: (Array.isArray(stats.birthdaysThisWeek) ? stats.birthdaysThisWeek.length : 0).toString(), icon: CalendarDays },
-  ];
-
   const notificationMessage =
     notificationResult === "granted"
       ? "Notificações ativadas com sucesso."
@@ -86,18 +80,83 @@ function PastorDashboard() {
 
   return (
     <div className="space-y-8">
-      {/* restante do seu dashboard permanece igual */}
+      {/* Hero Section */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/90 to-primary p-6 text-primary-foreground">
+        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -left-10 -bottom-10 h-40 w-40 rounded-full bg-white/5 blur-3xl" />
+
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Painel Administrativo</h1>
+            <p className="mt-1 text-sm text-primary-foreground/70">
+              Visão geral da sua igreja
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <InstallButton />
+
+            {congregations.length > 1 && (
+              <CongregationSelector
+                congregations={congregations}
+                selectedId={selectedCongregation}
+                onSelect={setSelectedCongregation}
+              />
+            )}
+
+            {canRequestNotification && (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="gap-2"
+                onClick={handleNotificationPermission}
+                disabled={isRequestingPermission}
+              >
+                {isRequestingPermission ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Bell className="h-4 w-4" />
+                )}
+                Ativar Notificações
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {notificationMessage && (
+          <p className="mt-3 text-xs text-primary-foreground/80">{notificationMessage}</p>
+        )}
+      </div>
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {statCards.map((card) => (
+          <StatCard key={card.title} {...card} />
+        ))}
+      </div>
+
+      {/* Network Overview */}
       <NetworkOverview stats={stats.networkStats} totalMembers={stats.totalMembers} />
+
+      {/* Spiritual Funnel */}
       <SpiritualFunnel />
+
+      {/* Cell Charts */}
       <CellChartsCard />
+
+      {/* Birthdays & Anniversaries */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <BirthdayCard birthdaysThisMonth={stats.birthdaysThisMonth} birthdaysThisWeek={stats.birthdaysThisWeek} />
         <WeddingAnniversaryCard anniversariesThisMonth={stats.weddingAnniversariesThisMonth} anniversariesThisWeek={stats.weddingAnniversariesThisWeek} />
       </div>
+
+      {/* Events & Finance */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <UpcomingEvents />
         <FinanceOverview />
       </div>
+
+      {/* Recent Activity */}
       <RecentActivity />
     </div>
   );
@@ -106,7 +165,6 @@ function PastorDashboard() {
 export default function Dashboard() {
   return (
     <AppLayout requireChurch>
-      <InstallButton />
       <PastorDashboard />
     </AppLayout>
   );
