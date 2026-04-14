@@ -1,3 +1,13 @@
+let deferredPrompt: any = null;
+
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+
+  console.log("🔥 beforeinstallprompt capturado");
+
+  deferredPrompt = e;
+  (window as any).deferredPrompt = e;
+});
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
