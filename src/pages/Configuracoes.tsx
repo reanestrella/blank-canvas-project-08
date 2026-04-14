@@ -87,7 +87,7 @@ export default function Configuracoes() {
   const churchId = profile?.church_id;
   const { invitations, isLoading, createInvitation, deleteInvitation, getInviteLink } = useInvitations();
   const { congregations, isLoading: loadingCongregations, createCongregation, updateCongregation } = useCongregations(churchId || undefined);
-  const { church, isLoading: loadingChurch, isSaving, updateChurch } = useChurchSettings();
+  const { church, isLoading: loadingChurch, isSaving, updateChurch, fetchChurch } = useChurchSettings();
 
   // Initialize form with church data
   useEffect(() => {
