@@ -1,48 +1,38 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 
 export default function InstallButton() {
-  const [prompt, setPrompt] = useState<any>(null);
+  const [canInstall, setCanInstall] = useState(false);
 
   useEffect(() => {
-    try {
-      const deferred = (window as any)?.deferredPrompt;
-
-      if (deferred) {
-        setPrompt(deferred);
-      }
-    } catch (error) {
-      console.log("Erro ao capturar deferredPrompt:", error);
-    }
+    const check = () => setCanInstall(!!(window as any).deferredPrompt);
+    check();
+    window.addEventListener("beforeinstallprompt", () => check());
+    return () => window.removeEventListener("beforeinstallprompt", check);
   }, []);
 
-  const instalar = async () => {
-    try {
-      const deferred = (window as any)?.deferredPrompt;
+  const handleInstall = async () => {
+    const prompt = (window as any).deferredPrompt;
+    if (!prompt) return;
 
-      if (!deferred) {
-        console.log("Prompt não disponível");
-        return;
-      }
-
-      deferred.prompt();
-      await deferred.userChoice;
-
-      (window as any).deferredPrompt = null;
-      setPrompt(null);
-    } catch (error) {
-      console.log("Erro ao instalar:", error);
-    }
+    prompt.prompt();
+    const choice = await prompt.userChoice;
+    console.log("Escolha do usuário:", choice.outcome);
+    (window as any).deferredPrompt = null;
+    setCanInstall(false);
   };
 
-  // 🔥 PROTEÇÃO TOTAL (IMPEDIR QUEBRAR REACT)
-  if (!prompt) return null;
+  if (!canInstall) return null;
 
   return (
-    <div style={{ padding: 16 }}>
-      <Button onClick={instalar}>
-        Instalar App
-      </Button>
-    </div>
+    <Button
+      onClick={handleInstall}
+      className="fixed bottom-5 right-5 z-[9999] gap-2 shadow-lg"
+      size="lg"
+    >
+      <Download className="h-4 w-4" />
+      Instalar App
+    </Button>
   );
 }
