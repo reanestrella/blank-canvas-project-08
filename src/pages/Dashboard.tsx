@@ -99,7 +99,7 @@ function PastorDashboard() {
             {congregations.length > 1 && (
               <CongregationSelector
                 congregations={congregations}
-                selected={selectedCongregation}
+                selectedId={selectedCongregation}
                 onSelect={setSelectedCongregation}
               />
             )}
