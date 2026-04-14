@@ -28,6 +28,19 @@
     <!-- Favicon -->
     <link id="dynamic-favicon" rel="icon" href="/favicon.ico" />
 
+    <!-- PWA: injetar apple-touch-icon ANTES do React carregar -->
+    <script>
+      (function () {
+        var logo = localStorage.getItem("churchLogo");
+        if (logo) {
+          var link = document.createElement("link");
+          link.rel = "apple-touch-icon";
+          link.href = logo + "?v=" + Date.now();
+          document.head.appendChild(link);
+        }
+      })();
+    </script>
+
     <!-- Open Graph -->
     <meta property="og:title" content="Igreja Conectada - Gestão Completa" />
     <meta property="og:description" content="Sistema completo de gestão para igrejas" />
