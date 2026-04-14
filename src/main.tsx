@@ -1,26 +1,17 @@
-let deferredPrompt: any = null;
-
-window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault();
-
-  console.log("🔥 beforeinstallprompt capturado");
-
-  deferredPrompt = e;
-  (window as any).deferredPrompt = e;
-});
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-createRoot(document.getElementById("root")!).render(<App />);
-
-// Capturar evento de instalação PWA
+// Capturar evento de instalação PWA (uma única vez)
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   (window as any).deferredPrompt = e;
   console.log("✅ beforeinstallprompt capturado");
 });
 
+createRoot(document.getElementById("root")!).render(<App />);
+
+// Service Worker: apenas em produção fora de iframe
 const isInIframe = (() => {
   try { return window.self !== window.top; } catch { return true; }
 })();
