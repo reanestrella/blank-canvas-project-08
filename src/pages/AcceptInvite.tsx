@@ -66,17 +66,13 @@ export default function AcceptInvite() {
         return;
       }
 
-      // Reload profile (church_id) + roles
-      await refreshUserData();
-
+      // Force full reload so AuthContext picks up new church_id and roles
       toast({ title: "Convite aceito!", description: "Você foi vinculado à igreja com sucesso." });
 
-      // Role-based redirect
-      const roles: string[] = result?.roles || [];
-      console.log("roles from RPC:", roles);
-      const redirectTo = getRoleBasedRedirect(roles);
-      console.log("redirecting to:", redirectTo);
-      navigate(redirectTo, { replace: true });
+      // Small delay then full reload to ensure clean state
+      setTimeout(() => {
+        window.location.href = "/meu-app";
+      }, 500);
     } catch (err: any) {
       console.error("AcceptInvite exception:", err);
       setErrorMsg(err.message || "Erro inesperado ao aceitar convite.");
