@@ -2,22 +2,22 @@ import { X, CheckCircle } from "lucide-react";
 
 export default function ComparisonSection() {
   return (
-    <section className="py-20 md:py-28 bg-[#0A0F2C]">
+    <section className="gradient-primary py-20 text-sidebar-foreground md:py-28">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <p className="text-[#FACC15] font-bold text-sm tracking-widest uppercase mb-4">
+          <p className="mb-4 text-sm font-bold uppercase tracking-widest text-secondary">
             COMPARAÇÃO DE VALOR
           </p>
-          <h2 className="text-3xl lg:text-4xl font-extrabold text-white">
+          <h2 className="text-3xl font-extrabold lg:text-4xl">
             Quanto custa ter um{" "}
-            <span className="text-[#FACC15]">app próprio?</span>
+            <span className="text-secondary">app próprio?</span>
           </h2>
         </div>
 
         <div className="max-w-3xl mx-auto grid md:grid-cols-2 gap-6">
           {/* Without */}
-          <div className="p-8 rounded-2xl bg-red-500/5 border border-red-500/20">
-            <h3 className="font-extrabold text-lg mb-6 text-red-400">
+          <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-8">
+            <h3 className="mb-6 text-lg font-extrabold text-destructive">
               Desenvolver um app próprio
             </h3>
             <ul className="space-y-5">
@@ -28,10 +28,10 @@ export default function ComparisonSection() {
                 ["Equipe técnica", "Necessária"],
               ].map(([label, value]) => (
                 <li key={label} className="flex items-start gap-3">
-                  <X className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                  <X className="mt-0.5 h-5 w-5 flex-shrink-0 text-destructive" />
                   <div>
-                    <p className="font-bold text-white">{label}</p>
-                    <p className="text-sm text-[#9CA3AF]">{value}</p>
+                    <p className="font-bold text-sidebar-foreground">{label}</p>
+                    <p className="text-sm text-sidebar-foreground/70">{value}</p>
                   </div>
                 </li>
               ))}
@@ -39,12 +39,12 @@ export default function ComparisonSection() {
           </div>
 
           {/* With */}
-          <div className="p-8 rounded-2xl border-2 border-[#FACC15]/30 bg-[#FACC15]/5 shadow-[0_0_40px_rgba(250,204,21,0.1)] relative">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-5 py-1 rounded-full gradient-accent text-[#0A0F2C] text-xs font-extrabold tracking-wider shadow-md">
+          <div className="relative rounded-2xl border-2 border-secondary/30 bg-secondary/5 p-8 shadow-[var(--shadow-glow)]">
+            <div className="gradient-accent absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-5 py-1 text-xs font-extrabold tracking-wider text-secondary-foreground shadow-md">
               CHURCH ONEFY
             </div>
-            <h3 className="font-extrabold text-lg mb-6 text-[#FACC15]">
-              Com Church Onefy
+            <h3 className="mb-6 text-lg font-extrabold text-secondary">
+              Com CHURCH ONEFY
             </h3>
             <ul className="space-y-5">
               {[
@@ -54,10 +54,10 @@ export default function ComparisonSection() {
                 ["Equipe técnica", "Não precisa"],
               ].map(([label, value]) => (
                 <li key={label} className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-[#FACC15] flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-secondary" />
                   <div>
-                    <p className="font-bold text-white">{label}</p>
-                    <p className="text-sm text-[#9CA3AF]">{value}</p>
+                    <p className="font-bold text-sidebar-foreground">{label}</p>
+                    <p className="text-sm text-sidebar-foreground/70">{value}</p>
                   </div>
                 </li>
               ))}
@@ -65,9 +65,9 @@ export default function ComparisonSection() {
           </div>
         </div>
 
-        <p className="text-center mt-12 text-lg md:text-xl font-extrabold text-white">
+        <p className="mt-12 text-center text-lg font-extrabold text-sidebar-foreground md:text-xl">
           Você tem tudo isso por{" "}
-          <span className="text-[#FACC15]">menos que um jantar</span> 🍽️
+          <span className="text-secondary">menos que um jantar</span> 🍽️
         </p>
       </div>
     </section>

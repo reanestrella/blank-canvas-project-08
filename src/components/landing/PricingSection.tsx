@@ -16,32 +16,32 @@ const included = [
 
 export default function PricingSection() {
   return (
-    <section className="py-20 md:py-28 bg-[#0F1C4D]">
+    <section className="bg-background py-20 md:py-28">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <p className="text-[#FACC15] font-bold text-sm tracking-widest uppercase mb-4">
+          <p className="mb-4 text-sm font-bold uppercase tracking-widest text-primary">
             OFERTA DIRETA
           </p>
-          <h2 className="text-3xl lg:text-4xl font-extrabold text-white">
+          <h2 className="text-3xl font-extrabold text-foreground lg:text-4xl">
             Tenha agora o sistema que{" "}
-            <span className="text-[#FACC15]">sua igreja precisa</span>
+            <span className="text-secondary">sua igreja precisa</span>
           </h2>
         </div>
 
         <div className="max-w-lg mx-auto">
-          <div className="relative p-8 md:p-10 rounded-3xl border-2 border-[#FACC15]/30 bg-[#0A0F2C] shadow-[0_0_60px_rgba(250,204,21,0.1)]">
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-2 rounded-full gradient-accent text-[#0A0F2C] text-sm font-extrabold tracking-wider shadow-lg">
+          <div className="relative rounded-3xl border-2 border-primary/20 bg-card p-8 shadow-[var(--shadow-lg)] md:p-10">
+            <div className="gradient-accent absolute -top-4 left-1/2 -translate-x-1/2 rounded-full px-6 py-2 text-sm font-extrabold tracking-wider text-secondary-foreground shadow-lg">
               CHURCH ONEFY
             </div>
 
             <div className="text-center mb-8 pt-4">
               <div className="flex items-baseline justify-center gap-1">
-                <span className="text-4xl md:text-5xl font-extrabold text-white">
+                <span className="text-4xl font-extrabold text-foreground md:text-5xl">
                   R$ 79,90
                 </span>
-                <span className="text-[#9CA3AF] text-lg">/mês</span>
+                <span className="text-lg text-muted-foreground">/mês</span>
               </div>
-              <p className="text-[#9CA3AF] mt-2">
+              <p className="mt-2 text-muted-foreground">
                 Cancele quando quiser · Sem fidelidade
               </p>
             </div>
@@ -49,8 +49,8 @@ export default function PricingSection() {
             <ul className="space-y-3 mb-8">
               {included.map((item) => (
                 <li key={item} className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-[#FACC15] flex-shrink-0" />
-                  <span className="text-sm font-medium text-white/90">{item}</span>
+                  <CheckCircle className="h-5 w-5 flex-shrink-0 text-primary" />
+                  <span className="text-sm font-medium text-foreground/90">{item}</span>
                 </li>
               ))}
             </ul>
@@ -58,7 +58,7 @@ export default function PricingSection() {
             <Link to="/registro">
               <Button
                 size="lg"
-                className="w-full gradient-accent text-[#0A0F2C] font-bold text-base shadow-[0_0_20px_rgba(250,204,21,0.4)] hover:shadow-[0_0_30px_rgba(250,204,21,0.6)] hover:scale-[1.03] transition-all py-6 rounded-xl"
+                className="gradient-accent w-full rounded-xl py-6 text-base font-bold text-secondary-foreground shadow-[var(--shadow-glow)] transition-all hover:scale-[1.03]"
               >
                 Começar agora
                 <ArrowRight className="w-5 h-5 ml-2" />

@@ -9,6 +9,7 @@ import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useChurchBranding } from "@/hooks/useChurchBranding";
+import { APP_BRAND_LOGO, APP_BRAND_NAME } from "@/lib/brand";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -24,8 +25,17 @@ export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+        <div className="rounded-2xl bg-sidebar p-3 shadow-[var(--shadow-lg)]">
+          <img src={APP_BRAND_LOGO} alt={APP_BRAND_NAME} className="h-12 w-auto max-w-[200px] object-contain" />
+        </div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="space-y-1">
+          <p className="font-medium text-foreground">Carregando seu app...</p>
+          <p className="text-xs text-muted-foreground">
+            desenvolvido por <span className="font-semibold text-primary">{APP_BRAND_NAME.toLowerCase()}</span>
+          </p>
+        </div>
       </div>
     );
   }
