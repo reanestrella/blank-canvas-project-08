@@ -10,18 +10,18 @@ const pains = [
 
 export default function PainSection() {
   return (
-    <section className="py-20 md:py-28 bg-[#0F1C4D]">
+    <section className="bg-background py-20 md:py-28">
       <div className="container mx-auto px-4 max-w-3xl">
-        <p className="text-[#FACC15] font-bold text-sm tracking-widest uppercase text-center mb-4">
+        <p className="mb-4 text-center text-sm font-bold uppercase tracking-widest text-primary">
           A REALIDADE DE MUITAS IGREJAS
         </p>
 
-        <h2 className="text-3xl lg:text-4xl font-extrabold text-center mb-4 text-white">
+        <h2 className="mb-4 text-center text-3xl font-extrabold text-foreground lg:text-4xl">
           Se você lidera uma igreja,{" "}
-          <span className="text-red-400">sabe como é…</span>
+          <span className="text-primary">sabe como é…</span>
         </h2>
 
-        <p className="text-base md:text-lg text-[#9CA3AF] text-center mb-12 max-w-2xl mx-auto">
+        <p className="mx-auto mb-12 max-w-2xl text-center text-base text-muted-foreground md:text-lg">
           O trabalho é enorme, o tempo é curto e as ferramentas erradas só atrapalham.
         </p>
 
@@ -29,20 +29,20 @@ export default function PainSection() {
           {pains.map((pain) => (
             <div
               key={pain}
-              className="flex items-center gap-4 p-4 md:p-5 rounded-xl bg-red-500/5 border border-red-500/10"
+              className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-sm md:p-5"
             >
-              <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0">
-                <X className="w-4 h-4 text-red-400" />
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                <X className="h-4 w-4 text-destructive" />
               </div>
-              <span className="text-sm md:text-base font-medium text-white/90">{pain}</span>
+              <span className="text-sm font-medium text-foreground/90 md:text-base">{pain}</span>
             </div>
           ))}
         </div>
 
         <div className="text-center">
-          <p className="text-lg md:text-xl font-bold text-white">
+          <p className="text-lg font-bold text-foreground md:text-xl">
             Isso não é falta de dedicação.{" "}
-            <span className="text-[#FACC15]">É falta de sistema.</span>
+            <span className="text-secondary">É falta de sistema.</span>
           </p>
         </div>
       </div>

@@ -11,15 +11,15 @@ const benefits = [
 
 export default function BenefitsSection() {
   return (
-    <section className="py-20 md:py-28 bg-[#0F1C4D]">
+    <section className="bg-background py-20 md:py-28">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <p className="text-[#FACC15] font-bold text-sm tracking-widest uppercase mb-4">
+          <p className="mb-4 text-sm font-bold uppercase tracking-widest text-primary">
             TUDO QUE VOCÊ PRECISA
           </p>
-          <h2 className="text-3xl lg:text-4xl font-extrabold text-white">
+          <h2 className="text-3xl font-extrabold text-foreground lg:text-4xl">
             Um sistema completo para{" "}
-            <span className="text-[#FACC15]">toda a igreja</span>
+            <span className="text-secondary">toda a igreja</span>
           </h2>
         </div>
 
@@ -27,13 +27,13 @@ export default function BenefitsSection() {
           {benefits.map((b) => (
             <div
               key={b.title}
-              className="p-6 rounded-2xl bg-[#0A0F2C] border border-[#1E3A8A]/20 shadow-md hover:shadow-[0_0_20px_rgba(37,99,235,0.15)] hover:-translate-y-1 transition-all"
+              className="rounded-2xl border border-primary/15 bg-card p-6 shadow-[var(--shadow-sm)] transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-glow)]"
             >
-              <div className="w-12 h-12 rounded-xl bg-[#FACC15]/10 flex items-center justify-center mb-4">
-                <b.icon className="w-6 h-6 text-[#FACC15]" />
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                <b.icon className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">{b.title}</h3>
-              <p className="text-sm text-[#9CA3AF]">{b.desc}</p>
+              <h3 className="mb-2 text-base font-bold text-foreground">{b.title}</h3>
+              <p className="text-sm text-muted-foreground">{b.desc}</p>
             </div>
           ))}
         </div>

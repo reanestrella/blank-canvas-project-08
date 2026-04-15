@@ -2,7 +2,7 @@ const testimonials = [
   {
     name: "Pr. Marcos Silva",
     church: "Igreja Vida Plena",
-    text: "Antes do Church Onefy, nossas escalas eram um caos no WhatsApp. Agora cada voluntário sabe exatamente quando serve. Mudou tudo!",
+    text: "Antes do CHURCH ONEFY, nossas escalas eram um caos no WhatsApp. Agora cada voluntário sabe exatamente quando serve. Mudou tudo!",
   },
   {
     name: "Líder Ana Costa",
@@ -18,32 +18,32 @@ const testimonials = [
 
 export default function TestimonialsSection() {
   return (
-    <section className="py-20 md:py-28 bg-[#0F1C4D]">
+    <section className="bg-muted/30 py-20 md:py-28">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <p className="text-[#FACC15] font-bold text-sm tracking-widest uppercase mb-4">
+          <p className="mb-4 text-sm font-bold uppercase tracking-widest text-primary">
             PROVA SOCIAL
           </p>
-          <h2 className="text-3xl lg:text-4xl font-extrabold text-white">
+          <h2 className="text-3xl font-extrabold text-foreground lg:text-4xl">
             Igrejas que já{" "}
-            <span className="text-[#FACC15]">transformaram sua gestão</span>
+            <span className="text-secondary">transformaram sua gestão</span>
           </h2>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {testimonials.map((t) => (
-            <div key={t.name} className="p-6 rounded-2xl bg-[#0A0F2C] border border-[#1E3A8A]/20 shadow-md">
-              <div className="flex items-center gap-1 text-[#FACC15] mb-4">
+            <div key={t.name} className="rounded-2xl border border-primary/15 bg-card p-6 shadow-[var(--shadow-sm)]">
+              <div className="mb-4 flex items-center gap-1 text-secondary">
                 {"★★★★★".split("").map((s, i) => (
                   <span key={i} className="text-lg">{s}</span>
                 ))}
               </div>
-              <p className="text-sm text-[#9CA3AF] mb-6 italic leading-relaxed">
+              <p className="mb-6 text-sm italic leading-relaxed text-muted-foreground">
                 "{t.text}"
               </p>
               <div>
-                <p className="font-bold text-white">{t.name}</p>
-                <p className="text-xs text-[#9CA3AF]">{t.church}</p>
+                <p className="font-bold text-foreground">{t.name}</p>
+                <p className="text-xs text-muted-foreground">{t.church}</p>
               </div>
             </div>
           ))}

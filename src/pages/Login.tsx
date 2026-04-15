@@ -1,6 +1,6 @@
 // 🔥 LOGIN SIMPLIFICADO — redireciona sempre para /meu-app
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,9 +12,10 @@ import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Church, Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { APP_BRAND_LOGO, APP_BRAND_NAME } from "@/lib/brand";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -33,10 +34,11 @@ export default function Login() {
   const { toast } = useToast();
 
   // Store pending redirect (e.g. from invite link)
-  if (rawRedirect) {
+  useEffect(() => {
+    if (!rawRedirect) return;
     const decoded = decodeURIComponent(rawRedirect);
     sessionStorage.setItem("post_login_redirect", decoded);
-  }
+  }, [rawRedirect]);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -89,11 +91,20 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary/5 to-background p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary/10 via-background to-background p-4">
+      <Card className="w-full max-w-md border-primary/15 shadow-[var(--shadow-lg)]">
         <CardHeader className="text-center">
-          <Link to="/" className="flex items-center justify-center gap-2 mb-4">
-            <Church className="w-10 h-10 text-primary" />
+          <Link to="/" className="mb-4 flex flex-col items-center justify-center gap-3">
+            <div className="rounded-2xl bg-sidebar p-3 shadow-[var(--shadow-lg)]">
+              <img
+                src={APP_BRAND_LOGO}
+                alt={APP_BRAND_NAME}
+                className="h-14 w-auto max-w-[220px] object-contain"
+              />
+            </div>
+            <span className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
+              {APP_BRAND_NAME}
+            </span>
           </Link>
           <CardTitle className="text-2xl">Bem-vindo de volta</CardTitle>
           <CardDescription>

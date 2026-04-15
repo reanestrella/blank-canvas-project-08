@@ -340,14 +340,18 @@ export default function Consolidacao() {
         </div>
 
         {/* Tabs: 3 abas */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="overflow-x-auto -mx-1 px-1">
-            <TabsList className="w-full min-w-[400px]">
-              <TabsTrigger value="visitantes" className="flex-1 text-xs sm:text-sm">Visitantes ({visitors.length})</TabsTrigger>
-              <TabsTrigger value="consolidacao" className="flex-1 text-xs sm:text-sm">Consolidação ({emConsolidacao.length})</TabsTrigger>
-              <TabsTrigger value="consolidados" className="flex-1 text-xs sm:text-sm">Consolidados ({consolidados.length})</TabsTrigger>
-            </TabsList>
-          </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="!grid h-auto w-full grid-cols-3">
+            <TabsTrigger value="visitantes" className="min-w-0 whitespace-normal px-2 py-2 text-[11px] leading-tight sm:text-sm">
+              Visitantes ({visitors.length})
+            </TabsTrigger>
+            <TabsTrigger value="consolidacao" className="min-w-0 whitespace-normal px-2 py-2 text-[11px] leading-tight sm:text-sm">
+              Consolidação ({emConsolidacao.length})
+            </TabsTrigger>
+            <TabsTrigger value="consolidados" className="min-w-0 whitespace-normal px-2 py-2 text-[11px] leading-tight sm:text-sm">
+              Consolidados ({consolidados.length})
+            </TabsTrigger>
+          </TabsList>
 
           {/* Tab 1: Visitantes */}
           <TabsContent value="visitantes" className="space-y-4">
@@ -434,8 +438,8 @@ export default function Consolidacao() {
 
           {/* Tab 2: Em Consolidação */}
           <TabsContent value="consolidacao" className="space-y-4">
-            <div className="flex justify-end">
-              <Button onClick={() => setShowAddForm(true)}>
+            <div className="flex justify-stretch sm:justify-end">
+              <Button onClick={() => setShowAddForm(true)} className="w-full sm:w-auto">
                 <Plus className="w-4 h-4 mr-2" /> Nova Consolidação
               </Button>
             </div>

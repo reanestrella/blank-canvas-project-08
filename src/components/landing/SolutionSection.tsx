@@ -1,14 +1,14 @@
 export default function SolutionSection() {
   return (
-    <section className="py-20 md:py-28 bg-[#0A0F2C]">
+    <section className="gradient-primary py-20 text-sidebar-foreground md:py-28">
       <div className="container mx-auto px-4 max-w-4xl text-center">
-        <p className="text-[#FACC15] font-bold text-sm tracking-widest uppercase mb-4">
+        <p className="mb-4 text-sm font-bold uppercase tracking-widest text-secondary">
           A SOLUÇÃO
         </p>
 
-        <h2 className="text-3xl lg:text-4xl font-extrabold mb-6 text-white">
+        <h2 className="mb-6 text-3xl font-extrabold lg:text-4xl">
           Agora imagine sua igreja{" "}
-          <span className="text-[#FACC15]">funcionando assim:</span>
+          <span className="text-secondary">funcionando assim:</span>
         </h2>
 
         <div className="grid sm:grid-cols-3 gap-6 mt-12">
@@ -17,10 +17,10 @@ export default function SolutionSection() {
             { icon: "🎨", title: "Sua identidade", desc: "Com logo, cores e nome da sua igreja. 100% personalizado" },
             { icon: "⚡", title: "Tudo em um lugar", desc: "Escalas, membros, financeiro, células, devocional e muito mais" },
           ].map((item) => (
-            <div key={item.title} className="p-6 rounded-2xl bg-[#0F1C4D] border border-[#2563EB]/10 text-center">
+            <div key={item.title} className="rounded-2xl border border-primary/20 bg-sidebar-accent/90 p-6 text-center shadow-[var(--shadow-sm)]">
               <div className="text-4xl mb-4">{item.icon}</div>
-              <h3 className="text-lg font-bold text-white mb-2">{item.title}</h3>
-              <p className="text-sm text-[#9CA3AF]">{item.desc}</p>
+              <h3 className="mb-2 text-lg font-bold">{item.title}</h3>
+              <p className="text-sm text-sidebar-foreground/70">{item.desc}</p>
             </div>
           ))}
         </div>
