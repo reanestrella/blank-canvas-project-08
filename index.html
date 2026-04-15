@@ -15,8 +15,8 @@
     />
     <meta name="author" content="Igreja Conectada" />
 
-    <!-- PWA Manifest — MUST remain static for Chrome install prompt -->
-    <link rel="manifest" href="/manifest.json" />
+    <!-- PWA Manifest — starts with static fallback, replaced by blob URL after login -->
+    <link rel="manifest" id="dynamic-manifest" href="/manifest.json" />
 
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#1e3a5f" />
@@ -37,6 +37,12 @@
           link.rel = "apple-touch-icon";
           link.href = logo + "?v=" + Date.now() + "&ios=true";
           document.head.appendChild(link);
+        }
+
+        var name = localStorage.getItem("churchName");
+        if (name) {
+          var meta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+          if (meta) meta.setAttribute("content", name);
         }
       })();
     </script>

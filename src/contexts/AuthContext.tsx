@@ -231,8 +231,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           if (churchData) {
             setChurch(churchData as Church);
-            // Atualizar manifest e apple-touch-icon dinâmico
-            setDynamicManifest(profileData.church_id, churchData.logo_url ?? undefined);
+            // Atualizar manifest dinâmico (Android) + apple-touch-icon (iOS)
+            setDynamicManifest(
+              profileData.church_id,
+              churchData.logo_url ?? undefined,
+              churchData.name,
+            );
           }
 
           // 3. Fetch roles FILTERED by this church_id
