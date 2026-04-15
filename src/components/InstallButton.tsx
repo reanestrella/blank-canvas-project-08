@@ -7,7 +7,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Download, Share, PlusSquare, MoreVertical } from "lucide-react";
+import { Download, Share, PlusSquare } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 function isIos() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -21,6 +22,7 @@ function isInStandaloneMode() {
 }
 
 export default function InstallButton() {
+  const { church } = useAuth();
   const [canInstall, setCanInstall] = useState(false);
   const [showIosGuide, setShowIosGuide] = useState(false);
   const [isIosDevice] = useState(isIos);
@@ -29,16 +31,23 @@ export default function InstallButton() {
   useEffect(() => {
     if (alreadyInstalled) return;
 
-    const check = () => setCanInstall(!!(window as any).deferredPrompt);
-    check();
-
-    const handler = () => {
-      (window as any).deferredPrompt && check();
+    // Wait for the dynamic manifest to be picked up by Chrome
+    const timer = setTimeout(() => {
+      const check = () => setCanInstall(!!(window as any).deferredPrompt);
       check();
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, [alreadyInstalled]);
+
+      const handler = (e: Event) => {
+        e.preventDefault();
+        (window as any).deferredPrompt = e;
+        setCanInstall(true);
+      };
+      window.addEventListener("beforeinstallprompt", handler);
+
+      return () => window.removeEventListener("beforeinstallprompt", handler);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [alreadyInstalled, church]);
 
   const handleInstall = async () => {
     if (isIosDevice) {
