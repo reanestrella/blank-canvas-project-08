@@ -1,64 +1,75 @@
-import { CheckCircle, Smartphone } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 
-const appFeatures = [
-  "Visualizar escalas de ministério (louvor, kids, mídia…)",
+const features = [
+  "Ver sua escala (louvor, kids, mídia…)",
   "Acompanhar eventos da igreja",
-  "Acessar devocionais",
-  "Ler a Bíblia",
-  "Receber comunicações",
-  "Atualizar dados pessoais",
+  "Ler o devocional do dia",
+  "Acessar a Bíblia",
+  "Receber avisos importantes",
+  "Atualizar seus dados pessoais",
 ];
 
 export default function AppSection() {
   return (
-    <section className="py-20 bg-muted/30">
+    <section className="py-20 md:py-28 bg-[hsl(40,33%,98%)]">
       <div className="container mx-auto px-4">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/10 text-secondary text-sm font-medium mb-4">
-              <Smartphone className="w-4 h-4" />
-              Área do Membro
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Sua igreja com seu{" "}
-              <span className="text-secondary">próprio app</span>
-            </h2>
-            <p className="text-muted-foreground text-lg mb-8">
-              Cada igreja usa o ChurchfyOne como seu próprio aplicativo, com logo
-              personalizada e identidade visual exclusiva. Membros acessam como
-              se fosse o app oficial da igreja.
-            </p>
-            <ul className="space-y-3">
-              {appFeatures.map((f) => (
-                <li key={f} className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
-                  <span>{f}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Visual */}
-          <div className="flex justify-center">
-            <div className="relative w-full max-w-md">
-              <div className="absolute inset-0 bg-primary/5 rounded-3xl rotate-3" />
-              <div className="relative bg-card rounded-3xl border shadow-xl p-8 space-y-4">
+          <div className="flex justify-center order-2 lg:order-1">
+            <div className="relative w-full max-w-sm">
+              <div className="absolute inset-0 bg-secondary/10 rounded-3xl rotate-2 scale-105" />
+              <div className="relative bg-[hsl(222,47%,11%)] rounded-3xl p-6 shadow-2xl border border-secondary/10">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg">⛪</div>
+                  <div className="w-12 h-12 rounded-xl gradient-accent flex items-center justify-center text-[hsl(222,47%,11%)] font-bold text-lg">
+                    ⛪
+                  </div>
                   <div>
-                    <p className="font-semibold">Igreja Vida Nova</p>
-                    <p className="text-sm text-muted-foreground">App personalizado</p>
+                    <p className="font-bold text-[hsl(40,33%,98%)]">Igreja Vida Nova</p>
+                    <p className="text-sm text-[hsl(40,20%,55%)]">App personalizado</p>
                   </div>
                 </div>
-                {appFeatures.slice(0, 4).map((f, i) => (
-                  <div key={i} className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl">
-                    <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary text-sm">
-                      {["📅", "📢", "🙏", "📖"][i]}
-                    </div>
-                    <span className="text-sm font-medium">{f.split("(")[0].trim()}</span>
-                  </div>
-                ))}
+                <div className="grid grid-cols-3 gap-3">
+                  {["📅 Escalas", "📖 Bíblia", "🙏 Oração", "📢 Avisos", "👥 Células", "🎓 Cursos"].map(
+                    (item, i) => (
+                      <div
+                        key={item}
+                        className="bg-[hsl(222,47%,18%)] rounded-xl p-3 text-center border border-[hsl(222,47%,25%)]"
+                      >
+                        <p className="text-xs font-medium text-[hsl(40,33%,90%)]">{item}</p>
+                      </div>
+                    )
+                  )}
+                </div>
+                <div className="mt-4 bg-secondary/10 rounded-xl p-3 border border-secondary/20">
+                  <p className="text-xs font-bold text-secondary">⏰ Próxima escala</p>
+                  <p className="text-xs text-[hsl(40,20%,65%)] mt-1">Louvor · Domingo 19h</p>
+                </div>
               </div>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="order-1 lg:order-2">
+            <p className="text-secondary font-bold text-sm tracking-widest uppercase mb-4">
+              EXPERIÊNCIA DO MEMBRO
+            </p>
+
+            <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-[hsl(222,47%,11%)]">
+              Membros abrem o app e{" "}
+              <span className="text-secondary">encontram tudo</span>
+            </h2>
+
+            <p className="text-lg text-muted-foreground mb-8">
+              Tudo na palma da mão, com a cara da sua igreja.
+            </p>
+
+            <div className="space-y-4">
+              {features.map((f) => (
+                <div key={f} className="flex items-center gap-3">
+                  <CheckCircle className="w-5 h-5 text-secondary flex-shrink-0" />
+                  <span className="text-base font-medium text-[hsl(222,47%,15%)]">{f}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

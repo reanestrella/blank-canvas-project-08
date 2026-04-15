@@ -16,26 +16,29 @@ const included = [
 
 export default function PricingSection() {
   return (
-    <section className="py-20 bg-muted/30">
+    <section className="py-20 md:py-28 bg-[hsl(40,33%,98%)]">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Um plano. Tudo incluso.
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Sem surpresas, sem limitações artificiais
+          <p className="text-secondary font-bold text-sm tracking-widest uppercase mb-4">
+            OFERTA DIRETA
           </p>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-[hsl(222,47%,11%)]">
+            Tenha agora o sistema que{" "}
+            <span className="text-secondary">sua igreja precisa</span>
+          </h2>
         </div>
 
         <div className="max-w-lg mx-auto">
-          <div className="relative p-8 md:p-10 rounded-3xl border-2 border-secondary bg-card shadow-xl">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-5 py-1.5 rounded-full gradient-accent text-secondary-foreground text-sm font-bold shadow-md">
+          <div className="relative p-8 md:p-10 rounded-3xl border-2 border-secondary bg-[hsl(0,0%,100%)] shadow-[0_0_60px_hsl(38,92%,50%,0.15)]">
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-2 rounded-full gradient-accent text-[hsl(222,47%,11%)] text-sm font-extrabold tracking-wider shadow-lg">
               CHURCHFYONE
             </div>
 
-            <div className="text-center mb-8 pt-2">
+            <div className="text-center mb-8 pt-4">
               <div className="flex items-baseline justify-center gap-1">
-                <span className="text-5xl md:text-6xl font-bold">R$ 79,90</span>
+                <span className="text-5xl md:text-6xl font-extrabold text-[hsl(222,47%,11%)]">
+                  R$ 79,90
+                </span>
                 <span className="text-muted-foreground text-lg">/mês</span>
               </div>
               <p className="text-muted-foreground mt-2">
@@ -46,8 +49,8 @@ export default function PricingSection() {
             <ul className="space-y-3 mb-8">
               {included.map((item) => (
                 <li key={item} className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
-                  <span className="text-sm">{item}</span>
+                  <CheckCircle className="w-5 h-5 text-secondary flex-shrink-0" />
+                  <span className="text-sm font-medium">{item}</span>
                 </li>
               ))}
             </ul>
@@ -55,9 +58,9 @@ export default function PricingSection() {
             <Link to="/registro">
               <Button
                 size="lg"
-                className="w-full gradient-accent text-secondary-foreground font-semibold text-base shadow-lg hover:shadow-xl transition-all"
+                className="w-full gradient-accent text-[hsl(222,47%,11%)] font-bold text-base shadow-[0_0_20px_hsl(38,92%,50%,0.4)] hover:shadow-[0_0_30px_hsl(38,92%,50%,0.6)] transition-all py-6 rounded-xl"
               >
-                Assinar agora
+                Começar agora
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
