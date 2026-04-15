@@ -1,17 +1,19 @@
 import { useState } from "react";
-import { CheckCircle, ArrowRight, Crown, Loader2 } from "lucide-react";
+import { CheckCircle, ArrowRight, Crown, Loader2, Shield, Sparkles, Zap, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { APP_BRAND_LOGO } from "@/lib/brand";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 
 const PLANS = [
   {
     id: "mensal",
-    name: "Plano Mensal",
-    price: "R$ 79,90",
+    name: "Mensal",
+    price: "79",
+    cents: ",90",
     period: "/mês",
     priceId: "price_1TMaZUG15I82n9DcGUn6ucA3",
     badge: null,
@@ -19,32 +21,39 @@ const PLANS = [
   },
   {
     id: "anual",
-    name: "Plano Anual",
-    price: "R$ 790,00",
+    name: "Anual",
+    price: "790",
+    cents: ",00",
     period: "/ano",
     priceId: "price_1TMadmG15I82n9DcfTxw7Jgm",
     badge: "MAIS VANTAJOSO",
     highlight: true,
     savings: "Economize R$ 168,80",
+    monthlyEquiv: "R$ 65,83/mês",
   },
 ];
 
 const features = [
-  "Sistema completo (todos os módulos)",
-  "App personalizado com a logo da igreja",
-  "Membros e células ilimitados",
-  "Gestão financeira completa",
-  "Escalas de ministério",
-  "Ensino e discipulado",
-  "Relatórios inteligentes",
-  "Suporte dedicado",
-  "Atualizações contínuas",
+  { icon: Users, text: "Membros e células ilimitados" },
+  { icon: Shield, text: "Gestão financeira completa" },
+  { icon: Zap, text: "Escalas de ministério" },
+  { icon: Sparkles, text: "Ensino e discipulado" },
+  { icon: Shield, text: "Relatórios inteligentes com IA" },
+  { icon: Users, text: "App personalizado com logo da igreja" },
+  { icon: Zap, text: "Suporte dedicado" },
+  { icon: Sparkles, text: "Atualizações contínuas" },
 ];
 
 export default function Planos() {
   const { user, church } = useAuth();
+  const { isSubscribed, isLoading: subLoading } = useSubscription();
   const { toast } = useToast();
   const [loading, setLoading] = useState<string | null>(null);
+
+  // If already subscribed, redirect to app
+  if (user && !subLoading && isSubscribed) {
+    return <Navigate to="/meu-app" replace />;
+  }
 
   const handleCheckout = async (priceId: string, planId: string) => {
     if (!user) {
@@ -87,74 +96,91 @@ export default function Planos() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[hsl(var(--background))]">
       {/* Header */}
-      <header className="border-b border-border/30 bg-sidebar/50 backdrop-blur-sm">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4">
+      <header className="border-b border-border/20 bg-card/60 backdrop-blur-md sticky top-0 z-50">
+        <div className="container mx-auto flex items-center justify-between px-4 py-3">
           <Link to="/" className="flex items-center gap-2">
             <img src={APP_BRAND_LOGO} alt="Church Onefy" className="h-10 w-auto" />
           </Link>
           {user ? (
             <Link to="/meu-app">
-              <Button variant="outline" size="sm">Voltar ao App</Button>
+              <Button variant="outline" size="sm" className="rounded-lg">Voltar ao App</Button>
             </Link>
           ) : (
             <Link to="/login">
-              <Button variant="outline" size="sm">Entrar</Button>
+              <Button variant="outline" size="sm" className="rounded-lg">Entrar</Button>
             </Link>
           )}
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 mb-4">
+      <div className="container mx-auto px-4 py-12 md:py-20">
+        {/* Hero */}
+        <div className="text-center mb-14 max-w-2xl mx-auto">
+          <div className="inline-flex items-center gap-2 rounded-full bg-secondary/10 border border-secondary/20 px-5 py-2 mb-6">
             <Crown className="h-4 w-4 text-secondary" />
-            <span className="text-sm font-bold text-secondary">ESCOLHA SEU PLANO</span>
+            <span className="text-sm font-bold text-secondary tracking-wide">ESCOLHA SEU PLANO</span>
           </div>
-          <h1 className="text-3xl font-extrabold text-foreground lg:text-4xl mb-3">
-            Tenha o sistema completo para{" "}
-            <span className="text-secondary">sua igreja</span>
+          <h1 className="text-3xl md:text-5xl font-extrabold text-foreground leading-tight mb-4">
+            O sistema completo para{" "}
+            <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
+              sua igreja crescer
+            </span>
           </h1>
-          <p className="text-muted-foreground max-w-lg mx-auto">
+          <p className="text-lg text-muted-foreground max-w-lg mx-auto">
             Todos os módulos inclusos. Sem surpresas. Cancele quando quiser.
           </p>
         </div>
 
         {/* Plans Grid */}
-        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto mb-12">
+        <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto mb-16">
           {PLANS.map((plan) => (
             <div
               key={plan.id}
-              className={`relative rounded-2xl border-2 p-8 transition-all ${
+              className={`relative rounded-3xl p-8 transition-all duration-300 ${
                 plan.highlight
-                  ? "border-secondary bg-card shadow-[0_0_30px_rgba(234,179,8,0.15)]"
-                  : "border-border/40 bg-card"
+                  ? "border-2 border-secondary bg-card shadow-[0_0_40px_rgba(234,179,8,0.12)] scale-[1.02]"
+                  : "border border-border/50 bg-card hover:border-border"
               }`}
             >
               {plan.badge && (
-                <div className="gradient-accent absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-4 py-1 text-xs font-extrabold tracking-wider text-secondary-foreground shadow-lg">
-                  {plan.badge}
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <div className="gradient-accent rounded-full px-5 py-1.5 text-xs font-extrabold tracking-wider text-secondary-foreground shadow-lg whitespace-nowrap">
+                    ⭐ {plan.badge}
+                  </div>
                 </div>
               )}
 
-              <div className="text-center mb-6 pt-2">
-                <h3 className="text-lg font-bold text-foreground mb-3">{plan.name}</h3>
-                <div className="flex items-baseline justify-center gap-1">
-                  <span className="text-4xl font-extrabold text-foreground">{plan.price}</span>
-                  <span className="text-muted-foreground">{plan.period}</span>
+              <div className="text-center mb-8 pt-2">
+                <h3 className="text-base font-semibold text-muted-foreground uppercase tracking-widest mb-5">
+                  Plano {plan.name}
+                </h3>
+                <div className="flex items-baseline justify-center">
+                  <span className="text-sm text-muted-foreground mr-1">R$</span>
+                  <span className="text-6xl font-black text-foreground tracking-tight">{plan.price}</span>
+                  <span className="text-2xl font-bold text-foreground">{plan.cents}</span>
+                  <span className="text-base text-muted-foreground ml-1">{plan.period}</span>
                 </div>
+                {plan.monthlyEquiv && (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    equivalente a <span className="font-semibold text-foreground">{plan.monthlyEquiv}</span>
+                  </p>
+                )}
                 {plan.savings && (
-                  <p className="mt-2 text-sm font-semibold text-green-400">{plan.savings}</p>
+                  <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-green-500/10 border border-green-500/20 px-4 py-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-green-500" />
+                    <span className="text-sm font-bold text-green-500">{plan.savings}</span>
+                  </div>
                 )}
               </div>
 
               <Button
                 size="lg"
-                className={`w-full rounded-xl py-5 text-base font-bold transition-all hover:scale-[1.02] ${
+                className={`w-full rounded-2xl py-6 text-base font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
                   plan.highlight
-                    ? "gradient-accent text-secondary-foreground shadow-[var(--shadow-glow)]"
-                    : "bg-primary text-primary-foreground"
+                    ? "gradient-accent text-secondary-foreground shadow-[0_4px_20px_rgba(234,179,8,0.3)]"
+                    : "bg-primary hover:bg-primary/90 text-primary-foreground"
                 }`}
                 onClick={() => handleCheckout(plan.priceId, plan.id)}
                 disabled={!!loading}
@@ -163,8 +189,8 @@ export default function Planos() {
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <>
-                    Assinar {plan.name.split(" ")[1]}
-                    <ArrowRight className="w-4 h-4 ml-2" />
+                    Começar agora
+                    <ArrowRight className="w-5 h-5 ml-2" />
                   </>
                 )}
               </Button>
@@ -173,18 +199,27 @@ export default function Planos() {
         </div>
 
         {/* Features */}
-        <div className="max-w-lg mx-auto">
-          <h3 className="text-center text-sm font-bold uppercase tracking-widest text-muted-foreground mb-6">
+        <div className="max-w-2xl mx-auto">
+          <h3 className="text-center text-sm font-bold uppercase tracking-[0.2em] text-muted-foreground mb-8">
             Tudo incluso em ambos os planos
           </h3>
-          <ul className="space-y-3">
+          <div className="grid sm:grid-cols-2 gap-4">
             {features.map((f) => (
-              <li key={f} className="flex items-center gap-3">
-                <CheckCircle className="h-5 w-5 flex-shrink-0 text-primary" />
-                <span className="text-sm font-medium text-foreground/90">{f}</span>
-              </li>
+              <div key={f.text} className="flex items-center gap-3 rounded-xl bg-card border border-border/30 px-5 py-4">
+                <div className="flex-shrink-0 rounded-lg bg-primary/10 p-2">
+                  <CheckCircle className="h-4 w-4 text-primary" />
+                </div>
+                <span className="text-sm font-medium text-foreground">{f.text}</span>
+              </div>
             ))}
-          </ul>
+          </div>
+        </div>
+
+        {/* Trust */}
+        <div className="text-center mt-12">
+          <p className="text-xs text-muted-foreground">
+            🔒 Pagamento seguro via Stripe · Cancele a qualquer momento · Sem taxa de cancelamento
+          </p>
         </div>
       </div>
     </div>
