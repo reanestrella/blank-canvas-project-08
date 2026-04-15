@@ -200,18 +200,7 @@ export default function Secretaria() {
               Gerencie membros, decididos e visitantes da sua igreja
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <RegistrationQrCode compact churchId={churchId} congregations={congregations} />
-            <FinancialFilters mode={periodMode} month={filterMonth} year={filterYear} onModeChange={(m) => setPeriodMode(m)} onMonthChange={setFilterMonth} onYearChange={setFilterYear} />
-            <CongregationSelector
-              congregations={congregations}
-              selectedId={selectedCongregation}
-              onSelect={setSelectedCongregation}
-            />
-            <Button variant="outline" onClick={() => setImportModalOpen(true)}>
-              <Upload className="w-4 h-4 mr-2" />
-              Importar
-            </Button>
+          <div className="flex flex-wrap items-center gap-2">
             <Button 
               className="gradient-accent text-secondary-foreground shadow-lg hover:shadow-xl transition-all"
               onClick={() => {
@@ -222,6 +211,17 @@ export default function Secretaria() {
               <Plus className="w-4 h-4 mr-2" />
               Novo Cadastro
             </Button>
+            <RegistrationQrCode compact churchId={churchId} congregations={congregations} />
+            <Button variant="outline" size="sm" onClick={() => setImportModalOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Importar
+            </Button>
+            <FinancialFilters mode={periodMode} month={filterMonth} year={filterYear} onModeChange={(m) => setPeriodMode(m)} onMonthChange={setFilterMonth} onYearChange={setFilterYear} />
+            <CongregationSelector
+              congregations={congregations}
+              selectedId={selectedCongregation}
+              onSelect={setSelectedCongregation}
+            />
           </div>
         </div>
 

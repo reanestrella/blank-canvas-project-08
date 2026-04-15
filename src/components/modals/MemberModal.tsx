@@ -45,7 +45,7 @@ const memberSchema = z.object({
   state: z.string().max(2).optional().or(z.literal("")),
   gender: z.enum(["M", "F"]).optional(),
   marital_status: z.string().optional().or(z.literal("")),
-  spiritual_status: z.enum(["visitante", "novo_convertido", "membro", "lider", "discipulador"]).default("visitante"),
+  spiritual_status: z.enum(["visitante", "novo_convertido", "membro", "lider", "discipulador"]).optional(),
   baptism_date: z.string().optional().or(z.literal("")),
   baptism_location: z.string().max(200).optional().or(z.literal("")),
   conversion_date: z.string().optional().or(z.literal("")),

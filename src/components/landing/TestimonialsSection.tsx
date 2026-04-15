@@ -1,54 +1,52 @@
-import { Star } from "lucide-react";
-
 const testimonials = [
   {
-    quote: "O sistema revolucionou nossa gestão de células. Agora temos visibilidade total do crescimento espiritual.",
-    author: "Pr. Carlos Mendes",
-    church: "Igreja Nova Aliança",
-    avatar: "CM",
+    name: "Pr. Marcos Silva",
+    church: "Igreja Vida Plena",
+    text: "Antes do ChurchfyOne, nossas escalas eram um caos no WhatsApp. Agora cada voluntário sabe exatamente quando serve. Mudou tudo!",
   },
   {
-    quote: "A transparência financeira trouxe paz para toda a liderança. Recomendo para todas as igrejas.",
-    author: "Pra. Ana Santos",
-    church: "Comunidade Vida Plena",
-    avatar: "AS",
+    name: "Líder Ana Costa",
+    church: "Comunidade Restaurar",
+    text: "Os membros adoram ter o 'app da igreja'. Parece que temos um aplicativo próprio. A comunicação melhorou 100%.",
   },
   {
-    quote: "Finalmente um sistema feito por quem entende a realidade das igrejas brasileiras. As escalas mudaram tudo!",
-    author: "Pr. Roberto Lima",
-    church: "Igreja Batista Renovada",
-    avatar: "RL",
+    name: "Pr. Ricardo Mendes",
+    church: "Igreja Graça e Verdade",
+    text: "O controle financeiro ficou transparente e profissional. Os relatórios me ajudam a tomar decisões muito mais rápido.",
   },
 ];
 
 export default function TestimonialsSection() {
   return (
-    <section className="py-20">
+    <section className="py-20 md:py-28 bg-[hsl(40,33%,98%)]">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            O que dizem nossos usuários
+        <div className="text-center mb-16">
+          <p className="text-secondary font-bold text-sm tracking-widest uppercase mb-4">
+            PROVA SOCIAL
+          </p>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-[hsl(222,47%,11%)]">
+            Igrejas que já{" "}
+            <span className="text-secondary">transformaram sua gestão</span>
           </h2>
         </div>
+
         <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {testimonials.map((t) => (
-            <div key={t.author} className="p-6 rounded-2xl border bg-card">
-              <div className="flex gap-1 mb-4">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <Star key={s} className="w-4 h-4 fill-warning text-warning" />
+            <div
+              key={t.name}
+              className="p-6 rounded-2xl bg-[hsl(0,0%,100%)] border border-[hsl(40,20%,88%)] shadow-md"
+            >
+              <div className="flex items-center gap-1 text-secondary mb-4">
+                {"★★★★★".split("").map((s, i) => (
+                  <span key={i} className="text-lg">{s}</span>
                 ))}
               </div>
-              <p className="text-muted-foreground mb-6 italic leading-relaxed">
-                "{t.quote}"
+              <p className="text-sm text-[hsl(222,47%,25%)] mb-6 italic leading-relaxed">
+                "{t.text}"
               </p>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="font-semibold text-primary text-sm">{t.avatar}</span>
-                </div>
-                <div>
-                  <p className="font-semibold text-sm">{t.author}</p>
-                  <p className="text-xs text-muted-foreground">{t.church}</p>
-                </div>
+              <div>
+                <p className="font-bold text-[hsl(222,47%,11%)]">{t.name}</p>
+                <p className="text-xs text-muted-foreground">{t.church}</p>
               </div>
             </div>
           ))}
