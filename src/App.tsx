@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { RequireAnyRole } from "@/components/guards/RequireAnyRole";
+import { RequireSubscription } from "@/components/guards/RequireSubscription";
 import { queryClient } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
 import { APP_BRAND_LOGO, APP_BRAND_NAME } from "@/lib/brand";
@@ -76,6 +77,11 @@ function UnhandledRejectionHandler() {
   return null;
 }
 
+/** Wraps children with subscription gate */
+function Sub({ children }: { children: React.ReactNode }) {
+  return <RequireSubscription>{children}</RequireSubscription>;
+}
+
 const App = () => {
 
   // 🔔 OneSignal
@@ -121,110 +127,130 @@ const App = () => {
                   <Route path="/dev-admin" element={<Master />} />
 
                   {/* Rede */}
-                  <Route path="/rede" element={<NetworkDashboard />} />
+                  <Route path="/rede" element={<Sub><NetworkDashboard /></Sub>} />
                   <Route
                     path="/gestao-app"
                     element={
-                      <RequireAnyRole allowedRoles={["pastor"]}>
-                        <GestaoApp />
-                      </RequireAnyRole>
+                      <Sub>
+                        <RequireAnyRole allowedRoles={["pastor"]}>
+                          <GestaoApp />
+                        </RequireAnyRole>
+                      </Sub>
                     }
                   />
 
-                  {/* Usuário */}
-                  <Route path="/app" element={<Dashboard />} />
-                  <Route path="/meu-app" element={<MeuApp />} />
-                  <Route path="/perfil" element={<Perfil />} />
+                  {/* Usuário — protegido por assinatura */}
+                  <Route path="/app" element={<Sub><Dashboard /></Sub>} />
+                  <Route path="/meu-app" element={<Sub><MeuApp /></Sub>} />
+                  <Route path="/perfil" element={<Sub><Perfil /></Sub>} />
 
-                  {/* Protegidas */}
+                  {/* Protegidas por role + assinatura */}
                   <Route
                     path="/secretaria"
                     element={
-                      <RequireAnyRole allowedRoles={["pastor", "secretario", "consolidacao"]}>
-                        <Secretaria />
-                      </RequireAnyRole>
+                      <Sub>
+                        <RequireAnyRole allowedRoles={["pastor", "secretario", "consolidacao"]}>
+                          <Secretaria />
+                        </RequireAnyRole>
+                      </Sub>
                     }
                   />
 
                   <Route
                     path="/ministerios"
                     element={
-                      <RequireAnyRole allowedRoles={["pastor", "lider_ministerio"]}>
-                        <Ministerios />
-                      </RequireAnyRole>
+                      <Sub>
+                        <RequireAnyRole allowedRoles={["pastor", "lider_ministerio"]}>
+                          <Ministerios />
+                        </RequireAnyRole>
+                      </Sub>
                     }
                   />
 
                   <Route
                     path="/celulas"
                     element={
-                      <RequireAnyRole allowedRoles={["pastor", "lider_celula", "consolidacao", "secretario"]}>
-                        <Celulas />
-                      </RequireAnyRole>
+                      <Sub>
+                        <RequireAnyRole allowedRoles={["pastor", "lider_celula", "consolidacao", "secretario"]}>
+                          <Celulas />
+                        </RequireAnyRole>
+                      </Sub>
                     }
                   />
 
                   <Route
                     path="/financeiro"
                     element={
-                      <RequireAnyRole allowedRoles={["pastor", "tesoureiro"]}>
-                        <Financeiro />
-                      </RequireAnyRole>
+                      <Sub>
+                        <RequireAnyRole allowedRoles={["pastor", "tesoureiro"]}>
+                          <Financeiro />
+                        </RequireAnyRole>
+                      </Sub>
                     }
                   />
 
                   <Route
                     path="/consolidacao"
                     element={
-                      <RequireAnyRole allowedRoles={["pastor", "consolidacao"]}>
-                        <Consolidacao />
-                      </RequireAnyRole>
+                      <Sub>
+                        <RequireAnyRole allowedRoles={["pastor", "consolidacao"]}>
+                          <Consolidacao />
+                        </RequireAnyRole>
+                      </Sub>
                     }
                   />
 
                   <Route
                     path="/configuracoes"
                     element={
-                      <RequireAnyRole allowedRoles={["pastor"]}>
-                        <Configuracoes />
-                      </RequireAnyRole>
+                      <Sub>
+                        <RequireAnyRole allowedRoles={["pastor"]}>
+                          <Configuracoes />
+                        </RequireAnyRole>
+                      </Sub>
                     }
                   />
 
                   <Route
                     path="/gestao-pastoral"
                     element={
-                      <RequireAnyRole allowedRoles={["pastor"]}>
-                        <GestaoPastoral />
-                      </RequireAnyRole>
+                      <Sub>
+                        <RequireAnyRole allowedRoles={["pastor"]}>
+                          <GestaoPastoral />
+                        </RequireAnyRole>
+                      </Sub>
                     }
                   />
 
                   <Route
                     path="/ensino"
                     element={
-                      <RequireAnyRole allowedRoles={["pastor"]}>
-                        <Ensino />
-                      </RequireAnyRole>
+                      <Sub>
+                        <RequireAnyRole allowedRoles={["pastor"]}>
+                          <Ensino />
+                        </RequireAnyRole>
+                      </Sub>
                     }
                   />
 
                   <Route
                     path="/lembretes"
                     element={
-                      <RequireAnyRole allowedRoles={["pastor"]}>
-                        <Lembretes />
-                      </RequireAnyRole>
+                      <Sub>
+                        <RequireAnyRole allowedRoles={["pastor"]}>
+                          <Lembretes />
+                        </RequireAnyRole>
+                      </Sub>
                     }
                   />
 
-                  <Route path="/eventos" element={<Eventos />} />
-                  <Route path="/contribuicao" element={<Contribuicao />} />
-                  <Route path="/discipulados" element={<Discipulados />} />
-                  <Route path="/visitas" element={<Visitas />} />
-                  <Route path="/gabinete" element={<Gabinete />} />
-                  <Route path="/patrimonio" element={<Patrimonio />} />
-                  <Route path="/assistente" element={<Assistente />} />
+                  <Route path="/eventos" element={<Sub><Eventos /></Sub>} />
+                  <Route path="/contribuicao" element={<Sub><Contribuicao /></Sub>} />
+                  <Route path="/discipulados" element={<Sub><Discipulados /></Sub>} />
+                  <Route path="/visitas" element={<Sub><Visitas /></Sub>} />
+                  <Route path="/gabinete" element={<Sub><Gabinete /></Sub>} />
+                  <Route path="/patrimonio" element={<Sub><Patrimonio /></Sub>} />
+                  <Route path="/assistente" element={<Sub><Assistente /></Sub>} />
 
                   {/* 404 */}
                   <Route path="*" element={<NotFound />} />
