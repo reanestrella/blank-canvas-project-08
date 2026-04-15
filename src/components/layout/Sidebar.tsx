@@ -113,8 +113,8 @@ export function Sidebar() {
         </Button>
       </div>
 
-      {/* Plan Badge */}
-      {!collapsed && (
+      {/* Plan Badge — only visible to pastor */}
+      {!collapsed && isAdmin() && (
         <div className="mx-4 mt-4 p-3 rounded-lg bg-sidebar-accent/50 border border-sidebar-border">
           <div className="flex items-center gap-2">
             <Crown className="w-4 h-4 text-secondary" />

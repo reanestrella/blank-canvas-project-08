@@ -1,9 +1,9 @@
 /**
  * Given an array of user role strings, returns the best dashboard route.
+ * All users go to Meu App on login.
  */
 export function getRoleBasedRedirect(roles: string[]): string {
   if (roles.includes("network_admin") || roles.includes("network_finance")) return "/rede";
-  // All users go to Meu App on login
   return "/meu-app";
 }
 

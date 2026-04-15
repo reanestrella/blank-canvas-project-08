@@ -341,11 +341,13 @@ export default function Consolidacao() {
 
         {/* Tabs: 3 abas */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="visitantes">Visitantes ({visitors.length})</TabsTrigger>
-            <TabsTrigger value="consolidacao">Em Consolidação ({emConsolidacao.length})</TabsTrigger>
-            <TabsTrigger value="consolidados">Consolidados ({consolidados.length})</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-1 px-1">
+            <TabsList className="w-full min-w-[400px]">
+              <TabsTrigger value="visitantes" className="flex-1 text-xs sm:text-sm">Visitantes ({visitors.length})</TabsTrigger>
+              <TabsTrigger value="consolidacao" className="flex-1 text-xs sm:text-sm">Consolidação ({emConsolidacao.length})</TabsTrigger>
+              <TabsTrigger value="consolidados" className="flex-1 text-xs sm:text-sm">Consolidados ({consolidados.length})</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Tab 1: Visitantes */}
           <TabsContent value="visitantes" className="space-y-4">
@@ -362,8 +364,8 @@ export default function Consolidacao() {
                       <TableRow>
                         <TableHead>Visitante</TableHead>
                         <TableHead className="hidden md:table-cell">Contato</TableHead>
-                        <TableHead>Acompanhamento</TableHead>
-                        <TableHead className="w-[280px]">Ação</TableHead>
+                         <TableHead className="hidden sm:table-cell">Acompanhamento</TableHead>
+                        <TableHead>Ação</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -390,15 +392,15 @@ export default function Consolidacao() {
                                 {visitor.email && <span className="text-xs text-muted-foreground">{visitor.email}</span>}
                               </div>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="hidden sm:table-cell">
                               <div className="flex items-center gap-1 flex-wrap">
                                 <Badge variant="default" className="text-[10px] py-0 h-4">Visita</Badge>
                                 {hasConsolidation && contactMade && (
-                                  <Badge className="text-[10px] py-0 h-4 bg-success/80 text-white">✔ Contato feito</Badge>
+                                  <Badge className="text-[10px] py-0 h-4 bg-success/80 text-white">✔ Contato</Badge>
                                 )}
                                 {hasConsolidation && contactMade === false && (
                                   <Badge variant="destructive" className="text-[10px] py-0 h-4" title={reason || ""}>
-                                    ✘ Não contatado
+                                    ✘ Pendente
                                   </Badge>
                                 )}
                               </div>
@@ -407,16 +409,16 @@ export default function Consolidacao() {
                               <div className="flex gap-1 flex-wrap">
                                 {!hasConsolidation && (
                                   <>
-                                    <Button size="sm" variant="outline" onClick={() => handleContactMade(visitor.id)}>
-                                      <Phone className="w-3 h-3 mr-1" /> Contato ✔
+                                    <Button size="sm" variant="outline" className="text-xs px-2" onClick={() => handleContactMade(visitor.id)}>
+                                      <Phone className="w-3 h-3 sm:mr-1" /><span className="hidden sm:inline"> Contato</span> ✔
                                     </Button>
-                                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setContactModal({ memberId: visitor.id, type: "nao_feito" })}>
-                                      <PhoneOff className="w-3 h-3 mr-1" /> Não feito
+                                    <Button size="sm" variant="ghost" className="text-destructive text-xs px-2" onClick={() => setContactModal({ memberId: visitor.id, type: "nao_feito" })}>
+                                      <PhoneOff className="w-3 h-3 sm:mr-1" /><span className="hidden sm:inline"> Não feito</span>
                                     </Button>
                                   </>
                                 )}
-                                <Button size="sm" variant="default" onClick={() => setEditingVisitor(visitor)}>
-                                  <Heart className="w-3 h-3 mr-1" /> Decidiu
+                                <Button size="sm" variant="default" className="text-xs px-2" onClick={() => setEditingVisitor(visitor)}>
+                                  <Heart className="w-3 h-3 sm:mr-1" /><span className="hidden sm:inline"> Decidiu</span>
                                 </Button>
                               </div>
                             </TableCell>
