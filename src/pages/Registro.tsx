@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getAppUrl } from "@/lib/brand";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -56,7 +57,7 @@ export default function Registro() {
         email: data.email,
         password: data.password,
         options: {
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: getAppUrl(),
           data: {
             full_name: data.fullName,
           },

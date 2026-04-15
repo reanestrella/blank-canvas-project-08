@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Download, QrCode, Link2, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getAppUrl } from "@/lib/brand";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -25,7 +26,7 @@ export function RegistrationQrCode({ compact, churchId, congregations }: Registr
   const [selectedCongregation, setSelectedCongregation] = useState<string>("");
 
   // Use published URL or env var, never preview URL
-  const baseUrl = import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin;
+  const baseUrl = getAppUrl();
   const registrationUrl = churchId
     ? `${baseUrl}/cadastro?church=${churchId}${selectedCongregation ? `&congregation=${selectedCongregation}` : ""}`
     : `${baseUrl}/cadastro`;

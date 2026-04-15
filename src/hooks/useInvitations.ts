@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { getAppUrl } from "@/lib/brand";
 
 export interface Invitation {
   id: string;
@@ -171,7 +172,7 @@ export function useInvitations() {
   };
 
   const getInviteLink = (token: string) => {
-    const baseUrl = import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin;
+    const baseUrl = getAppUrl();
     return `${baseUrl}/accept-invite?token=${token}`;
   };
 

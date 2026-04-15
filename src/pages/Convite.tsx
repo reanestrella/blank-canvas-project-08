@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { getAppUrl } from "@/lib/brand";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -128,7 +129,7 @@ export default function Convite() {
         email: invitation.email,
         password: data.password,
         options: {
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: getAppUrl(),
           data: {
             full_name: data.full_name,
             church_id: invitation.church_id,
