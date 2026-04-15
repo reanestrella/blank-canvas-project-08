@@ -1,14 +1,12 @@
-import { CheckCircle, Sparkles } from "lucide-react";
-
 export default function SolutionSection() {
   return (
-    <section className="py-20 md:py-28 bg-[hsl(222,47%,11%)]">
+    <section className="py-20 md:py-28 bg-[hsl(220,60%,8%)]">
       <div className="container mx-auto px-4 max-w-4xl text-center">
         <p className="text-secondary font-bold text-sm tracking-widest uppercase mb-4">
           A SOLUÇÃO
         </p>
 
-        <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-6 text-[hsl(40,33%,98%)]">
+        <h2 className="text-3xl md:text-3xl lg:text-4xl font-extrabold mb-6 text-[hsl(40,33%,98%)]">
           Agora imagine sua igreja{" "}
           <span className="text-secondary">funcionando assim:</span>
         </h2>
@@ -33,7 +31,7 @@ export default function SolutionSection() {
           ].map((item) => (
             <div
               key={item.title}
-              className="p-6 rounded-2xl bg-[hsl(222,47%,15%)] border border-secondary/10 text-center"
+              className="p-6 rounded-2xl bg-[hsl(220,60%,12%)] border border-[hsl(220,80%,50%)]/10 text-center"
             >
               <div className="text-4xl mb-4">{item.icon}</div>
               <h3 className="text-lg font-bold text-[hsl(40,33%,98%)] mb-2">{item.title}</h3>

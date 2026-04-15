@@ -24,7 +24,7 @@ export default function TestimonialsSection() {
           <p className="text-secondary font-bold text-sm tracking-widest uppercase mb-4">
             PROVA SOCIAL
           </p>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-[hsl(222,47%,11%)]">
+          <h2 className="text-3xl md:text-3xl lg:text-4xl font-extrabold text-[hsl(220,60%,8%)]">
             Igrejas que já{" "}
             <span className="text-secondary">transformaram sua gestão</span>
           </h2>
@@ -41,11 +41,11 @@ export default function TestimonialsSection() {
                   <span key={i} className="text-lg">{s}</span>
                 ))}
               </div>
-              <p className="text-sm text-[hsl(222,47%,25%)] mb-6 italic leading-relaxed">
+              <p className="text-sm text-[hsl(220,60%,20%)] mb-6 italic leading-relaxed">
                 "{t.text}"
               </p>
               <div>
-                <p className="font-bold text-[hsl(222,47%,11%)]">{t.name}</p>
+                <p className="font-bold text-[hsl(220,60%,8%)]">{t.name}</p>
                 <p className="text-xs text-muted-foreground">{t.church}</p>
               </div>
             </div>
