@@ -141,7 +141,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
         state: data.state || undefined,
         gender: data.gender,
         marital_status: data.marital_status || undefined,
-        spiritual_status: data.spiritual_status,
+        spiritual_status: data.network === "kids" ? (data.spiritual_status || "membro") : (data.spiritual_status || "visitante"),
         baptism_date: data.baptism_date || undefined,
         baptism_location: data.baptism_location || undefined,
         conversion_date: data.conversion_date || undefined,
@@ -401,30 +401,32 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
 
               <TabsContent value="spiritual" className="space-y-4 mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="spiritual_status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status Espiritual *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="visitante">Visitante</SelectItem>
-                            <SelectItem value="novo_convertido">Novo Convertido (Decidido)</SelectItem>
-                            <SelectItem value="membro">Membro</SelectItem>
-                            <SelectItem value="lider">Líder</SelectItem>
-                            <SelectItem value="discipulador">Discipulador</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {form.watch("network") !== "kids" && (
+                    <FormField
+                      control={form.control}
+                      name="spiritual_status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Status Espiritual</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="visitante">Visitante</SelectItem>
+                              <SelectItem value="novo_convertido">Novo Convertido (Decidido)</SelectItem>
+                              <SelectItem value="membro">Membro</SelectItem>
+                              <SelectItem value="lider">Líder</SelectItem>
+                              <SelectItem value="discipulador">Discipulador</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
                   <FormField
                     control={form.control}
