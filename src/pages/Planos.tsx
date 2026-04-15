@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle, ArrowRight, Crown, Loader2, Shield, Sparkles, Zap, Users } from "lucide-react";
+import { CheckCircle, ArrowRight, Crown, Loader2, Shield, Sparkles, Zap, Users, Star, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -50,7 +50,6 @@ export default function Planos() {
   const { toast } = useToast();
   const [loading, setLoading] = useState<string | null>(null);
 
-  // If already subscribed, redirect to app
   if (user && !subLoading && isSubscribed) {
     return <Navigate to="/meu-app" replace />;
   }
@@ -96,20 +95,24 @@ export default function Planos() {
   };
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--background))]">
+    <div className="min-h-screen bg-[hsl(var(--sidebar-background))]">
       {/* Header */}
-      <header className="border-b border-border/20 bg-card/60 backdrop-blur-md sticky top-0 z-50">
+      <header className="border-b border-white/5 bg-[hsl(var(--sidebar-background))]/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto flex items-center justify-between px-4 py-3">
           <Link to="/" className="flex items-center gap-2">
             <img src={APP_BRAND_LOGO} alt="Church Onefy" className="h-10 w-auto" />
           </Link>
           {user ? (
             <Link to="/meu-app">
-              <Button variant="outline" size="sm" className="rounded-lg">Voltar ao App</Button>
+              <Button variant="outline" size="sm" className="rounded-lg border-white/10 text-foreground hover:bg-white/5">
+                Voltar ao App
+              </Button>
             </Link>
           ) : (
             <Link to="/login">
-              <Button variant="outline" size="sm" className="rounded-lg">Entrar</Button>
+              <Button variant="outline" size="sm" className="rounded-lg border-white/10 text-foreground hover:bg-white/5">
+                Entrar
+              </Button>
             </Link>
           )}
         </div>
@@ -140,14 +143,15 @@ export default function Planos() {
               key={plan.id}
               className={`relative rounded-3xl p-8 transition-all duration-300 ${
                 plan.highlight
-                  ? "border-2 border-secondary bg-card shadow-[0_0_40px_rgba(234,179,8,0.12)] scale-[1.02]"
-                  : "border border-border/50 bg-card hover:border-border"
+                  ? "border-2 border-secondary bg-[hsl(var(--card))] shadow-[0_0_60px_rgba(234,179,8,0.15)] scale-[1.02]"
+                  : "border border-white/10 bg-[hsl(var(--card))] hover:border-white/20"
               }`}
             >
               {plan.badge && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <div className="gradient-accent rounded-full px-5 py-1.5 text-xs font-extrabold tracking-wider text-secondary-foreground shadow-lg whitespace-nowrap">
-                    ⭐ {plan.badge}
+                  <div className="gradient-accent rounded-full px-5 py-1.5 text-xs font-extrabold tracking-wider text-secondary-foreground shadow-lg whitespace-nowrap flex items-center gap-1.5">
+                    <Star className="h-3.5 w-3.5 fill-current" />
+                    {plan.badge}
                   </div>
                 </div>
               )}
@@ -205,7 +209,7 @@ export default function Planos() {
           </h3>
           <div className="grid sm:grid-cols-2 gap-4">
             {features.map((f) => (
-              <div key={f.text} className="flex items-center gap-3 rounded-xl bg-card border border-border/30 px-5 py-4">
+              <div key={f.text} className="flex items-center gap-3 rounded-xl bg-[hsl(var(--card))] border border-white/5 px-5 py-4">
                 <div className="flex-shrink-0 rounded-lg bg-primary/10 p-2">
                   <CheckCircle className="h-4 w-4 text-primary" />
                 </div>
@@ -217,9 +221,12 @@ export default function Planos() {
 
         {/* Trust */}
         <div className="text-center mt-12">
-          <p className="text-xs text-muted-foreground">
-            🔒 Pagamento seguro via Stripe · Cancele a qualquer momento · Sem taxa de cancelamento
-          </p>
+          <div className="inline-flex items-center gap-2 text-muted-foreground">
+            <Lock className="h-4 w-4" />
+            <p className="text-xs">
+              Pagamento seguro via Stripe · Cancele a qualquer momento · Sem taxa de cancelamento
+            </p>
+          </div>
         </div>
       </div>
     </div>
