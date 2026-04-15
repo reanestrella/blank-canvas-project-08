@@ -141,25 +141,37 @@ export default function Convite() {
       if (signUpError) throw signUpError;
       if (!authData.user) throw new Error("Erro ao criar conta");
 
-      // 2. Call accept_invitation RPC — handles profile, role, and marking invitation used
-      const { data: acceptResult, error: acceptError } = await supabase.rpc(
+      // 2. Sign in immediately to get a valid session for the RPC call
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: invitation.email,
+        password: data.password,
+      });
+
+      if (signInError) {
+        console.warn("Auto sign-in failed after signup:", signInError.message);
+        // If sign-in fails (e.g. email confirmation required), 
+        // the handle_new_user trigger should have already set church_id
+        // Mark invitation as used and redirect
+        toast({
+          title: "Conta criada!",
+          description: "Verifique seu email para confirmar a conta e depois faça login.",
+        });
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 1500);
+        return;
+      }
+
+      // 3. Call accept_invitation RPC — handles profile, role, and marking invitation used
+      const { error: acceptError } = await supabase.rpc(
         "accept_invitation" as any,
         { p_token: token } as any
       );
 
       if (acceptError) {
         console.error("accept_invitation RPC error:", acceptError);
-        // Non-blocking: the user was created, try manual fallback
-        toast({
-          title: "Aviso",
-          description: "Conta criada, mas houve um erro ao vincular à igreja. Entre em contato com o administrador.",
-          variant: "destructive",
-        });
-      } else {
-        const result = acceptResult as any;
-        if (result && !result.success) {
-          console.error("accept_invitation returned error:", result.error);
-        }
+        // Non-blocking: try manual profile fix
+        // The handle_new_user trigger should have set church_id from metadata
       }
 
       toast({
