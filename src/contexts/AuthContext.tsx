@@ -67,6 +67,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const hasNoChurch = !isLoading && !!user && !currentChurchId;
 
   const prevUserIdRef = useRef<string | null>(null);
+  const initialSessionHandled = useRef(false);
+  const fetchingRef = useRef(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -77,11 +79,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (event === "SIGNED_OUT") {
           prevUserIdRef.current = null;
+          initialSessionHandled.current = false;
+          fetchingRef.current = false;
           setProfile(null);
           setChurch(null);
           setRoles([]);
           queryClient.clear();
           setIsLoading(false);
+          return;
+        }
+
+        // Skip INITIAL_SESSION if getSession already handled it
+        if (event === "INITIAL_SESSION" && initialSessionHandled.current) {
           return;
         }
         
@@ -96,9 +105,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             queryClient.clear();
           }
           prevUserIdRef.current = newUserId;
+
+          // Avoid duplicate fetches
+          if (fetchingRef.current) return;
+          fetchingRef.current = true;
+
           // Defer to avoid deadlock inside onAuthStateChange
           setTimeout(async () => {
             await fetchUserData(newUserId);
+            fetchingRef.current = false;
             setIsLoading(false);
           }, 0);
         } else {
@@ -112,12 +127,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      initialSessionHandled.current = true;
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
         prevUserIdRef.current = session.user.id;
-        await fetchUserData(session.user.id);
+        if (!fetchingRef.current) {
+          fetchingRef.current = true;
+          await fetchUserData(session.user.id);
+          fetchingRef.current = false;
+        }
       }
       
       setIsLoading(false);

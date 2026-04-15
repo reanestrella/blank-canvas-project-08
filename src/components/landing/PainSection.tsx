@@ -16,12 +16,12 @@ export default function PainSection() {
           A REALIDADE DE MUITAS IGREJAS
         </p>
 
-        <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-center mb-4 text-[hsl(222,47%,11%)]">
+        <h2 className="text-3xl md:text-3xl lg:text-4xl font-extrabold text-center mb-4 text-[hsl(220,60%,8%)]">
           Se você lidera uma igreja,{" "}
           <span className="text-destructive">sabe como é…</span>
         </h2>
 
-        <p className="text-lg text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
+        <p className="text-base md:text-lg text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
           O trabalho é enorme, o tempo é curto e as ferramentas erradas só atrapalham.
         </p>
 
@@ -34,13 +34,13 @@ export default function PainSection() {
               <div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center flex-shrink-0">
                 <X className="w-4 h-4 text-destructive" />
               </div>
-              <span className="text-base md:text-lg font-medium text-[hsl(222,47%,15%)]">{pain}</span>
+              <span className="text-sm md:text-base font-medium text-[hsl(220,60%,12%)]">{pain}</span>
             </div>
           ))}
         </div>
 
         <div className="text-center">
-          <p className="text-xl md:text-2xl font-bold text-[hsl(222,47%,15%)]">
+          <p className="text-lg md:text-xl font-bold text-[hsl(220,60%,12%)]">
             Isso não é falta de dedicação.{" "}
             <span className="text-secondary">É falta de sistema.</span>
           </p>

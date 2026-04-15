@@ -22,7 +22,7 @@ export default function PricingSection() {
           <p className="text-secondary font-bold text-sm tracking-widest uppercase mb-4">
             OFERTA DIRETA
           </p>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-[hsl(222,47%,11%)]">
+          <h2 className="text-3xl md:text-3xl lg:text-4xl font-extrabold text-[hsl(220,60%,8%)]">
             Tenha agora o sistema que{" "}
             <span className="text-secondary">sua igreja precisa</span>
           </h2>
@@ -30,13 +30,13 @@ export default function PricingSection() {
 
         <div className="max-w-lg mx-auto">
           <div className="relative p-8 md:p-10 rounded-3xl border-2 border-secondary bg-[hsl(0,0%,100%)] shadow-[0_0_60px_hsl(38,92%,50%,0.15)]">
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-2 rounded-full gradient-accent text-[hsl(222,47%,11%)] text-sm font-extrabold tracking-wider shadow-lg">
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-2 rounded-full gradient-accent text-[hsl(220,60%,8%)] text-sm font-extrabold tracking-wider shadow-lg">
               CHURCHFYONE
             </div>
 
             <div className="text-center mb-8 pt-4">
               <div className="flex items-baseline justify-center gap-1">
-                <span className="text-5xl md:text-6xl font-extrabold text-[hsl(222,47%,11%)]">
+                <span className="text-4xl md:text-5xl font-extrabold text-[hsl(220,60%,8%)]">
                   R$ 79,90
                 </span>
                 <span className="text-muted-foreground text-lg">/mês</span>
@@ -58,7 +58,7 @@ export default function PricingSection() {
             <Link to="/registro">
               <Button
                 size="lg"
-                className="w-full gradient-accent text-[hsl(222,47%,11%)] font-bold text-base shadow-[0_0_20px_hsl(38,92%,50%,0.4)] hover:shadow-[0_0_30px_hsl(38,92%,50%,0.6)] transition-all py-6 rounded-xl"
+                className="w-full gradient-accent text-[hsl(220,60%,8%)] font-bold text-base shadow-[0_0_20px_hsl(38,92%,50%,0.4)] hover:shadow-[0_0_30px_hsl(38,92%,50%,0.6)] transition-all py-6 rounded-xl"
               >
                 Começar agora
                 <ArrowRight className="w-5 h-5 ml-2" />

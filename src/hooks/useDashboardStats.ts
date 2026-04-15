@@ -160,11 +160,12 @@ export function useDashboardStats(congregationId?: string | null) {
     const membrosForNetwork = activeMembers.filter(m =>
       m.spiritual_status === "membro" || m.spiritual_status === "lider" || m.spiritual_status === "discipulador"
     );
+    // Kids count ALL active members with network="kids" regardless of spiritual_status
     const networkStats = {
       homens: membrosForNetwork.filter(m => m.network === "homens").length,
       mulheres: membrosForNetwork.filter(m => m.network === "mulheres").length,
       jovens: membrosForNetwork.filter(m => m.network === "jovens").length,
-      kids: membrosForNetwork.filter(m => m.network === "kids").length,
+      kids: activeMembers.filter(m => m.network === "kids").length,
     };
 
     const birthdaysThisMonth = activeMembers.filter(m => {

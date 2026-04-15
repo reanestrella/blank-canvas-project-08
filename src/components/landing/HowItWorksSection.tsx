@@ -18,13 +18,13 @@ const steps = [
 
 export default function HowItWorksSection() {
   return (
-    <section className="py-20 md:py-28 bg-[hsl(222,47%,11%)]">
+    <section className="py-20 md:py-28 bg-[hsl(220,60%,8%)]">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="text-center mb-16">
           <p className="text-secondary font-bold text-sm tracking-widest uppercase mb-4">
             SIMPLES ASSIM
           </p>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-[hsl(40,33%,98%)]">
+          <h2 className="text-3xl md:text-3xl lg:text-4xl font-extrabold text-[hsl(40,33%,98%)]">
             Comece em <span className="text-secondary">3 passos</span>
           </h2>
         </div>
@@ -36,7 +36,7 @@ export default function HowItWorksSection() {
                 <div className="hidden md:block absolute top-8 left-[60%] w-[80%] h-px bg-secondary/20" />
               )}
               <div className="w-16 h-16 rounded-2xl gradient-accent flex items-center justify-center mx-auto mb-4 relative z-10">
-                <span className="text-xl font-extrabold text-[hsl(222,47%,11%)]">{step.num}</span>
+                <span className="text-xl font-extrabold text-[hsl(220,60%,8%)]">{step.num}</span>
               </div>
               <h3 className="text-lg font-bold text-[hsl(40,33%,98%)] mb-2">{step.title}</h3>
               <p className="text-sm text-[hsl(40,20%,65%)]">{step.desc}</p>
