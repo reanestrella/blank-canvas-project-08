@@ -1,6 +1,11 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { restoreManifestFromCache } from "./lib/setDynamicManifest";
+
+// Restore manifest from localStorage BEFORE anything else
+// so Chrome sees a valid manifest on reload after login
+restoreManifestFromCache();
 
 // Capture PWA install prompt — keep reference for InstallButton
 window.addEventListener("beforeinstallprompt", (e) => {
