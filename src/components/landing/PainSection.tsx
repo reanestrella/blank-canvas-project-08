@@ -10,18 +10,18 @@ const pains = [
 
 export default function PainSection() {
   return (
-    <section className="py-20 md:py-28 bg-[hsl(40,33%,98%)]">
+    <section className="py-20 md:py-28 bg-[#0F1C4D]">
       <div className="container mx-auto px-4 max-w-3xl">
-        <p className="text-secondary font-bold text-sm tracking-widest uppercase text-center mb-4">
+        <p className="text-[#FACC15] font-bold text-sm tracking-widest uppercase text-center mb-4">
           A REALIDADE DE MUITAS IGREJAS
         </p>
 
-        <h2 className="text-3xl md:text-3xl lg:text-4xl font-extrabold text-center mb-4 text-[hsl(220,60%,8%)]">
+        <h2 className="text-3xl lg:text-4xl font-extrabold text-center mb-4 text-white">
           Se você lidera uma igreja,{" "}
-          <span className="text-destructive">sabe como é…</span>
+          <span className="text-red-400">sabe como é…</span>
         </h2>
 
-        <p className="text-base md:text-lg text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
+        <p className="text-base md:text-lg text-[#9CA3AF] text-center mb-12 max-w-2xl mx-auto">
           O trabalho é enorme, o tempo é curto e as ferramentas erradas só atrapalham.
         </p>
 
@@ -29,20 +29,20 @@ export default function PainSection() {
           {pains.map((pain) => (
             <div
               key={pain}
-              className="flex items-center gap-4 p-4 md:p-5 rounded-xl bg-destructive/5 border border-destructive/10"
+              className="flex items-center gap-4 p-4 md:p-5 rounded-xl bg-red-500/5 border border-red-500/10"
             >
-              <div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center flex-shrink-0">
-                <X className="w-4 h-4 text-destructive" />
+              <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                <X className="w-4 h-4 text-red-400" />
               </div>
-              <span className="text-sm md:text-base font-medium text-[hsl(220,60%,12%)]">{pain}</span>
+              <span className="text-sm md:text-base font-medium text-white/90">{pain}</span>
             </div>
           ))}
         </div>
 
         <div className="text-center">
-          <p className="text-lg md:text-xl font-bold text-[hsl(220,60%,12%)]">
+          <p className="text-lg md:text-xl font-bold text-white">
             Isso não é falta de dedicação.{" "}
-            <span className="text-secondary">É falta de sistema.</span>
+            <span className="text-[#FACC15]">É falta de sistema.</span>
           </p>
         </div>
       </div>
