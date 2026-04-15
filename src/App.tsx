@@ -185,6 +185,41 @@ const App = () => {
                     }
                   />
 
+                  <Route
+                    path="/gestao-pastoral"
+                    element={
+                      <RequireAnyRole allowedRoles={["pastor"]}>
+                        <GestaoPastoral />
+                      </RequireAnyRole>
+                    }
+                  />
+
+                  <Route
+                    path="/ensino"
+                    element={
+                      <RequireAnyRole allowedRoles={["pastor"]}>
+                        <Ensino />
+                      </RequireAnyRole>
+                    }
+                  />
+
+                  <Route
+                    path="/lembretes"
+                    element={
+                      <RequireAnyRole allowedRoles={["pastor"]}>
+                        <Lembretes />
+                      </RequireAnyRole>
+                    }
+                  />
+
+                  <Route path="/eventos" element={<Eventos />} />
+                  <Route path="/contribuicao" element={<Contribuicao />} />
+                  <Route path="/discipulados" element={<Discipulados />} />
+                  <Route path="/visitas" element={<Visitas />} />
+                  <Route path="/gabinete" element={<Gabinete />} />
+                  <Route path="/patrimonio" element={<Patrimonio />} />
+                  <Route path="/assistente" element={<Assistente />} />
+
                   {/* 404 */}
                   <Route path="*" element={<NotFound />} />
 
