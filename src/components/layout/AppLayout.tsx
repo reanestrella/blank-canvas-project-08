@@ -27,7 +27,7 @@ export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background px-6 text-center">
         <div className="rounded-2xl bg-sidebar p-3 shadow-[var(--shadow-lg)]">
-          <img src={APP_BRAND_LOGO} alt={APP_BRAND_NAME} className="h-12 w-auto max-w-[200px] object-contain" />
+          <img src={APP_BRAND_LOGO} alt={APP_BRAND_NAME} className="h-14 w-auto max-w-[220px] object-contain drop-shadow-[0_0_8px_rgba(37,99,235,0.3)]" />
         </div>
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <div className="space-y-1">

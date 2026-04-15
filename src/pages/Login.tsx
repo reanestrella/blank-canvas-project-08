@@ -99,7 +99,7 @@ export default function Login() {
               <img
                 src={APP_BRAND_LOGO}
                 alt={APP_BRAND_NAME}
-                className="h-14 w-auto max-w-[220px] object-contain"
+                className="h-14 w-auto max-w-[220px] object-contain drop-shadow-[0_0_8px_rgba(37,99,235,0.3)]"
               />
             </div>
             <span className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
