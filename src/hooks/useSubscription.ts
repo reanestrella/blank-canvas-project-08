@@ -17,7 +17,7 @@ export interface Subscription {
 export function useSubscription() {
   const { currentChurchId } = useAuth();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["subscription", currentChurchId],
     queryFn: async () => {
       if (!currentChurchId) return null;
@@ -31,4 +31,12 @@ export function useSubscription() {
     },
     enabled: !!currentChurchId,
   });
+
+  const isSubscribed = query.data?.status === "ativo";
+
+  return {
+    ...query,
+    isSubscribed,
+    subscription: query.data,
+  };
 }
