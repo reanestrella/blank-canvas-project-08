@@ -56,7 +56,7 @@ export default function Registro() {
         email: data.email,
         password: data.password,
         options: {
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: getAppUrl(),
           data: {
             full_name: data.fullName,
           },

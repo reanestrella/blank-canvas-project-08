@@ -128,7 +128,7 @@ export default function Convite() {
         email: invitation.email,
         password: data.password,
         options: {
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: getAppUrl(),
           data: {
             full_name: data.full_name,
             church_id: invitation.church_id,

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Download, QrCode, Link2, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getAppUrl } from "@/lib/brand";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
