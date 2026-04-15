@@ -4,13 +4,13 @@ import { APP_BRAND_LOGO, APP_BRAND_NAME } from "@/lib/brand";
 
 export default function LandingHeader() {
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-primary/20 bg-sidebar/90 backdrop-blur-md">
-      <div className="container mx-auto flex items-center justify-between gap-4 px-4 py-3">
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-primary/20 bg-sidebar/90 backdrop-blur-md" style={{ height: "75px" }}>
+      <div className="container mx-auto flex items-center justify-between gap-4 px-4 h-full">
         <Link to="/" className="flex items-center">
           <img
             src={APP_BRAND_LOGO}
             alt={APP_BRAND_NAME}
-            className="h-11 w-auto max-w-[180px] object-contain"
+            className="h-12 md:h-14 w-auto max-w-[220px] object-contain drop-shadow-[0_0_8px_rgba(37,99,235,0.3)]"
           />
         </Link>
         <div className="flex items-center gap-3">

@@ -123,7 +123,7 @@ export default function Convite() {
 
     setIsSubmitting(true);
     try {
-      // 1. Create user account (do NOT pass church_name in metadata to avoid setup_new_church trigger)
+      // 1. Create user account WITH church_id so handle_new_user trigger creates profile correctly
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: invitation.email,
         password: data.password,
@@ -131,7 +131,8 @@ export default function Convite() {
           emailRedirectTo: window.location.origin,
           data: {
             full_name: data.full_name,
-            // Do NOT include church_name — prevent setup_new_church from running
+            church_id: invitation.church_id,
+            congregation_id: invitation.congregation_id || null,
           },
         },
       });
@@ -165,9 +166,10 @@ export default function Convite() {
         description: "Você já pode acessar o sistema.",
       });
 
-      // Re-fetch user data (profile, church, roles) BEFORE navigating
-      await refreshUserData();
-      navigate("/app");
+      // Full reload to ensure AuthContext picks up new church_id and roles cleanly
+      setTimeout(() => {
+        window.location.href = "/meu-app";
+      }, 500);
     } catch (error: any) {
       console.error("Registration error:", error);
       toast({
