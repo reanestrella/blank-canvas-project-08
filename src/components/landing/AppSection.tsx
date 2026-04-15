@@ -18,9 +18,9 @@ export default function AppSection() {
           <div className="flex justify-center order-2 lg:order-1">
             <div className="relative w-full max-w-sm">
               <div className="absolute inset-0 bg-secondary/10 rounded-3xl rotate-2 scale-105" />
-              <div className="relative bg-[hsl(222,47%,11%)] rounded-3xl p-6 shadow-2xl border border-secondary/10">
+              <div className="relative bg-[hsl(220,60%,8%)] rounded-3xl p-6 shadow-2xl border border-[hsl(220,80%,50%)]/10">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-xl gradient-accent flex items-center justify-center text-[hsl(222,47%,11%)] font-bold text-lg">
+                  <div className="w-12 h-12 rounded-xl gradient-accent flex items-center justify-center text-[hsl(220,60%,8%)] font-bold text-lg">
                     ⛪
                   </div>
                   <div>
@@ -30,10 +30,10 @@ export default function AppSection() {
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   {["📅 Escalas", "📖 Bíblia", "🙏 Oração", "📢 Avisos", "👥 Células", "🎓 Cursos"].map(
-                    (item, i) => (
+                    (item) => (
                       <div
                         key={item}
-                        className="bg-[hsl(222,47%,18%)] rounded-xl p-3 text-center border border-[hsl(222,47%,25%)]"
+                        className="bg-[hsl(220,60%,14%)] rounded-xl p-3 text-center border border-[hsl(220,60%,20%)]"
                       >
                         <p className="text-xs font-medium text-[hsl(40,33%,90%)]">{item}</p>
                       </div>
@@ -54,12 +54,12 @@ export default function AppSection() {
               EXPERIÊNCIA DO MEMBRO
             </p>
 
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-[hsl(222,47%,11%)]">
+            <h2 className="text-3xl md:text-3xl lg:text-4xl font-extrabold mb-4 text-[hsl(220,60%,8%)]">
               Membros abrem o app e{" "}
               <span className="text-secondary">encontram tudo</span>
             </h2>
 
-            <p className="text-lg text-muted-foreground mb-8">
+            <p className="text-base md:text-lg text-muted-foreground mb-8">
               Tudo na palma da mão, com a cara da sua igreja.
             </p>
 
@@ -67,7 +67,7 @@ export default function AppSection() {
               {features.map((f) => (
                 <div key={f} className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-secondary flex-shrink-0" />
-                  <span className="text-base font-medium text-[hsl(222,47%,15%)]">{f}</span>
+                  <span className="text-sm md:text-base font-medium text-[hsl(220,60%,12%)]">{f}</span>
                 </div>
               ))}
             </div>

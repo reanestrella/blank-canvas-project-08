@@ -41,7 +41,7 @@ export default function BenefitsSection() {
           <p className="text-secondary font-bold text-sm tracking-widest uppercase mb-4">
             TUDO QUE VOCÊ PRECISA
           </p>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-[hsl(222,47%,11%)]">
+          <h2 className="text-3xl md:text-3xl lg:text-4xl font-extrabold text-[hsl(220,60%,8%)]">
             Um sistema completo para{" "}
             <span className="text-secondary">toda a igreja</span>
           </h2>
@@ -56,7 +56,7 @@ export default function BenefitsSection() {
               <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center mb-4">
                 <b.icon className="w-6 h-6 text-secondary" />
               </div>
-              <h3 className="text-lg font-bold text-[hsl(222,47%,11%)] mb-2">{b.title}</h3>
+              <h3 className="text-base font-bold text-[hsl(220,60%,8%)] mb-2">{b.title}</h3>
               <p className="text-sm text-muted-foreground">{b.desc}</p>
             </div>
           ))}

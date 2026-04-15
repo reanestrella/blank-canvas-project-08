@@ -7,7 +7,7 @@ export default function HeroSection() {
     <section className="relative min-h-screen flex items-center overflow-hidden bg-[hsl(220,60%,8%)] pt-16">
       {/* Background effects */}
       <div className="absolute inset-0">
-        <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-secondary/5 rounded-full blur-[120px]" />
+        <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-[hsl(220,80%,50%)]/5 rounded-full blur-[120px]" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[100px]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_0%,_hsl(220,60%,8%)_70%)]" />
       </div>
@@ -28,7 +28,7 @@ export default function HeroSection() {
               , dependente de WhatsApp e planilhas?
             </h1>
 
-            <p className="text-lg md:text-lg text-[hsl(40,20%,75%)] mb-6 max-w-xl mx-auto lg:mx-0">
+            <p className="text-base md:text-lg text-[hsl(40,20%,75%)] mb-6 max-w-xl mx-auto lg:mx-0">
               O ChurchfyOne conecta toda a sua igreja em um só lugar e transforma
               sua organização em um{" "}
               <strong className="text-[hsl(40,33%,98%)]">verdadeiro app da igreja</strong>.
@@ -50,7 +50,7 @@ export default function HeroSection() {
             <Link to="/registro">
               <Button
                 size="lg"
-                className="gradient-accent text-[hsl(222,47%,11%)] font-bold shadow-[0_0_30px_hsl(38,92%,50%,0.4)] hover:shadow-[0_0_40px_hsl(38,92%,50%,0.6)] transition-all text-base md:text-lg px-8 py-6 rounded-xl"
+                className="gradient-accent text-[hsl(220,60%,8%)] font-bold shadow-[0_0_30px_hsl(38,92%,50%,0.4)] hover:shadow-[0_0_40px_hsl(38,92%,50%,0.6)] transition-all text-base md:text-lg px-8 py-6 rounded-xl"
               >
                 Quero organizar minha igreja agora
                 <ArrowRight className="w-5 h-5 ml-2" />
@@ -65,28 +65,28 @@ export default function HeroSection() {
           {/* Phone mockup */}
           <div className="flex justify-center lg:justify-end">
             <div className="relative">
-              <div className="absolute inset-0 bg-secondary/15 rounded-[3rem] blur-3xl scale-90" />
-              <div className="relative w-[280px] md:w-[320px] bg-[hsl(222,47%,18%)] rounded-[2.5rem] p-3 shadow-2xl border border-secondary/10">
-                <div className="bg-[hsl(222,47%,14%)] rounded-[2rem] overflow-hidden">
+              <div className="absolute inset-0 bg-[hsl(220,80%,50%)]/15 rounded-[3rem] blur-3xl scale-90" />
+              <div className="relative w-[280px] md:w-[320px] bg-[hsl(220,60%,14%)] rounded-[2.5rem] p-3 shadow-2xl border border-[hsl(220,80%,50%)]/10">
+                <div className="bg-[hsl(220,60%,10%)] rounded-[2rem] overflow-hidden">
                   {/* Status bar */}
-                  <div className="h-6 bg-secondary/10 flex items-center justify-center">
-                    <div className="w-20 h-1.5 bg-secondary/30 rounded-full" />
+                  <div className="h-6 bg-[hsl(220,80%,50%)]/10 flex items-center justify-center">
+                    <div className="w-20 h-1.5 bg-[hsl(220,80%,50%)]/30 rounded-full" />
                   </div>
                   {/* App header */}
                   <div className="px-4 py-3 gradient-accent">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-[hsl(222,47%,11%)]/20 flex items-center justify-center text-xs font-bold text-[hsl(222,47%,11%)]">
+                      <div className="w-8 h-8 rounded-full bg-[hsl(220,60%,8%)]/20 flex items-center justify-center text-xs font-bold text-[hsl(220,60%,8%)]">
                         ⛪
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-[hsl(222,47%,11%)]">Minha Igreja</p>
-                        <p className="text-[10px] text-[hsl(222,47%,11%)]/60">App da Igreja</p>
+                        <p className="text-sm font-bold text-[hsl(220,60%,8%)]">Minha Igreja</p>
+                        <p className="text-[10px] text-[hsl(220,60%,8%)]/60">App da Igreja</p>
                       </div>
                     </div>
                   </div>
                   {/* App content */}
                   <div className="p-4 space-y-3">
-                    <div className="text-xs font-bold text-secondary/70 uppercase tracking-wider">
+                    <div className="text-xs font-bold text-[hsl(220,80%,50%)]/70 uppercase tracking-wider">
                       Acesso rápido
                     </div>
                     <div className="grid grid-cols-3 gap-2">
@@ -100,7 +100,7 @@ export default function HeroSection() {
                       ].map((item) => (
                         <div
                           key={item}
-                          className="bg-[hsl(222,47%,20%)] rounded-xl p-2.5 text-center border border-secondary/5"
+                          className="bg-[hsl(220,60%,16%)] rounded-xl p-2.5 text-center border border-[hsl(220,80%,50%)]/5"
                         >
                           <p className="text-[11px] font-medium text-[hsl(40,33%,90%)]">{item}</p>
                         </div>
