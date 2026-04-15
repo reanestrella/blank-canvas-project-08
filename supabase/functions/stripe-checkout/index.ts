@@ -5,6 +5,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function validateStripeSecretKey(key: string): { valid: boolean; error?: string } {
+  const trimmed = key.trim();
+  if (!trimmed) return { valid: false, error: "Key is empty" };
+  if (trimmed.startsWith("pk_")) {
+    return { valid: false, error: "This is a PUBLISHABLE key (pk_). You need the SECRET key (sk_)." };
+  }
+  if (!trimmed.startsWith("sk_test_") && !trimmed.startsWith("sk_live_")) {
+    return { valid: false, error: `Invalid key format. Expected sk_test_ or sk_live_, got: ${trimmed.substring(0, 8)}...` };
+  }
+  if (trimmed.length < 20) return { valid: false, error: "Key appears too short." };
+  return { valid: true };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -13,7 +26,18 @@ Deno.serve(async (req) => {
   try {
     const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
     if (!STRIPE_SECRET_KEY) {
+      console.error("STRIPE_SECRET_KEY is not set in environment variables");
       return new Response(JSON.stringify({ error: "Stripe not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate that the key is actually a secret key, not a publishable key
+    const keyValidation = validateStripeSecretKey(STRIPE_SECRET_KEY);
+    if (!keyValidation.valid) {
+      console.error("Invalid STRIPE_SECRET_KEY:", keyValidation.error);
+      return new Response(JSON.stringify({ error: "Stripe configuration error. Contact support." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -81,7 +105,7 @@ Deno.serve(async (req) => {
 
     const baseUrl = Deno.env.get("APP_URL") || "https://churchonefy.com";
 
-    // Create Stripe Checkout Session
+    // Create Stripe Checkout Session using SECRET key
     const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
       headers: {
