@@ -100,7 +100,7 @@ export function ChurchLogoUpload({ churchId, currentLogoUrl, onLogoUpdated }: Ch
       if (dbError) throw dbError;
 
       // 5. Update apple-touch-icon (iOS) and favicon
-      setDynamicManifest(churchId, logoUrl, church?.name);
+      setDynamicManifest(churchId, logoUrl);
 
       // Reset reload flag so next load captures new icon on iOS
       localStorage.removeItem(`pwaIconReloaded_${churchId}`);
