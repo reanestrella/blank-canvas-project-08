@@ -3356,6 +3356,7 @@ export type Database = {
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
+          email: string | null
           id: string
           plan: string
           price_id: string | null
@@ -3370,6 +3371,7 @@ export type Database = {
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
+          email?: string | null
           id?: string
           plan?: string
           price_id?: string | null
@@ -3384,6 +3386,7 @@ export type Database = {
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
+          email?: string | null
           id?: string
           plan?: string
           price_id?: string | null
