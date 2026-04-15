@@ -10,7 +10,7 @@ export default function LandingHeader() {
             <span className="text-[hsl(222,47%,11%)] font-bold text-lg">C</span>
           </div>
           <span className="text-xl font-bold tracking-tight text-[hsl(40,33%,98%)]">
-            CHURCHY<span className="text-secondary">ONE</span>
+            CHURCHFY<span className="text-secondary">ONE</span>
           </span>
         </Link>
         <div className="flex items-center gap-3">

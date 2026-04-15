@@ -10,7 +10,7 @@ export default function LandingFooter() {
               <span className="text-[hsl(222,47%,11%)] font-bold text-sm">C</span>
             </div>
             <span className="text-sm font-bold text-[hsl(40,33%,95%)]">
-              CHURCHY<span className="text-secondary">ONE</span>
+              CHURCHFY<span className="text-secondary">ONE</span>
             </span>
           </div>
           <p className="text-xs text-[hsl(40,20%,45%)]">

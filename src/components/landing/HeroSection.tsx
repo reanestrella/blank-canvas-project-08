@@ -4,12 +4,12 @@ import { ArrowRight, CheckCircle } from "lucide-react";
 
 export default function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-[hsl(222,47%,11%)] pt-16">
+    <section className="relative min-h-screen flex items-center overflow-hidden bg-[hsl(220,60%,8%)] pt-16">
       {/* Background effects */}
       <div className="absolute inset-0">
         <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-secondary/5 rounded-full blur-[120px]" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[100px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_0%,_hsl(222,47%,11%)_70%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_0%,_hsl(220,60%,8%)_70%)]" />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
@@ -20,7 +20,7 @@ export default function HeroSection() {
               ⚡ A solução que sua igreja precisa
             </p>
 
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-[1.1] mb-6 text-[hsl(40,33%,98%)]">
+            <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-[2.75rem] font-extrabold leading-[1.15] mb-6 text-[hsl(40,33%,98%)]">
               Sua igreja ainda está{" "}
               <span className="text-secondary underline decoration-secondary/30 underline-offset-4">
                 desorganizada
@@ -28,7 +28,7 @@ export default function HeroSection() {
               , dependente de WhatsApp e planilhas?
             </h1>
 
-            <p className="text-lg md:text-xl text-[hsl(40,20%,75%)] mb-6 max-w-xl mx-auto lg:mx-0">
+            <p className="text-lg md:text-lg text-[hsl(40,20%,75%)] mb-6 max-w-xl mx-auto lg:mx-0">
               O ChurchfyOne conecta toda a sua igreja em um só lugar e transforma
               sua organização em um{" "}
               <strong className="text-[hsl(40,33%,98%)]">verdadeiro app da igreja</strong>.
