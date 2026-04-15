@@ -132,6 +132,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        // Check "keep logged in" preference — if not kept AND browser was closed, sign out
+        const keepLoggedIn = localStorage.getItem("keep_logged_in");
+        if (keepLoggedIn === "false" && !sessionStorage.getItem("session_active")) {
+          console.log("[Auth] Session expired (browser closed without keep_logged_in)");
+          await supabase.auth.signOut();
+          setUser(null);
+          setSession(null);
+          setIsLoading(false);
+          return;
+        }
+
         prevUserIdRef.current = session.user.id;
         if (!fetchingRef.current) {
           fetchingRef.current = true;
@@ -269,6 +280,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (rolesData) {
             console.log("[Auth] roles loaded:", rolesData.map((r: any) => r.role));
             setRoles(rolesData as UserRole[]);
+
+            // Force temporary session for restricted roles (tesoureiro, secretario, pastor)
+            const restrictedRoles = ["tesoureiro", "secretario", "pastor"];
+            const hasRestrictedRole = rolesData.some((r: any) => restrictedRoles.includes(r.role));
+            if (hasRestrictedRole) {
+              localStorage.setItem("keep_logged_in", "false");
+              sessionStorage.setItem("session_active", "1");
+            }
           } else {
             setRoles([]);
           }
