@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle, ArrowRight, Crown, Loader2, Shield, Sparkles, Zap, Users, Star, Lock } from "lucide-react";
+import { CheckCircle, ArrowRight, Crown, Loader2, Shield, Sparkles, Zap, Users, Star, Lock, Church, BarChart3, BookOpen, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -15,9 +15,10 @@ const PLANS = [
     price: "79",
     cents: ",90",
     period: "/mês",
-    priceId: "price_1TMaZUG15I82n9DcGUn6ucA3",
+    priceId: "price_1TMcOw5B9agydLDZ9egIeITM",
     badge: null,
     highlight: false,
+    description: "Ideal para começar sem compromisso",
   },
   {
     id: "anual",
@@ -25,27 +26,28 @@ const PLANS = [
     price: "790",
     cents: ",00",
     period: "/ano",
-    priceId: "price_1TMadmG15I82n9DcfTxw7Jgm",
+    priceId: "price_1TMcPV5B9agydLDZy00bre4z",
     badge: "MAIS VANTAJOSO",
     highlight: true,
     savings: "Economize R$ 168,80",
     monthlyEquiv: "R$ 65,83/mês",
+    description: "Melhor custo-benefício para sua igreja",
   },
 ];
 
 const features = [
   { icon: Users, text: "Membros e células ilimitados" },
-  { icon: Shield, text: "Gestão financeira completa" },
-  { icon: Zap, text: "Escalas de ministério" },
-  { icon: Sparkles, text: "Ensino e discipulado" },
-  { icon: Shield, text: "Relatórios inteligentes com IA" },
-  { icon: Users, text: "App personalizado com logo da igreja" },
-  { icon: Zap, text: "Suporte dedicado" },
-  { icon: Sparkles, text: "Atualizações contínuas" },
+  { icon: BarChart3, text: "Gestão financeira completa" },
+  { icon: Calendar, text: "Escalas de ministério" },
+  { icon: BookOpen, text: "Ensino e discipulado" },
+  { icon: Sparkles, text: "Relatórios inteligentes com IA" },
+  { icon: Church, text: "App personalizado com logo da igreja" },
+  { icon: Shield, text: "Suporte dedicado" },
+  { icon: Zap, text: "Atualizações contínuas" },
 ];
 
 export default function Planos() {
-  const { user, church } = useAuth();
+  const { user } = useAuth();
   const { isSubscribed, isLoading: subLoading } = useSubscription();
   const { toast } = useToast();
   const [loading, setLoading] = useState<string | null>(null);
@@ -95,22 +97,22 @@ export default function Planos() {
   };
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--sidebar-background))]">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-white/5 bg-[hsl(var(--sidebar-background))]/80 backdrop-blur-xl sticky top-0 z-50">
+      <header className="border-b border-border/40 bg-background/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto flex items-center justify-between px-4 py-3">
           <Link to="/" className="flex items-center gap-2">
             <img src={APP_BRAND_LOGO} alt="Church Onefy" className="h-10 w-auto" />
           </Link>
           {user ? (
             <Link to="/meu-app">
-              <Button variant="outline" size="sm" className="rounded-lg border-white/10 text-foreground hover:bg-white/5">
+              <Button variant="outline" size="sm" className="rounded-lg">
                 Voltar ao App
               </Button>
             </Link>
           ) : (
             <Link to="/login">
-              <Button variant="outline" size="sm" className="rounded-lg border-white/10 text-foreground hover:bg-white/5">
+              <Button variant="outline" size="sm" className="rounded-lg">
                 Entrar
               </Button>
             </Link>
@@ -121,7 +123,7 @@ export default function Planos() {
       <div className="container mx-auto px-4 py-12 md:py-20">
         {/* Hero */}
         <div className="text-center mb-14 max-w-2xl mx-auto">
-          <div className="inline-flex items-center gap-2 rounded-full bg-secondary/10 border border-secondary/20 px-5 py-2 mb-6">
+          <div className="inline-flex items-center gap-2 rounded-full bg-secondary/15 border border-secondary/30 px-5 py-2 mb-6">
             <Crown className="h-4 w-4 text-secondary" />
             <span className="text-sm font-bold text-secondary tracking-wide">ESCOLHA SEU PLANO</span>
           </div>
@@ -131,41 +133,44 @@ export default function Planos() {
               sua igreja crescer
             </span>
           </h1>
-          <p className="text-lg text-muted-foreground max-w-lg mx-auto">
+          <p className="text-base md:text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed">
             Todos os módulos inclusos. Sem surpresas. Cancele quando quiser.
           </p>
         </div>
 
         {/* Plans Grid */}
-        <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto mb-16">
+        <div className="grid md:grid-cols-2 gap-6 md:gap-8 max-w-3xl mx-auto mb-16">
           {PLANS.map((plan) => (
             <div
               key={plan.id}
-              className={`relative rounded-3xl p-8 transition-all duration-300 ${
+              className={`relative rounded-2xl md:rounded-3xl p-6 md:p-8 transition-all duration-300 ${
                 plan.highlight
-                  ? "border-2 border-secondary bg-[hsl(var(--card))] shadow-[0_0_60px_rgba(234,179,8,0.15)] scale-[1.02]"
-                  : "border border-white/10 bg-[hsl(var(--card))] hover:border-white/20"
+                  ? "border-2 border-secondary bg-card shadow-[0_0_40px_rgba(234,179,8,0.12)] md:scale-[1.03]"
+                  : "border border-border bg-card hover:border-border/80 hover:shadow-lg"
               }`}
             >
               {plan.badge && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <div className="gradient-accent rounded-full px-5 py-1.5 text-xs font-extrabold tracking-wider text-secondary-foreground shadow-lg whitespace-nowrap flex items-center gap-1.5">
-                    <Star className="h-3.5 w-3.5 fill-current" />
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                  <div className="bg-secondary text-secondary-foreground rounded-full px-4 py-1 text-[11px] font-extrabold tracking-wider shadow-lg whitespace-nowrap flex items-center gap-1.5">
+                    <Star className="h-3 w-3 fill-current" />
                     {plan.badge}
                   </div>
                 </div>
               )}
 
-              <div className="text-center mb-8 pt-2">
-                <h3 className="text-base font-semibold text-muted-foreground uppercase tracking-widest mb-5">
+              <div className="text-center mb-6 pt-2">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-1">
                   Plano {plan.name}
                 </h3>
-                <div className="flex items-baseline justify-center">
-                  <span className="text-sm text-muted-foreground mr-1">R$</span>
-                  <span className="text-6xl font-black text-foreground tracking-tight">{plan.price}</span>
-                  <span className="text-2xl font-bold text-foreground">{plan.cents}</span>
-                  <span className="text-base text-muted-foreground ml-1">{plan.period}</span>
+                <p className="text-xs text-muted-foreground/70 mb-4">{plan.description}</p>
+
+                <div className="flex items-baseline justify-center gap-0.5">
+                  <span className="text-base text-muted-foreground font-medium">R$</span>
+                  <span className="text-5xl md:text-6xl font-black text-foreground leading-none tracking-tight">{plan.price}</span>
+                  <span className="text-xl md:text-2xl font-bold text-foreground">{plan.cents}</span>
+                  <span className="text-sm text-muted-foreground ml-1 font-medium">{plan.period}</span>
                 </div>
+
                 {plan.monthlyEquiv && (
                   <p className="mt-2 text-sm text-muted-foreground">
                     equivalente a <span className="font-semibold text-foreground">{plan.monthlyEquiv}</span>
@@ -173,17 +178,17 @@ export default function Planos() {
                 )}
                 {plan.savings && (
                   <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-green-500/10 border border-green-500/20 px-4 py-1.5">
-                    <Sparkles className="h-3.5 w-3.5 text-green-500" />
-                    <span className="text-sm font-bold text-green-500">{plan.savings}</span>
+                    <Sparkles className="h-3.5 w-3.5 text-green-400" />
+                    <span className="text-sm font-bold text-green-400">{plan.savings}</span>
                   </div>
                 )}
               </div>
 
               <Button
                 size="lg"
-                className={`w-full rounded-2xl py-6 text-base font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
+                className={`w-full rounded-xl py-6 text-base font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
                   plan.highlight
-                    ? "gradient-accent text-secondary-foreground shadow-[0_4px_20px_rgba(234,179,8,0.3)]"
+                    ? "bg-secondary hover:bg-secondary/90 text-secondary-foreground shadow-[0_4px_20px_rgba(234,179,8,0.25)]"
                     : "bg-primary hover:bg-primary/90 text-primary-foreground"
                 }`}
                 onClick={() => handleCheckout(plan.priceId, plan.id)}
@@ -204,12 +209,12 @@ export default function Planos() {
 
         {/* Features */}
         <div className="max-w-2xl mx-auto">
-          <h3 className="text-center text-sm font-bold uppercase tracking-[0.2em] text-muted-foreground mb-8">
+          <h3 className="text-center text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground mb-8">
             Tudo incluso em ambos os planos
           </h3>
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {features.map((f) => (
-              <div key={f.text} className="flex items-center gap-3 rounded-xl bg-[hsl(var(--card))] border border-white/5 px-5 py-4">
+              <div key={f.text} className="flex items-center gap-3 rounded-xl bg-card border border-border/50 px-4 py-3.5">
                 <div className="flex-shrink-0 rounded-lg bg-primary/10 p-2">
                   <CheckCircle className="h-4 w-4 text-primary" />
                 </div>
