@@ -60,8 +60,8 @@ export function Header({ onMenuClick }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b px-4 md:px-6 py-3">
-      <div className="flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b px-4 md:px-6" style={{ height: "70px" }}>
+      <div className="flex items-center justify-between gap-4 h-full">
         {/* Mobile Menu Button */}
         <Button
           variant="ghost"

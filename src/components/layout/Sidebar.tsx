@@ -86,13 +86,13 @@ export function Sidebar() {
   return (
     <aside className={cn("fixed left-0 top-0 z-40 h-screen bg-sidebar transition-all duration-300 flex flex-col", collapsed ? "w-20" : "w-64")}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
+      <div className="flex items-center justify-between p-4 border-b border-sidebar-border" style={{ minHeight: "70px" }}>
         <div className={cn("flex items-center gap-3", collapsed && "justify-center w-full")}>
-          <div className="w-10 h-10 rounded-xl gradient-accent flex items-center justify-center overflow-hidden">
+          <div className="w-12 h-12 rounded-xl gradient-accent flex items-center justify-center overflow-hidden drop-shadow-[0_0_8px_rgba(37,99,235,0.3)]">
             {church?.logo_url ? (
               <img src={church.logo_url} alt={church.name} className="w-full h-full object-cover" />
             ) : (
-              <Church className="w-6 h-6 text-primary" />
+              <Church className="w-7 h-7 text-primary" />
             )}
           </div>
           {!collapsed && (

@@ -15,7 +15,7 @@ export function setDynamicManifest(
   churchName?: string,
 ) {
   /* ── 1. Android: dynamic manifest via blob URL ── */
-  const name = churchName || "Igreja Conectada";
+  const name = churchName || "CHURCH ONEFY";
   const iconSrc = logoUrl
     ? `${logoUrl}?v=${Date.now()}&android=true`
     : "/icons/icon-512x512.png";
