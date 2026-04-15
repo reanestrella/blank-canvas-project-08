@@ -55,12 +55,12 @@ export default function PricingSection() {
               ))}
             </ul>
 
-            <Link to="/registro">
+            <Link to="/planos">
               <Button
                 size="lg"
                 className="gradient-accent w-full rounded-xl py-6 text-base font-bold text-secondary-foreground shadow-[var(--shadow-glow)] transition-all hover:scale-[1.03]"
               >
-                Começar agora
+                Ver planos e assinar
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>

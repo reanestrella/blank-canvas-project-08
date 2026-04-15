@@ -43,6 +43,9 @@ const Assistente = lazy(() => import("./pages/Assistente"));
 const NetworkDashboard = lazy(() => import("./pages/NetworkDashboard"));
 const GestaoApp = lazy(() => import("./pages/GestaoApp"));
 const Patrimonio = lazy(() => import("./pages/Patrimonio"));
+const Planos = lazy(() => import("./pages/Planos"));
+const Sucesso = lazy(() => import("./pages/Sucesso"));
+const Cancelado = lazy(() => import("./pages/Cancelado"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 function PageLoader() {
@@ -109,6 +112,9 @@ const App = () => {
                   <Route path="/cadastrar" element={<Cadastrar />} />
                   <Route path="/cadastro" element={<Cadastrar />} />
                   <Route path="/instalar" element={<Instalar />} />
+                  <Route path="/planos" element={<Planos />} />
+                  <Route path="/sucesso" element={<Sucesso />} />
+                  <Route path="/cancelado" element={<Cancelado />} />
 
                   {/* Admin */}
                   <Route path="/master" element={<Master />} />
