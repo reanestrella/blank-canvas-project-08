@@ -27,9 +27,21 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Search, Plus, Filter, MoreHorizontal, Users, UserPlus, Heart,
-  Droplets, Download, Loader2, Eye, UserCheck, Baby, Upload, Smartphone,
+  Droplets, Download, Loader2, Eye, UserCheck, Baby, Upload, Smartphone, Trash2, AlertTriangle,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { useAppUsersCount } from "@/hooks/useAppUsersCount";
 import { useMembers, CreateMemberData } from "@/hooks/useMembers";
 import { MemberModal } from "@/components/modals/MemberModal";
