@@ -57,6 +57,9 @@ export default function Cadastrar() {
       //    - Create profile with church_id
       //    - Assign 'membro' role
       //    - Create pending_users record
+      const pendingTokenBefore = sessionStorage.getItem("pending_invite_token");
+      console.log("[Cadastrar] Token salvo antes do signUp:", pendingTokenBefore);
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -72,6 +75,7 @@ export default function Cadastrar() {
         },
       });
       if (authError) throw authError;
+      console.log("[Cadastrar] Usuário criado:", authData.user?.id);
 
       // 2. Fallback sync - ensures profile is correct even if trigger had issues
       if (authData.user) {
