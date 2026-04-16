@@ -51,7 +51,7 @@ function safeTs(epoch: unknown): string | null {
   }
 }
 
-const ANNUAL_PRICE = "price_1TMcPV5B9agydLDZy00bre4z";
+const ANNUAL_PRICE = "price_1TMadmG15I82n9DcfTxw7Jgm";
 
 /* ── look up user by metadata OR by email ────────────────── */
 async function resolveUser(

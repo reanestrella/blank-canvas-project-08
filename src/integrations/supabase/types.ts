@@ -3715,6 +3715,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      reset_module_data: {
+        Args: { p_church_id: string; p_module: string }
+        Returns: Json
+      }
       setup_new_church: {
         Args: { _church_name: string; _email: string; _full_name: string }
         Returns: Json
