@@ -145,6 +145,26 @@ export default function Planos() {
           </p>
         </div>
 
+        {/* Coupon input */}
+        <div className="max-w-md mx-auto mb-8">
+          <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            <Tag className="h-3.5 w-3.5" />
+            Cupom de desconto (opcional)
+          </label>
+          <input
+            type="text"
+            value={coupon}
+            onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+            placeholder="Digite seu cupom"
+            className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+          />
+          {coupon && (
+            <p className="mt-2 text-xs text-green-400 font-medium">
+              ✓ Cupom <span className="font-bold">{coupon}</span> será aplicado no checkout
+            </p>
+          )}
+        </div>
+
         {/* Plans Grid */}
         <div className="grid md:grid-cols-2 gap-6 md:gap-8 max-w-3xl mx-auto mb-16">
           {PLANS.map((plan) => (
