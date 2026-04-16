@@ -24,6 +24,7 @@ import {
   Building,
   MapPin,
   Edit,
+  AlertTriangle,
 } from "lucide-react";
 import { useInvitations } from "@/hooks/useInvitations";
 import { useCongregations } from "@/hooks/useCongregations";
@@ -35,6 +36,7 @@ import { InviteUserModal } from "@/components/modals/InviteUserModal";
 import { CongregationModal } from "@/components/modals/CongregationModal";
 import { RolesPanel } from "@/components/admin/RolesPanel";
 import { ChurchLogoUpload } from "@/components/settings/ChurchLogoUpload";
+import { ResetDataSection } from "@/components/settings/ResetDataSection";
 import type { Congregation, CreateCongregationData } from "@/hooks/useCongregations";
 
 const plans = [
@@ -172,6 +174,10 @@ export default function Configuracoes() {
             <TabsTrigger value="plan" className="gap-2">
               <Crown className="w-4 h-4" />
               <span className="hidden sm:inline">Plano</span>
+            </TabsTrigger>
+            <TabsTrigger value="reset" className="gap-2 text-destructive data-[state=active]:text-destructive">
+              <AlertTriangle className="w-4 h-4" />
+              <span className="hidden sm:inline">Resetar Dados</span>
             </TabsTrigger>
 
 
