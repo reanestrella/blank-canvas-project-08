@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { CheckCircle, ArrowRight, Crown, Loader2, Shield, Sparkles, Zap, Users, Star, Lock, Church, BarChart3, BookOpen, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CheckCircle, ArrowRight, Crown, Loader2, Shield, Sparkles, Zap, Users, Star, Lock, Church, BarChart3, BookOpen, Calendar, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { APP_BRAND_LOGO } from "@/lib/brand";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 
 const PLANS = [
   {
@@ -51,6 +51,13 @@ export default function Planos() {
   const { isSubscribed, isLoading: subLoading } = useSubscription();
   const { toast } = useToast();
   const [loading, setLoading] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const [coupon, setCoupon] = useState<string>("");
+
+  useEffect(() => {
+    const fromUrl = searchParams.get("cupom") || searchParams.get("coupon");
+    if (fromUrl) setCoupon(fromUrl.trim().toUpperCase());
+  }, [searchParams]);
 
   if (user && !subLoading && isSubscribed) {
     return <Navigate to="/meu-app" replace />;
@@ -75,7 +82,7 @@ export default function Planos() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session?.access_token}`,
           },
-          body: JSON.stringify({ price_id: priceId }),
+          body: JSON.stringify({ price_id: priceId, coupon: coupon || undefined }),
         }
       );
 
@@ -136,6 +143,26 @@ export default function Planos() {
           <p className="text-base md:text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed">
             Todos os módulos inclusos. Sem surpresas. Cancele quando quiser.
           </p>
+        </div>
+
+        {/* Coupon input */}
+        <div className="max-w-md mx-auto mb-8">
+          <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            <Tag className="h-3.5 w-3.5" />
+            Cupom de desconto (opcional)
+          </label>
+          <input
+            type="text"
+            value={coupon}
+            onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+            placeholder="Digite seu cupom"
+            className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+          />
+          {coupon && (
+            <p className="mt-2 text-xs text-green-400 font-medium">
+              ✓ Cupom <span className="font-bold">{coupon}</span> será aplicado no checkout
+            </p>
+          )}
         </div>
 
         {/* Plans Grid */}

@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { price_id } = await req.json();
+    const { price_id, coupon } = await req.json();
     if (!price_id) {
       return new Response(JSON.stringify({ error: "price_id is required" }), {
         status: 400,
@@ -105,24 +105,47 @@ Deno.serve(async (req) => {
 
     const baseUrl = Deno.env.get("APP_URL") || "https://churchonefy.com";
 
-    // Create Stripe Checkout Session using SECRET key
+    // Build params - allow_promotion_codes lets the user type a code in checkout
+    const params: Record<string, string> = {
+      mode: "subscription",
+      "payment_method_types[0]": "card",
+      "line_items[0][price]": price_id,
+      "line_items[0][quantity]": "1",
+      success_url: `${baseUrl}/sucesso`,
+      cancel_url: `${baseUrl}/cancelado`,
+      customer_email: user.email!,
+      "metadata[church_id]": profile.church_id,
+      "metadata[user_id]": user.id,
+    };
+
+    // If a coupon was passed via URL, apply it automatically (discounts and allow_promotion_codes are mutually exclusive)
+    if (coupon && typeof coupon === "string" && coupon.trim()) {
+      const couponCode = coupon.trim();
+      // Try to resolve as a Promotion Code first (user-friendly codes like WELCOME10)
+      const promoRes = await fetch(
+        `https://api.stripe.com/v1/promotion_codes?code=${encodeURIComponent(couponCode)}&active=true&limit=1`,
+        { headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` } }
+      );
+      const promoData = await promoRes.json();
+      const promo = promoData?.data?.[0];
+      if (promo?.id) {
+        params["discounts[0][promotion_code]"] = promo.id;
+      } else {
+        // Fallback: treat as raw coupon ID
+        params["discounts[0][coupon]"] = couponCode;
+      }
+    } else {
+      // No coupon in URL → let user enter one in Stripe Checkout
+      params["allow_promotion_codes"] = "true";
+    }
+
     const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: new URLSearchParams({
-        mode: "subscription",
-        "payment_method_types[0]": "card",
-        "line_items[0][price]": price_id,
-        "line_items[0][quantity]": "1",
-        success_url: `${baseUrl}/sucesso`,
-        cancel_url: `${baseUrl}/cancelado`,
-        customer_email: user.email!,
-        "metadata[church_id]": profile.church_id,
-        "metadata[user_id]": user.id,
-      }),
+      body: new URLSearchParams(params),
     });
 
     const session = await stripeRes.json();
