@@ -85,11 +85,38 @@ export default function Secretaria() {
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
   const [filterYear, setFilterYear] = useState(now.getFullYear());
   
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
   const { profile } = useAuth();
   const churchId = profile?.church_id;
   const { congregations, selectedCongregation, setSelectedCongregation } = useCongregations(churchId || undefined);
   const { members, isLoading, createMember, updateMember, deleteMember, fetchMembers } = useMembers(churchId || undefined);
   const { count: appUsersCount } = useAppUsersCount(churchId);
+
+  const handleResetMembers = async () => {
+    if (!churchId) return;
+    setResetting(true);
+    try {
+      const { data, error } = await supabase.rpc("reset_module_data" as any, {
+        p_church_id: churchId,
+        p_module: "membros",
+      } as any);
+      if (error) throw error;
+      const result = data as { success: boolean; error?: string };
+      if (!result?.success) {
+        toast.error(result?.error || "Erro ao apagar dados.");
+        return;
+      }
+      toast.success("Todos os membros foram apagados.");
+      setResetDialogOpen(false);
+      await fetchMembers();
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao apagar dados.");
+    } finally {
+      setResetting(false);
+    }
+  };
 
   // Filter members by tab, search, network, period, and active status
   const filteredMembers = useMemo(() => {
