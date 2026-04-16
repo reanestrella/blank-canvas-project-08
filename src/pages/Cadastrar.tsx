@@ -101,21 +101,18 @@ export default function Cadastrar() {
         password: data.password,
       });
 
-      if (signInError) {
-        setSuccess(true);
-        toast({ title: "Cadastro realizado! Faça login para acessar." });
-        return;
-      }
-
-      // 4. Aceitar convite pendente (se houver token salvo)
+      // 4. Aceitar convite pendente ANTES do redirecionamento (se houver)
       const pendingToken = sessionStorage.getItem("pending_invite_token");
+      console.log("[Cadastrar] Token pendente após signUp:", pendingToken);
+
       if (pendingToken) {
+        console.log("[Cadastrar] Aplicando convite após cadastro:", pendingToken);
         try {
           const { data: acceptData, error: acceptError } = await supabase.rpc(
             "accept_invitation" as any,
             { p_token: pendingToken } as any
           );
-          console.log("[Cadastrar] accept_invitation result:", acceptData, acceptError);
+          console.log("[Cadastrar] Resultado RPC accept_invitation:", acceptData, acceptError);
 
           if (acceptError) {
             console.error("[Cadastrar] accept_invitation error:", acceptError);
@@ -124,7 +121,6 @@ export default function Cadastrar() {
               description: acceptError.message || "Tente acessar o link novamente.",
               variant: "destructive",
             });
-            // Mantém token para tentativa manual posterior
           } else {
             sessionStorage.removeItem("pending_invite_token");
             toast({ title: "Convite aceito! Bem-vindo(a)!" });
@@ -134,6 +130,11 @@ export default function Cadastrar() {
         }
       } else {
         toast({ title: "Cadastro realizado! Bem-vindo(a)!" });
+      }
+
+      if (signInError) {
+        setSuccess(true);
+        return;
       }
 
       navigate("/meu-app");
