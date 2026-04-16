@@ -1993,7 +1993,7 @@ export type Database = {
           church_id: string
           congregation_id: string | null
           created_at: string
-          email: string
+          email: string | null
           expires_at: string
           full_name: string | null
           id: string
@@ -2001,6 +2001,7 @@ export type Database = {
           member_id: string | null
           role: Database["public"]["Enums"]["app_role"]
           roles: string[] | null
+          status: string
           token: string
           used_at: string | null
         }
@@ -2008,7 +2009,7 @@ export type Database = {
           church_id: string
           congregation_id?: string | null
           created_at?: string
-          email: string
+          email?: string | null
           expires_at?: string
           full_name?: string | null
           id?: string
@@ -2016,6 +2017,7 @@ export type Database = {
           member_id?: string | null
           role: Database["public"]["Enums"]["app_role"]
           roles?: string[] | null
+          status?: string
           token?: string
           used_at?: string | null
         }
@@ -2023,7 +2025,7 @@ export type Database = {
           church_id?: string
           congregation_id?: string | null
           created_at?: string
-          email?: string
+          email?: string | null
           expires_at?: string
           full_name?: string | null
           id?: string
@@ -2031,6 +2033,7 @@ export type Database = {
           member_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           roles?: string[] | null
+          status?: string
           token?: string
           used_at?: string | null
         }
@@ -3693,7 +3696,7 @@ export type Database = {
           church_id: string
           congregation_id: string | null
           created_at: string
-          email: string
+          email: string | null
           expires_at: string
           full_name: string | null
           id: string
@@ -3701,6 +3704,7 @@ export type Database = {
           member_id: string | null
           role: Database["public"]["Enums"]["app_role"]
           roles: string[] | null
+          status: string
           token: string
           used_at: string | null
         }
@@ -3726,6 +3730,7 @@ export type Database = {
           id: string
           member_id: string
           role: Database["public"]["Enums"]["app_role"]
+          status: string
           used_at: string
         }[]
       }
