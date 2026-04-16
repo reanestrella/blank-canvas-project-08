@@ -10,8 +10,8 @@ import { isValidUUID, getRoleBasedRedirect } from "@/lib/getRoleBasedRedirect";
 
 export default function InviteGate() {
   const [searchParams] = useSearchParams();
-  const inviteId = searchParams.get("id");
-console.log("ID do convite:", inviteId);
+  const token = searchParams.get("token")?.trim() || null;
+  console.log("[InviteGate] Token recebido:", token);
   const navigate = useNavigate();
   const { user, isLoading: authLoading, refreshUserData, signOut } = useAuth();
   const { toast } = useToast();
