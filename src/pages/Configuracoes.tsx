@@ -452,6 +452,10 @@ export default function Configuracoes() {
               ))}
             </div>
           </TabsContent>
+
+          <TabsContent value="reset" className="space-y-6 mt-6">
+            {churchId && <ResetDataSection churchId={churchId} />}
+          </TabsContent>
         </Tabs>
       </div>
 
