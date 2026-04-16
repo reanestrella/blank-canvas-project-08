@@ -86,6 +86,9 @@ export default function Convite() {
         return;
       }
 
+      // Preserva token assim que a página é acessada
+      sessionStorage.setItem("pending_invite_token", token);
+
       try {
         const { data, error: rpcError } = await supabase.rpc("validate_invitation" as any, {
           p_token: token,
