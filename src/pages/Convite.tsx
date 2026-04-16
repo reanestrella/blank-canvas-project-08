@@ -86,6 +86,9 @@ export default function Convite() {
         return;
       }
 
+      // Preserva token assim que a página é acessada
+      sessionStorage.setItem("pending_invite_token", token);
+
       try {
         const { data, error: rpcError } = await supabase.rpc("validate_invitation" as any, {
           p_token: token,
@@ -120,10 +123,13 @@ export default function Convite() {
   }, [token, form]);
 
   const handleSubmit = async (data: RegisterFormData) => {
-    if (!invitation || isSubmitting) return;
+    if (!invitation || isSubmitting || !token) return;
 
     setIsSubmitting(true);
     try {
+      // Preserva token para fluxo pós-cadastro
+      sessionStorage.setItem("pending_invite_token", token);
+
       // 1. Create user account WITH church_id so handle_new_user trigger creates profile correctly
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: invitation.email,
@@ -149,9 +155,6 @@ export default function Convite() {
 
       if (signInError) {
         console.warn("Auto sign-in failed after signup:", signInError.message);
-        // If sign-in fails (e.g. email confirmation required), 
-        // the handle_new_user trigger should have already set church_id
-        // Mark invitation as used and redirect
         toast({
           title: "Conta criada!",
           description: "Verifique seu email para confirmar a conta e depois faça login.",
@@ -162,22 +165,29 @@ export default function Convite() {
         return;
       }
 
-      // 3. Call accept_invitation RPC — handles profile, role, and marking invitation used
-      const { error: acceptError } = await supabase.rpc(
+      // 3. Aceitar convite via RPC usando o token salvo
+      const pendingToken = sessionStorage.getItem("pending_invite_token") || token;
+      const { data: acceptData, error: acceptError } = await supabase.rpc(
         "accept_invitation" as any,
-        { p_token: token } as any
+        { p_token: pendingToken } as any
       );
+      console.log("[Convite] accept_invitation result:", acceptData, acceptError);
 
       if (acceptError) {
         console.error("accept_invitation RPC error:", acceptError);
-        // Non-blocking: try manual profile fix
-        // The handle_new_user trigger should have set church_id from metadata
+        toast({
+          title: "Conta criada, mas houve erro ao aceitar convite.",
+          description: acceptError.message || "Tente novamente acessando o link.",
+          variant: "destructive",
+        });
+        // Mantém token salvo para nova tentativa
+      } else {
+        sessionStorage.removeItem("pending_invite_token");
+        toast({
+          title: "Conta criada com sucesso!",
+          description: "Você já pode acessar o sistema.",
+        });
       }
-
-      toast({
-        title: "Conta criada com sucesso!",
-        description: "Você já pode acessar o sistema.",
-      });
 
       // Full reload to ensure AuthContext picks up new church_id and roles cleanly
       setTimeout(() => {
