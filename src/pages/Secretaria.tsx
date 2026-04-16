@@ -585,6 +585,39 @@ export default function Secretaria() {
         />
       )}
 
+      {/* Reset Members Dialog */}
+      <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Apagar TODOS os dados da Secretaria?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                <strong className="text-destructive">ATENÇÃO:</strong> Esta ação irá apagar{" "}
+                <strong>todos os membros</strong> desta igreja, incluindo vínculos com células,
+                escalas, discipulados e demais registros relacionados.
+              </span>
+              <span className="block text-sm font-medium pt-2">
+                Esta ação é irreversível. Tem certeza?
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resetting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResetMembers}
+              disabled={resetting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {resetting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Sim, apagar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </AppLayout>
   );
 }
