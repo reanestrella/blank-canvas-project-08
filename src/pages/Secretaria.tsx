@@ -259,6 +259,10 @@ export default function Secretaria() {
               <Upload className="w-4 h-4 mr-2" />
               Importar
             </Button>
+            <Button variant="destructive" size="sm" onClick={() => setResetDialogOpen(true)}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Apagar Dados
+            </Button>
             <FinancialFilters mode={periodMode} month={filterMonth} year={filterYear} onModeChange={(m) => setPeriodMode(m)} onMonthChange={setFilterMonth} onYearChange={setFilterYear} />
             <CongregationSelector
               congregations={congregations}
