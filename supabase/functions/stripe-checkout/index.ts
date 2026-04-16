@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { price_id } = await req.json();
+    const { price_id, coupon } = await req.json();
     if (!price_id) {
       return new Response(JSON.stringify({ error: "price_id is required" }), {
         status: 400,
