@@ -3,20 +3,21 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { isValidUUID } from "@/lib/getRoleBasedRedirect";
 
 /**
- * Legacy redirect — all invite acceptance now goes through InviteGate.
+ * Redireciona corretamente usando ID do convite
  */
 export default function AcceptInvite() {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
+  const inviteId = searchParams.get("id");
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (token && isValidUUID(token)) {
-      navigate(`/accept-invite?token=${encodeURIComponent(token)}`, { replace: true });
+    if (inviteId && isValidUUID(inviteId)) {
+      // Redireciona para a página real que processa o convite
+      navigate(`/invite/${encodeURIComponent(inviteId)}`, { replace: true });
     } else {
       navigate("/", { replace: true });
     }
-  }, [token, navigate]);
+  }, [inviteId, navigate]);
 
   return null;
 }
