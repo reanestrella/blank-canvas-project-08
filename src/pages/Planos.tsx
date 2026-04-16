@@ -51,6 +51,13 @@ export default function Planos() {
   const { isSubscribed, isLoading: subLoading } = useSubscription();
   const { toast } = useToast();
   const [loading, setLoading] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const [coupon, setCoupon] = useState<string>("");
+
+  useEffect(() => {
+    const fromUrl = searchParams.get("cupom") || searchParams.get("coupon");
+    if (fromUrl) setCoupon(fromUrl.trim().toUpperCase());
+  }, [searchParams]);
 
   if (user && !subLoading && isSubscribed) {
     return <Navigate to="/meu-app" replace />;
@@ -75,7 +82,7 @@ export default function Planos() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session?.access_token}`,
           },
-          body: JSON.stringify({ price_id: priceId }),
+          body: JSON.stringify({ price_id: priceId, coupon: coupon || undefined }),
         }
       );
 
