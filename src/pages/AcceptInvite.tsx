@@ -46,11 +46,11 @@ export default function AcceptInvite() {
         p_token: inviteToken,
       } as any);
 
-      console.log("rpc result data:", data);
+      console.log("rpc result data:", JSON.stringify(data));
       console.log("rpc result error:", error);
 
       if (error) {
-        console.error("accept_invitation RPC error:", error?.message, (error as any)?.details, (error as any)?.hint, error);
+        console.error("accept_invitation RPC error:", error?.message, error);
         setErrorMsg(error.message || "Erro ao aceitar convite.");
         setStatus("error");
         return;
@@ -66,10 +66,8 @@ export default function AcceptInvite() {
         return;
       }
 
-      // Force full reload so AuthContext picks up new church_id and roles
       toast({ title: "Convite aceito!", description: "Você foi vinculado à igreja com sucesso." });
 
-      // Small delay then full reload to ensure clean state
       setTimeout(() => {
         window.location.href = "/meu-app";
       }, 500);
