@@ -7,12 +7,13 @@ import { getAppUrl } from "@/lib/brand";
 export interface Invitation {
   id: string;
   church_id: string;
-  email: string;
+  email: string | null;
   role: "pastor" | "tesoureiro" | "secretario" | "lider_celula" | "lider_ministerio" | "consolidacao" | "membro";
   token: string;
   invited_by: string;
   expires_at: string;
   used_at: string | null;
+  status: "pending" | "accepted" | "expired";
   created_at: string;
   full_name?: string | null;
   congregation_id?: string | null;
@@ -20,7 +21,7 @@ export interface Invitation {
 }
 
 export interface CreateInvitationData {
-  email: string;
+  email?: string;
   role: Invitation["role"];
   full_name?: string;
   congregation_id?: string;
@@ -64,12 +65,11 @@ export function useInvitations() {
     }
 
     try {
-      // Use RPC reissue_invitation to create/reissue invitation
       const { data: newInvitation, error } = await supabase.rpc(
         "reissue_invitation" as any,
         {
           p_church_id: profile.church_id,
-          p_email: data.email,
+          p_email: data.email || "",
           p_full_name: data.full_name || null,
           p_role: data.role,
           p_congregation_id: (data.congregation_id && data.congregation_id !== "_all") ? data.congregation_id : null,
@@ -85,12 +85,13 @@ export function useInvitations() {
       
       const invitation = newInvitation as unknown as Invitation;
       
-      // Refresh list to get updated data
       await fetchInvitations();
       
       toast({
         title: "Convite criado!",
-        description: `Link de convite gerado para ${data.email}.`,
+        description: data.email 
+          ? `Link de convite gerado para ${data.email}.`
+          : "Link de convite gerado com sucesso.",
       });
       return { data: invitation, error: null };
     } catch (error: any) {
@@ -132,7 +133,6 @@ export function useInvitations() {
 
   const getInvitationByToken = async (token: string) => {
     try {
-      // Use validate_invitation RPC for server-side validation
       const { data, error } = await supabase.rpc("validate_invitation" as any, {
         p_token: token,
       } as any);

@@ -34,7 +34,7 @@ import type { CreateInvitationData, Invitation } from "@/hooks/useInvitations";
 import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
 
 const inviteSchema = z.object({
-  email: z.string().email("Email inválido"),
+  email: z.string().email("Email inválido").or(z.literal("")),
   full_name: z.string().optional(),
   role: z.enum(["tesoureiro", "secretario", "lider_celula", "vice_lider_celula", "lider_ministerio", "consolidacao", "membro"]),
   congregation_id: z.string().optional(),
@@ -107,12 +107,12 @@ export function InviteUserModal({
     setIsSubmitting(true);
     try {
       const submitData: CreateInvitationData = {
-        email: data.email,
-        // vice_lider_celula maps to lider_celula role (same permissions)
         role: data.role === "vice_lider_celula" ? "lider_celula" : data.role,
       };
       
-      // Add optional fields
+      if (data.email && data.email.trim()) {
+        submitData.email = data.email.trim();
+      }
       if (data.full_name && data.full_name.trim()) {
         submitData.full_name = data.full_name.trim();
       }
@@ -156,8 +156,8 @@ export function InviteUserModal({
           <DialogTitle>Convidar Novo Usuário</DialogTitle>
           <DialogDescription>
             {generatedLink 
-              ? "Copie o link e envie para o usuário. Ele só precisará criar uma senha."
-              : "Gere um link de convite. O usuário só precisará criar uma senha para acessar."}
+              ? "Copie o link e envie para o usuário."
+              : "Gere um link de convite. O email é opcional — o link pode ser compartilhado diretamente."}
           </DialogDescription>
         </DialogHeader>
 
@@ -174,7 +174,7 @@ export function InviteUserModal({
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              Este link expira em 7 dias e só pode ser usado uma vez. O usuário só precisará criar uma senha.
+              Este link expira em 7 dias e só pode ser usado uma vez.
             </p>
             <DialogFooter>
               <Button onClick={() => handleClose(false)}>Fechar</Button>
@@ -188,7 +188,7 @@ export function InviteUserModal({
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email do convidado *</FormLabel>
+                    <FormLabel>Email do convidado (opcional)</FormLabel>
                     <FormControl>
                       <Input 
                         type="email" 
@@ -196,6 +196,9 @@ export function InviteUserModal({
                         {...field} 
                       />
                     </FormControl>
+                    <FormDescription>
+                      Se não informado, o link poderá ser usado por qualquer pessoa.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -213,9 +216,6 @@ export function InviteUserModal({
                         {...field} 
                       />
                     </FormControl>
-                    <FormDescription>
-                      Se preenchido, o nome será pré-preenchido no cadastro.
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -252,7 +252,7 @@ export function InviteUserModal({
                   name="member_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Vincular ao Membro *</FormLabel>
+                      <FormLabel>Vincular ao Membro (opcional)</FormLabel>
                       <FormControl>
                         <MemberAutocomplete
                           churchId={churchId}
@@ -262,9 +262,7 @@ export function InviteUserModal({
                         />
                       </FormControl>
                       <FormDescription>
-                        {selectedRole === "lider_celula" 
-                          ? "O líder só terá acesso à célula que lidera."
-                          : "O líder só terá acesso ao ministério que lidera."}
+                        Se informado, o usuário será vinculado automaticamente a este membro.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
