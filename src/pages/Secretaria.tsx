@@ -27,9 +27,21 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Search, Plus, Filter, MoreHorizontal, Users, UserPlus, Heart,
-  Droplets, Download, Loader2, Eye, UserCheck, Baby, Upload, Smartphone,
+  Droplets, Download, Loader2, Eye, UserCheck, Baby, Upload, Smartphone, Trash2, AlertTriangle,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { useAppUsersCount } from "@/hooks/useAppUsersCount";
 import { useMembers, CreateMemberData } from "@/hooks/useMembers";
 import { MemberModal } from "@/components/modals/MemberModal";
@@ -73,11 +85,38 @@ export default function Secretaria() {
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
   const [filterYear, setFilterYear] = useState(now.getFullYear());
   
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
   const { profile } = useAuth();
   const churchId = profile?.church_id;
   const { congregations, selectedCongregation, setSelectedCongregation } = useCongregations(churchId || undefined);
   const { members, isLoading, createMember, updateMember, deleteMember, fetchMembers } = useMembers(churchId || undefined);
   const { count: appUsersCount } = useAppUsersCount(churchId);
+
+  const handleResetMembers = async () => {
+    if (!churchId) return;
+    setResetting(true);
+    try {
+      const { data, error } = await supabase.rpc("reset_module_data" as any, {
+        p_church_id: churchId,
+        p_module: "membros",
+      } as any);
+      if (error) throw error;
+      const result = data as { success: boolean; error?: string };
+      if (!result?.success) {
+        toast.error(result?.error || "Erro ao apagar dados.");
+        return;
+      }
+      toast.success("Todos os membros foram apagados.");
+      setResetDialogOpen(false);
+      await fetchMembers();
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao apagar dados.");
+    } finally {
+      setResetting(false);
+    }
+  };
 
   // Filter members by tab, search, network, period, and active status
   const filteredMembers = useMemo(() => {
@@ -219,6 +258,10 @@ export default function Secretaria() {
             <Button variant="outline" size="sm" onClick={() => setImportModalOpen(true)}>
               <Upload className="w-4 h-4 mr-2" />
               Importar
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => setResetDialogOpen(true)}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Apagar Dados
             </Button>
             <FinancialFilters mode={periodMode} month={filterMonth} year={filterYear} onModeChange={(m) => setPeriodMode(m)} onMonthChange={setFilterMonth} onYearChange={setFilterYear} />
             <CongregationSelector
@@ -541,6 +584,39 @@ export default function Secretaria() {
           onImportDone={fetchMembers}
         />
       )}
+
+      {/* Reset Members Dialog */}
+      <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Apagar TODOS os dados da Secretaria?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                <strong className="text-destructive">ATENÇÃO:</strong> Esta ação irá apagar{" "}
+                <strong>todos os membros</strong> desta igreja, incluindo vínculos com células,
+                escalas, discipulados e demais registros relacionados.
+              </span>
+              <span className="block text-sm font-medium pt-2">
+                Esta ação é irreversível. Tem certeza?
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resetting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResetMembers}
+              disabled={resetting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {resetting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Sim, apagar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </AppLayout>
   );
