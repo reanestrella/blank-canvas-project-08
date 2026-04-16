@@ -10,7 +10,7 @@ import { isValidUUID, getRoleBasedRedirect } from "@/lib/getRoleBasedRedirect";
 
 export default function InviteGate() {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
+  const token = searchParams.get("token")?.trim() || null;
   const navigate = useNavigate();
   const { user, isLoading: authLoading, refreshUserData, signOut } = useAuth();
   const { toast } = useToast();
@@ -18,31 +18,33 @@ export default function InviteGate() {
   const [errorMsg, setErrorMsg] = useState("");
   const autoAcceptRan = useRef(false);
 
-  const validToken = token && isValidUUID(token);
+  const validToken = !!token && isValidUUID(token);
 
-  console.log("[InviteGate] token", token, "valid", validToken);
-  console.log("[InviteGate] session", user?.id);
+  console.log("[InviteGate] render — token:", token, "validUUID:", validToken, "user:", user?.id, "authLoading:", authLoading, "status:", status);
 
   const handleAccept = useCallback(async () => {
     if (!token) return;
     setStatus("processing");
+    setErrorMsg("");
     try {
-      console.log("[InviteGate] calling accept_invitation with p_token:", token);
+      console.log("[InviteGate] calling accept_invitation RPC with token:", token);
       const { data, error } = await supabase.rpc("accept_invitation" as any, {
         p_token: token,
       } as any);
 
-      console.log("[InviteGate] rpc result", data, error);
+      console.log("[InviteGate] RPC response — data:", JSON.stringify(data), "error:", error);
 
       if (error) {
-        console.error("accept_invitation RPC error:", error?.message, (error as any)?.details, (error as any)?.hint, error);
+        console.error("[InviteGate] RPC error:", error.message, error);
         setErrorMsg(error.message || "Erro ao aceitar convite.");
         setStatus("error");
         return;
       }
 
       const result = data as any;
+
       if (result && result.success === false) {
+        console.error("[InviteGate] RPC returned failure:", result.error);
         setErrorMsg(result.error || "Erro ao aceitar convite.");
         setStatus("error");
         return;
@@ -55,7 +57,7 @@ export default function InviteGate() {
 
       const roles: string[] = result?.roles || [];
       const redirectTo = getRoleBasedRedirect(roles);
-      console.log("[InviteGate] redirecting to:", redirectTo);
+      console.log("[InviteGate] success — redirecting to:", redirectTo);
       navigate(redirectTo, { replace: true });
     } catch (err: any) {
       console.error("[InviteGate] exception:", err);
@@ -88,7 +90,12 @@ export default function InviteGate() {
               <AlertCircle className="w-6 h-6 text-destructive" />
             </div>
             <CardTitle>Convite inválido</CardTitle>
-            <CardDescription>O link do convite está incompleto ou inválido.</CardDescription>
+            <CardDescription>
+              O link do convite está incompleto ou inválido.
+              {token && !isValidUUID(token) && (
+                <span className="block mt-2 text-xs text-muted-foreground">Token recebido: {token.substring(0, 20)}...</span>
+              )}
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
             <Button onClick={() => navigate("/")}>Ir para página inicial</Button>
@@ -117,12 +124,11 @@ export default function InviteGate() {
     );
   }
 
-  // Not authenticated — show login/signup options (DON'T auto-redirect)
+  // Not authenticated — show login/signup options
   if (!user) {
     const returnUrl = `/accept-invite?token=${encodeURIComponent(token)}`;
     const redirectParam = encodeURIComponent(returnUrl);
 
-    // Save token for recovery
     sessionStorage.setItem("pending_invite_token", token);
 
     return (
@@ -187,6 +193,10 @@ export default function InviteGate() {
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-3">
             <Button onClick={() => { autoAcceptRan.current = false; handleAccept(); }}>Tentar novamente</Button>
+            <Button variant="outline" onClick={handleSwitchAccount}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Entrar com outra conta
+            </Button>
             <Button variant="ghost" onClick={() => navigate("/")}>Ir para página inicial</Button>
           </CardContent>
         </Card>

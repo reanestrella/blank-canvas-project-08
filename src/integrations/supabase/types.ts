@@ -3653,7 +3653,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      accept_invitation: { Args: { p_token: string }; Returns: undefined }
+      accept_invitation: { Args: { p_token: string }; Returns: Json }
       delete_church_cascade: { Args: { p_church_id: string }; Returns: Json }
       enable_ai_trial: {
         Args: { p_church_id: string; p_trial_days?: number }
