@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { CheckCircle, ArrowRight, Crown, Loader2, Shield, Sparkles, Zap, Users, Star, Lock, Church, BarChart3, BookOpen, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CheckCircle, ArrowRight, Crown, Loader2, Shield, Sparkles, Zap, Users, Star, Lock, Church, BarChart3, BookOpen, Calendar, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { APP_BRAND_LOGO } from "@/lib/brand";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 
 const PLANS = [
   {
