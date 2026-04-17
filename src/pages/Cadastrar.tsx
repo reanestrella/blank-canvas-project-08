@@ -95,7 +95,6 @@ export default function Cadastrar() {
             .from("profiles")
             .upsert(
               {
-                id: userId,
                 user_id: userId,
                 email: data.email,
                 full_name: data.fullName,
