@@ -1,5 +1,5 @@
 export const APP_BRAND_NAME = "CHURCH ONEFY";
-export const APP_BRAND_LOGO = "/church-onefy-logo.png";
+export const APP_BRAND_LOGO = "/86540b94-ef74-4f66-a100-52f8feacdc6b.png";
 
 /**
  * Returns the canonical app URL for link generation.
