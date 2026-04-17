@@ -65,7 +65,6 @@ export async function syncSelfRegistrationProfile(
     .from("profiles")
     .upsert(
       {
-        id: user.id,
         user_id: user.id,
         email: user.email ?? null,
         full_name: fullName,
