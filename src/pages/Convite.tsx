@@ -168,13 +168,13 @@ export default function Convite() {
       // 3. Aceitar convite via RPC usando o token salvo
       const pendingToken = sessionStorage.getItem("pending_invite_token") || token;
       const { data: acceptData, error: acceptError } = await supabase.rpc(
-        "accept_invitation" as any,
-        { p_token: pendingToken } as any
+        "aceitar_convite",
+        { p_token: pendingToken, p_user_id: authData.user.id }
       );
-      console.log("[Convite] accept_invitation result:", acceptData, acceptError);
+      console.log("[Convite] aceitar_convite result:", acceptData, acceptError);
 
       if (acceptError) {
-        console.error("accept_invitation RPC error:", acceptError);
+        console.error("aceitar_convite RPC error:", acceptError);
         toast({
           title: "Conta criada, mas houve erro ao aceitar convite.",
           description: acceptError.message || "Tente novamente acessando o link.",
