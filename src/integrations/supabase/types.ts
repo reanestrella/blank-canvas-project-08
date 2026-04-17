@@ -3657,6 +3657,9 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { p_token: string }; Returns: Json }
+      aceitar_convite:
+        | { Args: { p_token: string }; Returns: Json }
+        | { Args: { p_token: string; p_user_id: string }; Returns: Json }
       delete_church_cascade: { Args: { p_church_id: string }; Returns: Json }
       enable_ai_trial: {
         Args: { p_church_id: string; p_trial_days?: number }

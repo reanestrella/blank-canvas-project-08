@@ -1,4 +1,5 @@
 import { Users, DollarSign, MessageSquare, BarChart3, CalendarCheck, Heart } from "lucide-react";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 const benefits = [
   { icon: Users, title: "Gestão de membros", desc: "Cadastro completo, fotos, histórico e acompanhamento pastoral" },
@@ -9,11 +10,30 @@ const benefits = [
   { icon: CalendarCheck, title: "Escalas automatizadas", desc: "Monte, publique e notifique escalas de ministério" },
 ];
 
+function BenefitCard({ b, index }: { b: typeof benefits[number]; index: number }) {
+  const ref = useScrollReveal<HTMLDivElement>();
+  const Icon = b.icon;
+  const delay = (index % 3) + 1;
+  return (
+    <div
+      ref={ref}
+      className={`reveal reveal-delay-${delay} card-lift group rounded-2xl border border-primary/15 bg-card p-6 shadow-[var(--shadow-sm)]`}
+    >
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 transition-transform group-hover:scale-110 group-hover:rotate-3">
+        <Icon className="h-6 w-6 text-primary" />
+      </div>
+      <h3 className="mb-2 text-base font-bold text-foreground">{b.title}</h3>
+      <p className="text-sm text-muted-foreground">{b.desc}</p>
+    </div>
+  );
+}
+
 export default function BenefitsSection() {
+  const headerRef = useScrollReveal<HTMLDivElement>();
   return (
     <section className="bg-background py-20 md:py-28">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
+        <div ref={headerRef} className="reveal text-center mb-16">
           <p className="mb-4 text-sm font-bold uppercase tracking-widest text-primary">
             TUDO QUE VOCÊ PRECISA
           </p>
@@ -24,17 +44,8 @@ export default function BenefitsSection() {
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {benefits.map((b) => (
-            <div
-              key={b.title}
-              className="rounded-2xl border border-primary/15 bg-card p-6 shadow-[var(--shadow-sm)] transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-glow)]"
-            >
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                <b.icon className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="mb-2 text-base font-bold text-foreground">{b.title}</h3>
-              <p className="text-sm text-muted-foreground">{b.desc}</p>
-            </div>
+          {benefits.map((b, i) => (
+            <BenefitCard key={b.title} b={b} index={i} />
           ))}
         </div>
       </div>

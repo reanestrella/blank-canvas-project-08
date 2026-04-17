@@ -138,10 +138,10 @@ export default function Cadastrar() {
       if (pendingToken) {
         console.log("[Cadastrar] Aplicando convite após cadastro:", pendingToken);
         try {
-          const { data: acceptData, error: acceptError } = await supabase.rpc("aceitar_convite", {
-  p_token: pendingToken,
-  p_user_id: data.user.id,
-});
+          const { data: acceptData, error: acceptError } = await supabase.rpc(
+            "aceitar_convite" as any,
+            { p_token: pendingToken, p_user_id: userId } as any
+          );
           console.log("[Cadastrar] Resultado RPC accept_invitation:", acceptData, acceptError);
 
           if (acceptError) {

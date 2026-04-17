@@ -1,21 +1,25 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle } from "lucide-react";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 export default function HeroSection() {
+  const copyRef = useScrollReveal<HTMLDivElement>();
+  const phoneRef = useScrollReveal<HTMLDivElement>();
+
   return (
     <section className="gradient-primary relative flex min-h-screen items-center overflow-hidden pt-28 md:pt-20">
       {/* Background effects */}
       <div className="absolute inset-0">
-        <div className="absolute right-0 top-1/4 h-[500px] w-[500px] rounded-full bg-primary/20 blur-[120px]" />
-        <div className="absolute bottom-0 left-0 h-[400px] w-[400px] rounded-full bg-secondary/10 blur-[100px]" />
+        <div className="absolute right-0 top-1/4 h-[500px] w-[500px] rounded-full bg-primary/20 blur-[120px] animate-pulse-soft" />
+        <div className="absolute bottom-0 left-0 h-[400px] w-[400px] rounded-full bg-secondary/10 blur-[100px] animate-pulse-soft" />
         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-sidebar/60" />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Copy */}
-          <div className="text-center lg:text-left mt-8 md:mt-0">
+          <div ref={copyRef} className="reveal text-center lg:text-left mt-8 md:mt-0">
             <p className="mb-6 text-sm font-semibold uppercase tracking-widest text-secondary md:text-base">
               ⚡ A solução que sua igreja precisa
             </p>
@@ -47,10 +51,10 @@ export default function HeroSection() {
               ))}
             </div>
 
-            <Link to="/registro">
+            <Link to="/registro" className="inline-block w-full sm:w-auto">
               <Button
                 size="lg"
-                className="gradient-accent rounded-xl px-8 py-6 text-base font-bold text-secondary-foreground shadow-[var(--shadow-glow)] transition-all hover:scale-[1.03] md:text-lg"
+                className="gradient-accent btn-press w-full sm:w-auto rounded-xl px-8 py-7 text-base font-bold text-secondary-foreground shadow-[var(--shadow-glow)] md:text-lg"
               >
                 Quero organizar minha igreja agora
                 <ArrowRight className="w-5 h-5 ml-2" />
@@ -63,10 +67,10 @@ export default function HeroSection() {
           </div>
 
           {/* Phone mockup */}
-          <div className="flex justify-center lg:justify-end">
-            <div className="relative">
+          <div ref={phoneRef} className="reveal reveal-delay-2 flex justify-center lg:justify-end">
+            <div className="relative animate-floaty">
               <div className="absolute inset-0 scale-90 rounded-[3rem] bg-primary/20 blur-3xl" />
-              <div className="relative w-[280px] rounded-[2.5rem] border border-primary/20 bg-sidebar-accent p-3 shadow-[var(--shadow-lg)] md:w-[320px]">
+              <div className="relative w-[260px] sm:w-[280px] rounded-[2.5rem] border border-primary/20 bg-sidebar-accent p-3 shadow-[var(--shadow-lg)] md:w-[320px]">
                 <div className="overflow-hidden rounded-[2rem] bg-sidebar">
                   {/* Status bar */}
                   <div className="flex h-6 items-center justify-center bg-primary/10">
@@ -91,7 +95,7 @@ export default function HeroSection() {
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       {["📅 Escalas", "📖 Bíblia", "🙏 Devocional", "📢 Avisos", "👥 Células", "💰 Ofertar"].map((item) => (
-                        <div key={item} className="rounded-xl border border-primary/15 bg-sidebar-accent p-2.5 text-center">
+                        <div key={item} className="rounded-xl border border-primary/15 bg-sidebar-accent p-2.5 text-center transition-transform hover:scale-105">
                           <p className="text-[11px] font-medium text-sidebar-foreground/80">{item}</p>
                         </div>
                       ))}
