@@ -1,3 +1,4 @@
+console.log("nova versão convite v2");
 import { useState } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
