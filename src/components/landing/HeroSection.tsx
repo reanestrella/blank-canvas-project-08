@@ -47,7 +47,6 @@ export default function HeroSection() {
                 <div
                   key={item}
                   className={`reveal reveal-delay-${i + 1} flex items-center gap-3`}
-                  ref={useScrollReveal<HTMLDivElement>()}
                 >
                   <CheckCircle className="h-5 w-5 flex-shrink-0 text-secondary" />
                   <span className="font-medium text-sidebar-foreground">{item}</span>
