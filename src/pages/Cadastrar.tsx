@@ -75,12 +75,47 @@ export default function Cadastrar() {
         },
       });
       if (authError) throw authError;
-      console.log("[Cadastrar] Usuário criado:", authData.user?.id);
+      const userId = authData.user?.id;
+      console.log("[Cadastrar] Usuário criado:", userId);
 
-      // 2. Fallback sync - ensures profile is correct even if trigger had issues
-      if (authData.user) {
+      // 2. Auto sign-in IMEDIATAMENTE para que auth.uid() funcione nas próximas chamadas
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+      if (signInError) {
+        console.warn("[Cadastrar] signIn error após signup:", signInError);
+      }
+
+      // 3. Garantir que o profile exista (upsert) - PRÉ-REQUISITO para accept_invitation
+      if (userId) {
         try {
-          await syncSelfRegistrationProfile(authData.user, {
+          console.log("[Cadastrar] Criando/atualizando profile para:", userId);
+          const { error: profileError } = await supabase
+            .from("profiles")
+            .upsert(
+              {
+                id: userId,
+                user_id: userId,
+                email: data.email,
+                full_name: data.fullName,
+                phone: data.phone || null,
+                church_id: churchId,
+                congregation_id: congregationId || null,
+                registration_status: "pendente",
+              } as any,
+              { onConflict: "user_id" }
+            );
+          if (profileError) {
+            console.error("[Cadastrar] profile upsert error:", profileError);
+          }
+        } catch (e) {
+          console.error("[Cadastrar] profile upsert exception:", e);
+        }
+
+        // 4. Sync fallback (pending_users etc)
+        try {
+          await syncSelfRegistrationProfile(authData.user!, {
             churchId,
             congregationId,
             fullName: data.fullName,
@@ -91,17 +126,13 @@ export default function Cadastrar() {
           });
         } catch (syncErr) {
           console.error("[Cadastrar] sync fallback error:", syncErr);
-          // Non-fatal - trigger should have handled it
         }
       }
 
-      // 3. Auto sign-in and redirect
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
-      });
+      // 5. Pequeno delay para persistência antes de aplicar o convite
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // 4. Aceitar convite pendente ANTES do redirecionamento (se houver)
+      // 6. Aceitar convite pendente
       const pendingToken = sessionStorage.getItem("pending_invite_token");
       console.log("[Cadastrar] Token pendente após signUp:", pendingToken);
 
