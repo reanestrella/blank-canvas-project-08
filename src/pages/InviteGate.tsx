@@ -28,10 +28,19 @@ export default function InviteGate() {
     setStatus("processing");
     setErrorMsg("");
     try {
-      console.log("[InviteGate] calling accept_invitation RPC with token:", token);
-      const { data, error } = await supabase.rpc("accept_invitation" as any, {
+      const { data: sessionData } = await supabase.auth.getUser();
+      const userId = sessionData.user?.id;
+      if (!userId) {
+        setErrorMsg("Usuário não autenticado.");
+        setStatus("error");
+        return;
+      }
+
+      console.log("[InviteGate] calling aceitar_convite RPC with token:", token, "user:", userId);
+      const { data, error } = await supabase.rpc("aceitar_convite", {
         p_token: token,
-      } as any);
+        p_user_id: userId,
+      });
 
       console.log("[InviteGate] RPC response — data:", JSON.stringify(data), "error:", error);
 
