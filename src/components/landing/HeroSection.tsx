@@ -43,11 +43,8 @@ export default function HeroSection() {
                 "Escalas organizadas automaticamente",
                 "Membros acessam tudo pelo app",
                 "Comunicação centralizada",
-              ].map((item, i) => (
-                <div
-                  key={item}
-                  className={`reveal reveal-delay-${i + 1} flex items-center gap-3`}
-                >
+              ].map((item) => (
+                <div key={item} className="flex items-center gap-3">
                   <CheckCircle className="h-5 w-5 flex-shrink-0 text-secondary" />
                   <span className="font-medium text-sidebar-foreground">{item}</span>
                 </div>
