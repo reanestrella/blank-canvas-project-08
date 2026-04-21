@@ -1,72 +1,73 @@
-import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Church, Loader2, Eye, EyeOff, AlertCircle } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Church, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { isValidUUID, getRoleBasedRedirect } from "@/lib/getRoleBasedRedirect";
 
-const cadastroSchema = z
-  .object({
-    fullName: z.string().min(2, "Nome completo é obrigatório").max(100),
-    email: z.string().email("Email inválido"),
-    phone: z.string().optional(),
-    password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
-    confirmPassword: z.string(),
-  })
-  .refine((d) => d.password === d.confirmPassword, {
-    message: "As senhas não coincidem",
-    path: ["confirmPassword"],
-  });
+const cadastroSchema = z.object({
+  fullName: z.string().min(2, "Nome obrigatório"),
+  email: z.string().email("Email inválido"),
+  password: z.string().min(6, "Mínimo 6 caracteres"),
+  phone: z.string().optional().or(z.literal("")),
+  birthDate: z.string().optional().or(z.literal("")),
+  tipo: z.enum(["visitante", "membro"]),
+  isBaptized: z.enum(["sim", "nao"]),
+});
 
 type CadastroFormData = z.infer<typeof cadastroSchema>;
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export default function Cadastrar() {
-  const [searchParams] = useSearchParams();
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const token =
-    searchParams.get("token") || sessionStorage.getItem("pending_invite_token") || "";
-  const validToken = !!token && UUID_RE.test(token);
+  // 🔥 TOKEN como fonte única de verdade (URL → sessionStorage)
+  const urlToken = searchParams.get("token")?.trim() || null;
+  const storedToken = typeof window !== "undefined"
+    ? sessionStorage.getItem("pending_invite_token")
+    : null;
+  const token = urlToken || storedToken;
+  const validToken = !!token && isValidUUID(token);
 
+  // Persistir token assim que a página carrega
   useEffect(() => {
-    if (token && validToken) {
-      sessionStorage.setItem("pending_invite_token", token);
+    if (urlToken && isValidUUID(urlToken)) {
+      sessionStorage.setItem("pending_invite_token", urlToken);
     }
-  }, [token, validToken]);
+  }, [urlToken]);
 
   const form = useForm<CadastroFormData>({
     resolver: zodResolver(cadastroSchema),
     defaultValues: {
       fullName: "",
       email: "",
-      phone: "",
       password: "",
-      confirmPassword: "",
+      phone: "",
+      birthDate: "",
+      tipo: "visitante",
+      isBaptized: "nao",
     },
   });
 
   const handleSubmit = async (data: CadastroFormData) => {
     if (!validToken || !token) {
-      setErrorMsg("Convite inválido.");
+      setErrorMsg("Convite inválido. Solicite um novo link de convite.");
       return;
     }
 
@@ -74,7 +75,10 @@ export default function Cadastrar() {
     setErrorMsg(null);
 
     try {
-      // 1. Criar usuário
+      // Garante que o token esteja salvo antes do signUp
+      sessionStorage.setItem("pending_invite_token", token);
+
+      // 1. CRIAR USUÁRIO (sem church_id — vínculo virá pelo convite)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -82,6 +86,8 @@ export default function Cadastrar() {
           data: {
             full_name: data.fullName,
             phone: data.phone || null,
+            birth_date: data.birthDate || null,
+            tipo: data.tipo,
           },
         },
       });
@@ -89,230 +95,234 @@ export default function Cadastrar() {
       if (authError) throw authError;
 
       const userId = authData.user?.id;
-      if (!userId) throw new Error("Erro ao criar usuário");
+      if (!userId) throw new Error("Falha ao criar conta.");
 
-      // 2. Login automático
-      await supabase.auth.signInWithPassword({
+      // 2. LOGIN AUTOMÁTICO para obter sessão válida
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });
 
-      // 3. Buscar convite
-      const { data: convite, error: conviteError } = await supabase
-        .from("invitations" as any)
-        .select("*")
-        .eq("token", token)
-        .single();
-
-      if (conviteError || !convite) {
-        throw new Error("Convite não encontrado");
+      if (signInError) {
+        toast({
+          title: "Conta criada!",
+          description: "Confirme seu email e faça login para aceitar o convite.",
+        });
+        navigate("/login");
+        return;
       }
 
-      const conviteData = convite as any;
+      // 3. Pequeno delay para garantir trigger handle_new_user
+      await new Promise((resolve) => setTimeout(resolve, 400));
 
-      // 4. Criar profile manualmente
-      const { error: profileError } = await supabase.from("profiles").upsert(
-        {
-          user_id: userId,
-          full_name: data.fullName,
-          email: data.email,
-          phone: data.phone || null,
-          church_id: conviteData.church_id,
-          registration_status: "ativo",
-        } as any,
-        { onConflict: "user_id" }
-      );
+      // 4. APLICAR CONVITE via RPC (token é a fonte de vínculo com igreja)
+      const pendingToken = sessionStorage.getItem("pending_invite_token");
+      let roles: string[] = [];
 
-      if (profileError) {
-        console.error(profileError);
-        throw new Error("Erro ao criar perfil");
+      if (pendingToken) {
+        const { data: acceptData, error: inviteError } = await supabase.rpc(
+          "aceitar_convite",
+          { p_token: pendingToken, p_user_id: userId }
+        );
+
+        if (inviteError) {
+          console.error("[Cadastrar] aceitar_convite error:", inviteError);
+          toast({
+            title: "Conta criada, mas houve erro ao aplicar convite.",
+            description: inviteError.message,
+            variant: "destructive",
+          });
+        } else {
+          const result = acceptData as any;
+          if (result?.success === false) {
+            toast({
+              title: "Erro ao aplicar convite",
+              description: result?.error || "Tente novamente.",
+              variant: "destructive",
+            });
+          } else {
+            sessionStorage.removeItem("pending_invite_token");
+            roles = result?.roles || [];
+            toast({ title: "Bem-vindo(a)!", description: "Convite aceito com sucesso." });
+          }
+        }
       }
 
-      // 5. Inserir role
-      const roleToInsert = conviteData.role || "membro";
-      const { error: roleError } = await supabase.from("user_roles").insert({
-        user_id: userId,
-        church_id: conviteData.church_id,
-        role: roleToInsert,
-      } as any);
-
-      if (roleError) {
-        console.error(roleError);
-      }
-
-      // 6. Marcar convite como usado
-      await supabase
-        .from("invitations" as any)
-        .update({
-          status: "accepted",
-          used_at: new Date().toISOString(),
-        })
-        .eq("token", token);
-
-      // 7. Limpar token
-      sessionStorage.removeItem("pending_invite_token");
-
-      toast({
-        title: "Cadastro concluído!",
-        description: "Bem-vindo à igreja!",
-      });
-
-      // 8. Redirecionar
-      window.location.href = "/app";
+      // 5. REDIRECIONAR baseado no role
+      const redirectTo = getRoleBasedRedirect(roles);
+      // Hard reload garante que AuthContext carregue church_id e roles atualizados
+      window.location.href = redirectTo;
     } catch (error: any) {
-      console.error(error);
-      setErrorMsg(error.message || "Erro ao cadastrar");
-      toast({
-        title: "Erro ao cadastrar",
-        description: error.message || "Tente novamente.",
-        variant: "destructive",
-      });
+      console.error("[Cadastrar] error:", error);
+      setErrorMsg(
+        error.message === "User already registered"
+          ? "Este email já está cadastrado. Faça login para aceitar o convite."
+          : error.message || "Erro ao cadastrar."
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
+  // 🚫 Token ausente ou inválido → bloqueia o cadastro
+  if (!validToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-muted">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
+              <AlertCircle className="w-6 h-6 text-destructive" />
+            </div>
+            <CardTitle>Convite necessário</CardTitle>
+            <CardDescription>
+              O cadastro só pode ser feito a partir de um link de convite válido.
+              <br />
+              Solicite um link ao administrador da sua igreja.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <Button asChild>
+              <Link to="/">Ir para a página inicial</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to="/login">Já tenho conta</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary/5 to-background p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-muted">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <Link to="/" className="flex items-center justify-center gap-2 mb-4">
-            <Church className="w-10 h-10 text-primary" />
-          </Link>
-          <CardTitle className="text-2xl">Aceitar Convite</CardTitle>
+          <div className="mx-auto w-12 h-12 gradient-primary rounded-full flex items-center justify-center mb-4">
+            <Church className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <CardTitle>Criar Conta</CardTitle>
           <CardDescription>
-            Crie sua conta para acessar a igreja
+            Você foi convidado(a) para uma igreja.
+            <br />
+            Preencha seus dados para entrar.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {!validToken && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Convite inválido ou ausente. Solicite um novo link.
-              </AlertDescription>
-            </Alert>
-          )}
 
+        <CardContent>
           {errorMsg && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{errorMsg}</AlertDescription>
-            </Alert>
+            <div className="text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2 mb-3">
+              {errorMsg}
+            </div>
           )}
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="fullName"
-                render={({ field }) => (
+              <FormField control={form.control} name="fullName" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome completo *</FormLabel>
+                  <FormControl><Input placeholder="Seu nome" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="email" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email *</FormLabel>
+                  <FormControl><Input type="email" placeholder="seu@email.com" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="password" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Senha *</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        {...field}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="phone" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telefone</FormLabel>
+                  <FormControl><Input placeholder="(00) 00000-0000" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="birthDate" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Data de nascimento</FormLabel>
+                  <FormControl><Input type="date" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <div className="grid grid-cols-2 gap-3">
+                <FormField control={form.control} name="tipo" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome Completo *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Seu nome completo" {...field} />
-                    </FormControl>
+                    <FormLabel>Tipo</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="visitante">Visitante</SelectItem>
+                        <SelectItem value="membro">Membro</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
+                )} />
 
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
+                <FormField control={form.control} name="isBaptized" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email *</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="seu@email.com" {...field} />
-                    </FormControl>
+                    <FormLabel>Batizado(a)?</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="sim">Sim</SelectItem>
+                        <SelectItem value="nao">Não</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
+                )} />
+              </div>
 
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Telefone</FormLabel>
-                    <FormControl>
-                      <Input placeholder="(00) 00000-0000" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Senha *</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type={showPassword ? "text" : "password"}
-                          placeholder="••••••••"
-                          {...field}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-0 top-0"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? (
-                            <EyeOff className="w-4 h-4" />
-                          ) : (
-                            <Eye className="w-4 h-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirmar Senha *</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading || !validToken}
-              >
-                {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Criar Conta
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading && <Loader2 className="animate-spin mr-2 w-4 h-4" />}
+                Criar conta e entrar
               </Button>
             </form>
           </Form>
 
-          <div className="mt-6 text-center text-sm">
-            <p className="text-muted-foreground">
-              Já tem uma conta?{" "}
-              <Link
-                to={`/login${token ? `?token=${token}` : ""}`}
-                className="text-primary hover:underline font-medium"
-              >
-                Fazer login
-              </Link>
-            </p>
+          <div className="text-center mt-4 text-sm text-muted-foreground">
+            Já tem conta?{" "}
+            <Link
+              to={`/login?redirect=${encodeURIComponent(`/accept-invite?token=${token}`)}`}
+              className="text-primary hover:underline font-medium"
+            >
+              Entrar
+            </Link>
           </div>
         </CardContent>
       </Card>
