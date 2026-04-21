@@ -16,6 +16,8 @@ import { Church, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { isValidUUID, getRoleBasedRedirect } from "@/lib/getRoleBasedRedirect";
+import { applyInvitationForUser } from "@/lib/authInvitation";
+import { clearAuthBrowserCache } from "@/lib/authProfile";
 
 const cadastroSchema = z.object({
   fullName: z.string().min(2, "Nome obrigatório"),
@@ -120,37 +122,26 @@ export default function Cadastrar() {
       let roles: string[] = [];
 
       if (pendingToken) {
-        const { data: acceptData, error: inviteError } = await supabase.rpc(
-          "aceitar_convite",
-          { p_token: pendingToken, p_user_id: userId }
-        );
-
-        if (inviteError) {
-          console.error("[Cadastrar] aceitar_convite error:", inviteError);
+        try {
+          const currentUser = (await supabase.auth.getUser()).data.user ?? authData.user;
+          const result = await applyInvitationForUser(pendingToken, currentUser!);
+          sessionStorage.removeItem("pending_invite_token");
+          roles = result.roles || [];
+          toast({ title: "Bem-vindo(a)!", description: "Convite aceito com sucesso." });
+        } catch (inviteError: any) {
+          console.error("[Cadastrar] applyInvitationForUser error:", inviteError);
           toast({
             title: "Conta criada, mas houve erro ao aplicar convite.",
             description: inviteError.message,
             variant: "destructive",
           });
-        } else {
-          const result = acceptData as any;
-          if (result?.success === false) {
-            toast({
-              title: "Erro ao aplicar convite",
-              description: result?.error || "Tente novamente.",
-              variant: "destructive",
-            });
-          } else {
-            sessionStorage.removeItem("pending_invite_token");
-            roles = result?.roles || [];
-            toast({ title: "Bem-vindo(a)!", description: "Convite aceito com sucesso." });
-          }
         }
       }
 
       // 5. REDIRECIONAR baseado no role
       const redirectTo = getRoleBasedRedirect(roles);
       // Hard reload garante que AuthContext carregue church_id e roles atualizados
+      await clearAuthBrowserCache();
       window.location.href = redirectTo;
     } catch (error: any) {
       console.error("[Cadastrar] error:", error);

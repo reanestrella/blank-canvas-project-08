@@ -19,6 +19,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Eye, EyeOff, Church, AlertCircle } from "lucide-react";
+import { applyInvitationForUser, fetchInvitationByToken } from "@/lib/authInvitation";
+import { clearAuthBrowserCache } from "@/lib/authProfile";
 
 const registerSchema = z.object({
   full_name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
@@ -90,22 +92,7 @@ export default function Convite() {
       sessionStorage.setItem("pending_invite_token", token);
 
       try {
-        const { data, error: rpcError } = await supabase.rpc("validate_invitation" as any, {
-          p_token: token,
-        } as any);
-
-        if (rpcError) {
-          console.error("validate_invitation error:", rpcError);
-          setError("Erro ao validar convite. Tente novamente.");
-          return;
-        }
-
-        if (!data || (Array.isArray(data) && data.length === 0)) {
-          setError("Convite inválido, expirado ou já utilizado.");
-          return;
-        }
-
-        const invitationRow = Array.isArray(data) ? data[0] : data;
+        const invitationRow = await fetchInvitationByToken(token);
         setInvitation(invitationRow as InvitationData);
 
         if (invitationRow.full_name) {
@@ -130,7 +117,7 @@ export default function Convite() {
       // Preserva token para fluxo pós-cadastro
       sessionStorage.setItem("pending_invite_token", token);
 
-      // 1. Create user account WITH church_id so handle_new_user trigger creates profile correctly
+      // 1. Create user account without church_id; invite defines vínculo
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: invitation.email,
         password: data.password,
@@ -138,8 +125,6 @@ export default function Convite() {
           emailRedirectTo: getAppUrl(),
           data: {
             full_name: data.full_name,
-            church_id: invitation.church_id,
-            congregation_id: invitation.congregation_id || null,
           },
         },
       });
@@ -165,31 +150,27 @@ export default function Convite() {
         return;
       }
 
-      // 3. Aceitar convite via RPC usando o token salvo
+      // 3. Aceitar convite com usuário autenticado
       const pendingToken = sessionStorage.getItem("pending_invite_token") || token;
-      const { data: acceptData, error: acceptError } = await supabase.rpc(
-        "aceitar_convite",
-        { p_token: pendingToken, p_user_id: authData.user.id }
-      );
-      console.log("[Convite] aceitar_convite result:", acceptData, acceptError);
-
-      if (acceptError) {
-        console.error("aceitar_convite RPC error:", acceptError);
-        toast({
-          title: "Conta criada, mas houve erro ao aceitar convite.",
-          description: acceptError.message || "Tente novamente acessando o link.",
-          variant: "destructive",
-        });
-        // Mantém token salvo para nova tentativa
-      } else {
+      try {
+        const currentUser = (await supabase.auth.getUser()).data.user ?? authData.user;
+        await applyInvitationForUser(pendingToken, currentUser!);
         sessionStorage.removeItem("pending_invite_token");
         toast({
           title: "Conta criada com sucesso!",
           description: "Você já pode acessar o sistema.",
         });
+      } catch (acceptError: any) {
+        console.error("aceitar_convite/apply invitation error:", acceptError);
+        toast({
+          title: "Conta criada, mas houve erro ao aceitar convite.",
+          description: acceptError.message || "Tente novamente acessando o link.",
+          variant: "destructive",
+        });
       }
 
       // Full reload to ensure AuthContext picks up new church_id and roles cleanly
+      await clearAuthBrowserCache();
       setTimeout(() => {
         window.location.href = "/meu-app";
       }, 500);
