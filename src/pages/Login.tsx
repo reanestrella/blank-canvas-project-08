@@ -16,6 +16,7 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { APP_BRAND_LOGO, APP_BRAND_NAME } from "@/lib/brand";
+import { clearAuthBrowserCache, getInviteTokenFromRedirect } from "@/lib/authProfile";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -38,6 +39,10 @@ export default function Login() {
     if (!rawRedirect) return;
     const decoded = decodeURIComponent(rawRedirect);
     sessionStorage.setItem("post_login_redirect", decoded);
+    const inviteToken = getInviteTokenFromRedirect(decoded);
+    if (inviteToken) {
+      sessionStorage.setItem("pending_invite_token", inviteToken);
+    }
   }, [rawRedirect]);
 
   const form = useForm<LoginFormData>({
@@ -76,11 +81,16 @@ export default function Login() {
 
       // Check for pending redirect (invite flow)
       const pendingRedirect = sessionStorage.getItem("post_login_redirect");
+      const inviteToken = getInviteTokenFromRedirect(pendingRedirect);
+      if (inviteToken) {
+        sessionStorage.setItem("pending_invite_token", inviteToken);
+      }
+      await clearAuthBrowserCache();
       if (pendingRedirect) {
         sessionStorage.removeItem("post_login_redirect");
-        navigate(pendingRedirect, { replace: true });
+        window.location.href = pendingRedirect;
       } else {
-        navigate("/meu-app", { replace: true });
+        window.location.href = "/meu-app";
       }
     } catch (error) {
       console.error("Erro login:", error);
