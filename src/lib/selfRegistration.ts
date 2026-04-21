@@ -77,7 +77,7 @@ export async function syncSelfRegistrationProfile(
       { onConflict: "user_id" },
     )
     .select("user_id, church_id, congregation_id")
-    .single();
+    .maybeSingle();
 
   if (profileError) {
     throw profileError;

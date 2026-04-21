@@ -24,14 +24,8 @@ const isPreviewHost =
   window.location.hostname.includes("id-preview--") ||
   window.location.hostname.includes("lovableproject.com");
 
-if (isPreviewHost || isInIframe) {
+if ("serviceWorker" in navigator) {
   navigator.serviceWorker?.getRegistrations().then((regs) =>
     regs.forEach((r) => r.unregister())
   );
-} else if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js")
-      .then(() => console.log("SW registrado"))
-      .catch((err) => console.log("Erro SW:", err));
-  });
 }

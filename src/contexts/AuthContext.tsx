@@ -3,6 +3,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { queryClient } from "@/lib/queryClient";
 import { getRegistrationBinding, syncSelfRegistrationProfile } from "@/lib/selfRegistration";
+import { clearAuthBrowserCache, ensureUserProfile } from "@/lib/authProfile";
 import { setDynamicManifest } from "@/lib/setDynamicManifest";
 
 interface Profile {
@@ -15,6 +16,8 @@ interface Profile {
   email: string;
   phone: string | null;
   avatar_url: string | null;
+  registration_status?: string | null;
+  is_linked?: boolean | null;
 }
 
 interface Church {
@@ -69,6 +72,169 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const prevUserIdRef = useRef<string | null>(null);
   const initialSessionHandled = useRef(false);
   const fetchingRef = useRef(false);
+  const fetchUserData = async (userId: string) => {
+    try {
+      console.log("[Auth] fetchUserData for:", userId);
+      const { data: authUserData, error: authUserError } = await supabase.auth.getUser();
+      const authUser = authUserData.user;
+
+      if (authUserError || !authUser || authUser.id !== userId) {
+        console.error("[Auth] could not resolve auth user for profile sync:", authUserError);
+      }
+
+      let { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("[Auth] Error fetching profile:", profileError);
+      }
+
+      if (!profileData && authUser) {
+        console.log("[Auth] profile missing, creating fallback profile for:", userId);
+        try {
+          profileData = await ensureUserProfile(authUser);
+        } catch (ensureError) {
+          console.error("[Auth] fallback profile creation failed:", ensureError);
+        }
+      }
+
+      if (profileData && !profileData.church_id && authUser) {
+        const binding = getRegistrationBinding(authUser);
+        if (binding.churchId) {
+          console.log("[Auth] Self-healing: recovering church_id from metadata:", binding.churchId);
+          try {
+            const result = await syncSelfRegistrationProfile(authUser, {
+              churchId: binding.churchId,
+              congregationId: binding.congregationId,
+              fullName: binding.fullName,
+              phone: binding.phone,
+              ensurePendingUser: true,
+            });
+            if (result.churchId) {
+              const { data: fixedProfile, error: fixedProfileError } = await supabase
+                .from("profiles")
+                .select("*")
+                .eq("user_id", userId)
+                .maybeSingle();
+              if (fixedProfileError) {
+                console.error("[Auth] error reloading healed profile:", fixedProfileError);
+              } else if (fixedProfile) {
+                profileData = fixedProfile;
+              }
+            }
+          } catch (healErr) {
+            console.error("[Auth] Self-healing failed:", healErr);
+          }
+        }
+      }
+
+      if (!profileData && authUser) {
+        profileData = await ensureUserProfile(authUser).catch((error) => {
+          console.error("[Auth] second profile fallback failed:", error);
+          return null;
+        });
+      }
+
+      if (!profileData) {
+        console.error("[Auth] no profile available after fallback for user:", userId);
+        setProfile(null);
+        setChurch(null);
+        setRoles([]);
+        return;
+      }
+
+      let resolvedProfile = profileData as Profile;
+
+      if (!resolvedProfile.member_id && resolvedProfile.church_id) {
+        const emailToMatch = resolvedProfile.email || authUser?.email;
+        if (emailToMatch) {
+          const { data: memberMatch, error: memberMatchError } = await supabase
+            .from("members")
+            .select("id")
+            .eq("church_id", resolvedProfile.church_id)
+            .eq("email", emailToMatch)
+            .limit(1)
+            .maybeSingle();
+
+          if (memberMatchError) {
+            console.error("[Auth] member auto-link error:", memberMatchError);
+          }
+
+          if (memberMatch) {
+            console.log("[Auth] Auto-linked member_id:", memberMatch.id);
+            const { error: updateMemberError } = await supabase
+              .from("profiles")
+              .update({ member_id: memberMatch.id })
+              .eq("user_id", userId);
+
+            if (updateMemberError) {
+              console.error("[Auth] member_id update error:", updateMemberError);
+            } else {
+              resolvedProfile = { ...resolvedProfile, member_id: memberMatch.id };
+            }
+          }
+        }
+      }
+
+      setProfile(resolvedProfile);
+      console.log("[Auth] profile loaded:", resolvedProfile);
+      console.log("[Auth] church_id:", resolvedProfile.church_id);
+
+      if (resolvedProfile.church_id) {
+        const [churchResponse, rolesResponse] = await Promise.all([
+          supabase
+            .from("churches")
+            .select("id, name, logo_url, slug, primary_color, secondary_color, ministry_name, plan, is_active")
+            .eq("id", resolvedProfile.church_id)
+            .maybeSingle(),
+          supabase
+            .from("user_roles")
+            .select("role, church_id")
+            .eq("user_id", userId)
+            .eq("church_id", resolvedProfile.church_id),
+        ]);
+
+        if (churchResponse.error) {
+          console.error("[Auth] error fetching church:", churchResponse.error);
+          setChurch(null);
+        } else if (churchResponse.data) {
+          setChurch(churchResponse.data as Church);
+          setDynamicManifest(
+            resolvedProfile.church_id,
+            churchResponse.data.logo_url ?? undefined,
+            churchResponse.data.name,
+          );
+        } else {
+          setChurch(null);
+        }
+
+        if (rolesResponse.error) {
+          console.error("[Auth] error fetching roles:", rolesResponse.error);
+          setRoles([]);
+        } else {
+          const loadedRoles = (rolesResponse.data ?? []) as UserRole[];
+          setRoles(loadedRoles);
+          console.log("[Auth] roles loaded:", loadedRoles.map((role) => role.role));
+
+          const restrictedRoles = ["tesoureiro", "secretario", "pastor"];
+          if (loadedRoles.some((role) => restrictedRoles.includes(role.role))) {
+            localStorage.setItem("keep_logged_in", "false");
+            sessionStorage.setItem("session_active", "1");
+          }
+        }
+      } else {
+        setChurch(null);
+        setRoles([]);
+      }
+    } catch (error) {
+      console.error("[Auth] Error fetching user data:", error);
+      setChurch(null);
+      setRoles([]);
+    }
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -157,154 +323,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchUserData = async (userId: string) => {
-    try {
-      console.log("[Auth] fetchUserData for:", userId);
-      // 1. Fetch profile — single source of church_id
-      let { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", userId)
-        .single();
-      
-      if (profileError) {
-        console.error("[Auth] Error fetching profile:", profileError.message);
-        // Fallback: create a minimal profile from auth user data
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser) {
-          setProfile({
-            id: "",
-            user_id: userId,
-            church_id: null,
-            full_name: authUser.email || "Usuário",
-            email: authUser.email || "",
-            phone: null,
-            avatar_url: null,
-          });
-        } else {
-          setProfile(null);
-        }
-        setChurch(null);
-        setRoles([]);
-        return;
-      }
-
-      if (profileData) {
-        let resolvedProfile = profileData as Profile;
-
-        // Self-healing: if profile has no church_id, try to recover from auth metadata
-        if (!profileData.church_id) {
-          const { data: { user: authUser } } = await supabase.auth.getUser();
-          if (authUser) {
-            const binding = getRegistrationBinding(authUser);
-            if (binding.churchId) {
-              console.log("[Auth] Self-healing: recovering church_id from metadata:", binding.churchId);
-              try {
-                const result = await syncSelfRegistrationProfile(authUser, {
-                  churchId: binding.churchId,
-                  congregationId: binding.congregationId,
-                  fullName: binding.fullName,
-                  phone: binding.phone,
-                  ensurePendingUser: true,
-                });
-                if (result.churchId) {
-                  // Re-fetch profile after fix
-                  const { data: fixedProfile } = await supabase
-                    .from("profiles")
-                    .select("*")
-                    .eq("user_id", userId)
-                    .single();
-                  if (fixedProfile) {
-                    resolvedProfile = fixedProfile as Profile;
-                    profileData = fixedProfile;
-                  }
-                }
-              } catch (healErr) {
-                console.error("[Auth] Self-healing failed:", healErr);
-              }
-            }
-          }
-        }
-
-        // Auto-resolve member_id if missing (for existing users without linkage)
-        if (!resolvedProfile.member_id && resolvedProfile.church_id) {
-          const emailToMatch = resolvedProfile.email || session?.user?.email;
-          if (emailToMatch) {
-            const { data: memberMatch } = await supabase
-              .from("members")
-              .select("id")
-              .eq("church_id", resolvedProfile.church_id)
-              .eq("email", emailToMatch)
-              .limit(1)
-              .maybeSingle();
-            
-            if (memberMatch) {
-              console.log("[Auth] Auto-linked member_id:", memberMatch.id);
-              await supabase
-                .from("profiles")
-                .update({ member_id: memberMatch.id })
-                .eq("user_id", userId);
-              resolvedProfile = { ...resolvedProfile, member_id: memberMatch.id };
-            }
-          }
-        }
-
-        setProfile(resolvedProfile);
-        console.log("[Auth] profile loaded, churchId:", profileData.church_id, "memberId:", resolvedProfile.member_id);
-        
-        // 2. Fetch church info ONLY if profile has church_id
-        if (profileData.church_id) {
-          const { data: churchData } = await supabase
-            .from("churches")
-            .select("id, name, logo_url, slug, primary_color, secondary_color, ministry_name, plan, is_active")
-            .eq("id", profileData.church_id)
-            .single();
-          
-          if (churchData) {
-            setChurch(churchData as Church);
-            // Atualizar manifest dinâmico (Android) + apple-touch-icon (iOS)
-            setDynamicManifest(
-              profileData.church_id,
-              churchData.logo_url ?? undefined,
-              churchData.name,
-            );
-          }
-
-          // 3. Fetch roles FILTERED by this church_id
-          const { data: rolesData } = await supabase
-            .from("user_roles")
-            .select("role, church_id")
-            .eq("user_id", userId)
-            .eq("church_id", profileData.church_id);
-          
-          if (rolesData) {
-            console.log("[Auth] roles loaded:", rolesData.map((r: any) => r.role));
-            setRoles(rolesData as UserRole[]);
-
-            // Force temporary session for restricted roles (tesoureiro, secretario, pastor)
-            const restrictedRoles = ["tesoureiro", "secretario", "pastor"];
-            const hasRestrictedRole = rolesData.some((r: any) => restrictedRoles.includes(r.role));
-            if (hasRestrictedRole) {
-              localStorage.setItem("keep_logged_in", "false");
-              sessionStorage.setItem("session_active", "1");
-            }
-          } else {
-            setRoles([]);
-          }
-        } else {
-          setChurch(null);
-          setRoles([]);
-        }
-      } else {
-        setProfile(null);
-        setChurch(null);
-        setRoles([]);
-      }
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-    }
-  };
-
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -315,6 +333,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    await clearAuthBrowserCache();
     setProfile(null);
     setChurch(null);
     setRoles([]);
