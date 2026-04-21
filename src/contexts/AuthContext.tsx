@@ -355,11 +355,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshChurch = async () => {
     if (!currentChurchId) return;
     
-    const { data: churchData } = await supabase
+    const { data: churchData, error: churchError } = await supabase
       .from("churches")
       .select("id, name, logo_url, slug, primary_color, secondary_color, ministry_name, plan, is_active")
       .eq("id", currentChurchId)
-      .single();
+      .maybeSingle();
+    
+    if (churchError) {
+      console.error("[Auth] refreshChurch error:", churchError);
+      return;
+    }
     
     if (churchData) {
       setChurch(churchData as Church);
