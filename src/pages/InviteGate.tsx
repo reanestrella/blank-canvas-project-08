@@ -7,6 +7,8 @@ import { Loader2, AlertCircle, Church, LogOut, LogIn, UserPlus } from "lucide-re
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { isValidUUID, getRoleBasedRedirect } from "@/lib/getRoleBasedRedirect";
+import { applyInvitationForUser } from "@/lib/authInvitation";
+import { clearAuthBrowserCache } from "@/lib/authProfile";
 
 export default function InviteGate() {
   const [searchParams] = useSearchParams();
@@ -29,46 +31,25 @@ export default function InviteGate() {
     setErrorMsg("");
     try {
       const { data: sessionData } = await supabase.auth.getUser();
-      const userId = sessionData.user?.id;
-      if (!userId) {
+      const currentUser = sessionData.user;
+      if (!currentUser) {
         setErrorMsg("Usuário não autenticado.");
         setStatus("error");
         return;
       }
 
-      console.log("[InviteGate] calling aceitar_convite RPC with token:", token, "user:", userId);
-      const { data, error } = await supabase.rpc("aceitar_convite", {
-        p_token: token,
-        p_user_id: userId,
-      });
-
-      console.log("[InviteGate] RPC response — data:", JSON.stringify(data), "error:", error);
-
-      if (error) {
-        console.error("[InviteGate] RPC error:", error.message, error);
-        setErrorMsg(error.message || "Erro ao aceitar convite.");
-        setStatus("error");
-        return;
-      }
-
-      const result = data as any;
-
-      if (result && result.success === false) {
-        console.error("[InviteGate] RPC returned failure:", result.error);
-        setErrorMsg(result.error || "Erro ao aceitar convite.");
-        setStatus("error");
-        return;
-      }
+      const result = await applyInvitationForUser(token, currentUser);
 
       sessionStorage.removeItem("pending_invite_token");
       await refreshUserData();
+      await clearAuthBrowserCache();
 
       toast({ title: "Convite aceito!", description: "Você foi vinculado à igreja com sucesso." });
 
-      const roles: string[] = result?.roles || [];
+      const roles: string[] = result.roles || [];
       const redirectTo = getRoleBasedRedirect(roles);
       console.log("[InviteGate] success — redirecting to:", redirectTo);
-      navigate(redirectTo, { replace: true });
+      window.location.href = redirectTo;
     } catch (err: any) {
       console.error("[InviteGate] exception:", err);
       setErrorMsg(err.message || "Erro inesperado ao aceitar convite.");
@@ -160,7 +141,7 @@ export default function InviteGate() {
               <LogIn className="w-4 h-4 mr-2" />
               Entrar
             </Button>
-            <Button variant="outline" className="w-full" onClick={() => navigate(`/cadastrar?redirect=${redirectParam}`)}>
+            <Button variant="outline" className="w-full" onClick={() => navigate(`/cadastrar?token=${encodeURIComponent(token)}`)}>
               <UserPlus className="w-4 h-4 mr-2" />
               Criar conta
             </Button>
