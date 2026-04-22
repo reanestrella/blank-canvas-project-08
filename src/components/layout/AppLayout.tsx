@@ -49,7 +49,7 @@ export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
     if (isSuperAdmin) {
       return <Navigate to="/master" replace />;
     }
-    return <NoChurchScreen />;
+    return <Navigate to="/registro" replace />;
   }
 
   return (
