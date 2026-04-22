@@ -142,7 +142,7 @@ export default function Cadastrar() {
       await new Promise((r) => setTimeout(r, 500));
 
       // 9. REDIRECT SEGURO
-      let redirectTo = getRoleBasedRedirect(roles);
+      let redirectTo = "/"; // 👈 força home;
       if (!redirectTo || typeof redirectTo !== "string") {
         redirectTo = "/dashboard";
       }
