@@ -86,6 +86,7 @@ export default function Login() {
         sessionStorage.setItem("pending_invite_token", inviteToken);
       }
       await clearAuthBrowserCache();
+      sessionStorage.setItem("auth_post_login_reload", "1");
       if (pendingRedirect) {
         sessionStorage.removeItem("post_login_redirect");
         window.location.href = pendingRedirect;
