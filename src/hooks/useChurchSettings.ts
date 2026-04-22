@@ -46,10 +46,10 @@ export function useChurchSettings() {
         .from("churches")
         .select("*")
         .eq("id", profile.church_id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      setChurch(data as ChurchSettings);
+      if (data) setChurch(data as ChurchSettings);
     } catch (error: any) {
       console.error("Error fetching church:", error);
     } finally {
