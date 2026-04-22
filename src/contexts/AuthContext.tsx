@@ -159,8 +159,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
 
-      if (!profileData) {
+      if (!profileData && authUser) {
         console.error("[Auth] no profile available after fallback for user:", userId);
+        profileData = {
+          id: authUser.id,
+          user_id: authUser.id,
+          church_id: loadedRoles[0]?.church_id ?? null,
+          full_name:
+            typeof authUser.user_metadata?.full_name === "string"
+              ? authUser.user_metadata.full_name
+              : typeof authUser.user_metadata?.name === "string"
+                ? authUser.user_metadata.name
+                : authUser.email?.split("@")[0] ?? "Usuário",
+          email: authUser.email ?? "",
+          phone: typeof authUser.user_metadata?.phone === "string" ? authUser.user_metadata.phone : null,
+          avatar_url: null,
+          registration_status: "ativo",
+          is_linked: false,
+        } as Profile;
+      }
+
+      if (!profileData) {
         console.log("PROFILE:", null);
         console.log("ROLES:", loadedRoles);
         console.log("CHURCH:", loadedRoles[0]?.church_id ?? null);
