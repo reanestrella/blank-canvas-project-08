@@ -142,7 +142,17 @@ export default function Cadastrar() {
       const redirectTo = getRoleBasedRedirect(roles);
       // Hard reload garante que AuthContext carregue church_id e roles atualizados
       await clearAuthBrowserCache();
-      window.location.href = redirectTo;
+      // 🔥 FORÇA ATUALIZAÇÃO DA SESSÃO
+await supabase.auth.refreshSession();
+
+// 🔥 PEGA USUÁRIO ATUALIZADO
+const { data: { user } } = await supabase.auth.getUser();
+
+// 🔥 PEQUENO DELAY (IMPORTANTE)
+await new Promise((resolve) => setTimeout(resolve, 500));
+
+// 🔥 REDIRECIONA
+window.location.href = redirectTo;;
     } catch (error: any) {
       console.error("[Cadastrar] error:", error);
       setErrorMsg(
