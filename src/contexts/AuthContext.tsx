@@ -33,7 +33,16 @@ interface Church {
 }
 
 interface UserRole {
-  role: "pastor" | "tesoureiro" | "secretario" | "lider_celula" | "lider_ministerio" | "consolidacao" | "membro";
+  role:
+    | "pastor"
+    | "tesoureiro"
+    | "secretario"
+    | "lider_celula"
+    | "lider_ministerio"
+    | "consolidacao"
+    | "membro"
+    | "network_admin"
+    | "network_finance";
   church_id: string;
 }
 
@@ -66,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   // Single source of truth for church_id
-  const currentChurchId = profile?.church_id ?? null;
+  const currentChurchId = profile?.church_id ?? roles[0]?.church_id ?? null;
   const hasNoChurch = !isLoading && !!user && !currentChurchId;
 
   const prevUserIdRef = useRef<string | null>(null);
@@ -100,6 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("USER:", userId);
       console.log("[Auth] fetchUserData for:", userId);
+
       const { data: authUserData, error: authUserError } = await supabase.auth.getUser();
       const authUser = authUserData.user;
 
@@ -107,15 +117,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("[Auth] could not resolve auth user for profile sync:", authUserError);
       }
 
-      let { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", userId)
-        .limit(1)
-        .maybeSingle();
+      const [profileResponse, rolesResponse] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", userId)
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("user_roles")
+          .select("*")
+          .eq("user_id", userId),
+      ]);
 
-      if (profileError) {
-        console.error("[Auth] Error fetching profile:", profileError);
+      let profileData = profileResponse.data;
+      let loadedRoles: UserRole[] = [];
+
+      if (profileResponse.error) {
+        console.error("[Auth] Error fetching profile:", profileResponse.error);
+      }
+
+      if (rolesResponse.error) {
+        console.error("[Auth] error fetching roles:", rolesResponse.error);
+      } else {
+        loadedRoles = (rolesResponse.data ?? []) as UserRole[];
       }
 
       if (!profileData && authUser) {
@@ -124,37 +149,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           profileData = await ensureUserProfile(authUser);
         } catch (ensureError) {
           console.error("[Auth] fallback profile creation failed:", ensureError);
-        }
-      }
-
-      if (profileData && !profileData.church_id && authUser) {
-        const binding = getRegistrationBinding(authUser);
-        if (binding.churchId) {
-          console.log("[Auth] Self-healing: recovering church_id from metadata:", binding.churchId);
-          try {
-            const result = await syncSelfRegistrationProfile(authUser, {
-              churchId: binding.churchId,
-              congregationId: binding.congregationId,
-              fullName: binding.fullName,
-              phone: binding.phone,
-              ensurePendingUser: true,
-            });
-            if (result.churchId) {
-              const { data: fixedProfile, error: fixedProfileError } = await supabase
-                .from("profiles")
-                .select("*")
-                .eq("user_id", userId)
-                .limit(1)
-                .maybeSingle();
-              if (fixedProfileError) {
-                console.error("[Auth] error reloading healed profile:", fixedProfileError);
-              } else if (fixedProfile) {
-                profileData = fixedProfile;
-              }
-            }
-          } catch (healErr) {
-            console.error("[Auth] Self-healing failed:", healErr);
-          }
         }
       }
 
@@ -168,22 +162,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!profileData) {
         console.error("[Auth] no profile available after fallback for user:", userId);
         console.log("PROFILE:", null);
-        console.log("CHURCH:", null);
-        console.log("ROLES:", []);
-        return { profile: null, church: null, roles: [] as UserRole[] };
+        console.log("ROLES:", loadedRoles);
+        console.log("CHURCH:", loadedRoles[0]?.church_id ?? null);
+        return { profile: null, church: null, roles: loadedRoles };
       }
 
       let resolvedProfile = profileData as Profile;
       let resolvedChurch: Church | null = null;
-      let loadedRoles: UserRole[] = [];
+      let resolvedChurchId = resolvedProfile.church_id ?? loadedRoles[0]?.church_id ?? null;
 
-      if (!resolvedProfile.member_id && resolvedProfile.church_id) {
+      if (!resolvedChurchId && authUser) {
+        const binding = getRegistrationBinding(authUser);
+        if (binding.churchId) {
+          console.log("[Auth] Self-healing: recovering church_id from metadata:", binding.churchId);
+          try {
+            const result = await syncSelfRegistrationProfile(authUser, {
+              churchId: binding.churchId,
+              congregationId: binding.congregationId,
+              fullName: binding.fullName,
+              phone: binding.phone,
+              ensurePendingUser: true,
+            });
+
+            if (result.churchId) {
+              const { data: fixedProfile, error: fixedProfileError } = await supabase
+                .from("profiles")
+                .select("*")
+                .eq("user_id", userId)
+                .limit(1)
+                .maybeSingle();
+
+              if (fixedProfileError) {
+                console.error("[Auth] error reloading healed profile:", fixedProfileError);
+              } else if (fixedProfile) {
+                resolvedProfile = fixedProfile as Profile;
+                resolvedChurchId = fixedProfile.church_id ?? binding.churchId;
+              }
+            }
+          } catch (healErr) {
+            console.error("[Auth] Self-healing failed:", healErr);
+          }
+        }
+      }
+
+      if (!resolvedProfile.church_id && resolvedChurchId) {
+        const { error: healProfileError } = await supabase
+          .from("profiles")
+          .update({ church_id: resolvedChurchId })
+          .eq("user_id", userId);
+
+        if (healProfileError) {
+          console.error("[Auth] error healing profile church_id:", healProfileError);
+        } else {
+          resolvedProfile = { ...resolvedProfile, church_id: resolvedChurchId };
+          console.log("[Auth] healed church_id from roles:", resolvedChurchId);
+        }
+      }
+
+      if (!resolvedProfile.member_id && resolvedChurchId) {
         const emailToMatch = resolvedProfile.email || authUser?.email;
         if (emailToMatch) {
           const { data: memberMatch, error: memberMatchError } = await supabase
             .from("members")
             .select("id")
-            .eq("church_id", resolvedProfile.church_id)
+            .eq("church_id", resolvedChurchId)
             .eq("email", emailToMatch)
             .limit(1)
             .maybeSingle();
@@ -208,64 +250,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      console.log("PROFILE:", resolvedProfile);
-      console.log("CHURCH:", resolvedProfile.church_id ?? null);
-      console.log("[Auth] profile loaded:", resolvedProfile);
-      console.log("[Auth] church_id:", resolvedProfile.church_id);
-
-      const [churchResponse, rolesResponse] = await Promise.all([
-        resolvedProfile.church_id
-          ? supabase
-              .from("churches")
-              .select("id, name, logo_url, slug, primary_color, secondary_color, ministry_name, plan, is_active")
-              .eq("id", resolvedProfile.church_id)
-              .maybeSingle()
-          : Promise.resolve({ data: null, error: null }),
-        supabase
-          .from("user_roles")
-          .select("role, church_id")
-          .eq("user_id", userId),
-      ]);
-
-      if (rolesResponse.error) {
-        console.error("[Auth] error fetching roles:", rolesResponse.error);
-        console.log("ROLES:", []);
-      } else {
-        loadedRoles = (rolesResponse.data ?? []) as UserRole[];
-        console.log("ROLES:", loadedRoles);
-        console.log("[Auth] roles loaded:", loadedRoles.map((role) => role.role));
-
-        if (!resolvedProfile.church_id) {
-          const derivedChurchId = loadedRoles[0]?.church_id ?? null;
-          if (derivedChurchId) {
-            const { error: healProfileError } = await supabase
-              .from("profiles")
-              .update({ church_id: derivedChurchId })
-              .eq("user_id", userId);
-
-            if (healProfileError) {
-              console.error("[Auth] error healing profile church_id from roles:", healProfileError);
-            } else {
-              resolvedProfile = { ...resolvedProfile, church_id: derivedChurchId };
-              console.log("[Auth] healed church_id from roles:", derivedChurchId);
-            }
-          }
-        }
-
-        const restrictedRoles = ["tesoureiro", "secretario", "pastor"];
-        if (loadedRoles.some((role) => restrictedRoles.includes(role.role))) {
-          localStorage.setItem("keep_logged_in", "false");
-          sessionStorage.setItem("session_active", "1");
-        }
+      const restrictedRoles = ["tesoureiro", "secretario", "pastor"];
+      if (loadedRoles.some((role) => restrictedRoles.includes(role.role))) {
+        localStorage.setItem("keep_logged_in", "false");
+        sessionStorage.setItem("session_active", "1");
       }
 
-      if (resolvedProfile.church_id) {
+      if (resolvedChurchId) {
+        const churchResponse = await supabase
+          .from("churches")
+          .select("id, name, logo_url, slug, primary_color, secondary_color, ministry_name, plan, is_active")
+          .eq("id", resolvedChurchId)
+          .maybeSingle();
+
         if (churchResponse.error) {
           console.error("[Auth] error fetching church:", churchResponse.error);
         } else if (churchResponse.data) {
           resolvedChurch = churchResponse.data as Church;
           setDynamicManifest(
-            resolvedProfile.church_id,
+            resolvedChurchId,
             churchResponse.data.logo_url ?? undefined,
             churchResponse.data.name,
           );
@@ -273,13 +276,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log("PROFILE:", resolvedProfile);
-      console.log("CHURCH:", resolvedProfile.church_id ?? null);
       console.log("ROLES:", loadedRoles);
+      console.log("CHURCH:", resolvedChurchId);
+      console.log("[Auth] profile loaded:", resolvedProfile);
+      console.log("[Auth] roles loaded:", loadedRoles.map((role) => role.role));
+      console.log("[Auth] church_id:", resolvedChurchId);
 
-      return { profile: resolvedProfile, church: resolvedChurch, roles: loadedRoles };
+      return {
+        profile: { ...resolvedProfile, church_id: resolvedChurchId },
+        church: resolvedChurch,
+        roles: loadedRoles,
+      };
     } catch (error) {
       console.error("[Auth] Error fetching user data:", error);
+      console.log("PROFILE:", null);
       console.log("ROLES:", []);
+      console.log("CHURCH:", null);
       return { profile: null, church: null, roles: [] as UserRole[] };
     }
   };
