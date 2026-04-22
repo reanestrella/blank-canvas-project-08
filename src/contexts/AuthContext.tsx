@@ -288,19 +288,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("[Auth] event:", event, "user:", session?.user?.id);
-        setSession(session);
-        setUser(session?.user ?? null);
         
         if (event === "SIGNED_OUT") {
           prevUserIdRef.current = null;
           initialSessionHandled.current = false;
           fetchingRef.current = false;
           authResolvedRef.current = true;
-          setProfile(null);
-          setChurch(null);
-          setRoles([]);
+          applyResolvedAuthState({
+            nextSession: null,
+            nextUser: null,
+            nextProfile: null,
+            nextChurch: null,
+            nextRoles: [],
+          });
           queryClient.clear();
-          setIsLoading(false);
           return;
         }
 
@@ -327,26 +328,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           // Defer to avoid deadlock inside onAuthStateChange
           setTimeout(async () => {
-            await fetchUserData(newUserId);
+            const resolvedData = await fetchUserData(newUserId);
+            applyResolvedAuthState({
+              nextSession: session,
+              nextUser: session.user,
+              nextProfile: resolvedData?.profile ?? null,
+              nextChurch: resolvedData?.church ?? null,
+              nextRoles: resolvedData?.roles ?? [],
+            });
             fetchingRef.current = false;
-            authResolvedRef.current = true;
-            setIsLoading(false);
           }, 0);
         } else {
           prevUserIdRef.current = null;
-          setProfile(null);
-          setChurch(null);
-          setRoles([]);
-          authResolvedRef.current = true;
-          setIsLoading(false);
+          applyResolvedAuthState({
+            nextSession: null,
+            nextUser: null,
+            nextProfile: null,
+            nextChurch: null,
+            nextRoles: [],
+          });
         }
       }
     );
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       initialSessionHandled.current = true;
-      setSession(session);
-      setUser(session?.user ?? null);
       
       if (session?.user) {
         // Check "keep logged in" preference — if not kept AND browser was closed, sign out
@@ -363,13 +369,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         prevUserIdRef.current = session.user.id;
         if (!fetchingRef.current) {
           fetchingRef.current = true;
-          await fetchUserData(session.user.id);
+          const resolvedData = await fetchUserData(session.user.id);
+          applyResolvedAuthState({
+            nextSession: session,
+            nextUser: session.user,
+            nextProfile: resolvedData?.profile ?? null,
+            nextChurch: resolvedData?.church ?? null,
+            nextRoles: resolvedData?.roles ?? [],
+          });
           fetchingRef.current = false;
         }
+      } else {
+        applyResolvedAuthState({
+          nextSession: null,
+          nextUser: null,
+          nextProfile: null,
+          nextChurch: null,
+          nextRoles: [],
+        });
       }
-      
-      authResolvedRef.current = true;
-      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -426,9 +444,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUserData = async () => {
     if (user) {
       setIsLoading(true);
-      await fetchUserData(user.id);
-      authResolvedRef.current = true;
-      setIsLoading(false);
+      const resolvedData = await fetchUserData(user.id);
+      applyResolvedAuthState({
+        nextSession: session,
+        nextUser: user,
+        nextProfile: resolvedData?.profile ?? null,
+        nextChurch: resolvedData?.church ?? null,
+        nextRoles: resolvedData?.roles ?? [],
+      });
     }
   };
 
