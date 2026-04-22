@@ -208,26 +208,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      setProfile(resolvedProfile);
       console.log("PROFILE:", resolvedProfile);
       console.log("CHURCH:", resolvedProfile.church_id ?? null);
       console.log("[Auth] profile loaded:", resolvedProfile);
       console.log("[Auth] church_id:", resolvedProfile.church_id);
 
-      if (resolvedProfile.church_id) {
-        const [churchResponse, rolesResponse] = await Promise.all([
-          supabase
-            .from("churches")
-            .select("id, name, logo_url, slug, primary_color, secondary_color, ministry_name, plan, is_active")
-            .eq("id", resolvedProfile.church_id)
-            .maybeSingle(),
-          supabase
-            .from("user_roles")
-            .select("role, church_id")
-            .eq("user_id", userId)
-            .eq("church_id", resolvedProfile.church_id),
-        ]);
+      const [churchResponse, rolesResponse] = await Promise.all([
+        resolvedProfile.church_id
+          ? supabase
+              .from("churches")
+              .select("id, name, logo_url, slug, primary_color, secondary_color, ministry_name, plan, is_active")
+              .eq("id", resolvedProfile.church_id)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        supabase
+          .from("user_roles")
+          .select("role, church_id")
+          .eq("user_id", userId),
+      ]);
 
+      if (rolesResponse.error) {
+        console.error("[Auth] error fetching roles:", rolesResponse.error);
+        console.log("ROLES:", []);
+      } else {
+        loadedRoles = (rolesResponse.data ?? []) as UserRole[];
+        console.log("ROLES:", loadedRoles);
+        console.log("[Auth] roles loaded:", loadedRoles.map((role) => role.role));
+
+        if (!resolvedProfile.church_id) {
+          const derivedChurchId = loadedRoles[0]?.church_id ?? null;
+          if (derivedChurchId) {
+            const { error: healProfileError } = await supabase
+              .from("profiles")
+              .update({ church_id: derivedChurchId })
+              .eq("user_id", userId);
+
+            if (healProfileError) {
+              console.error("[Auth] error healing profile church_id from roles:", healProfileError);
+            } else {
+              resolvedProfile = { ...resolvedProfile, church_id: derivedChurchId };
+              console.log("[Auth] healed church_id from roles:", derivedChurchId);
+            }
+          }
+        }
+
+        const restrictedRoles = ["tesoureiro", "secretario", "pastor"];
+        if (loadedRoles.some((role) => restrictedRoles.includes(role.role))) {
+          localStorage.setItem("keep_logged_in", "false");
+          sessionStorage.setItem("session_active", "1");
+        }
+      }
+
+      if (resolvedProfile.church_id) {
         if (churchResponse.error) {
           console.error("[Auth] error fetching church:", churchResponse.error);
         } else if (churchResponse.data) {
@@ -238,23 +270,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             churchResponse.data.name,
           );
         }
-
-        if (rolesResponse.error) {
-          console.error("[Auth] error fetching roles:", rolesResponse.error);
-          console.log("ROLES:", []);
-        } else {
-          loadedRoles = (rolesResponse.data ?? []) as UserRole[];
-          console.log("ROLES:", loadedRoles);
-          console.log("[Auth] roles loaded:", loadedRoles.map((role) => role.role));
-
-          const restrictedRoles = ["tesoureiro", "secretario", "pastor"];
-          if (loadedRoles.some((role) => restrictedRoles.includes(role.role))) {
-            localStorage.setItem("keep_logged_in", "false");
-            sessionStorage.setItem("session_active", "1");
-          }
-        }
-      } else {
-        console.log("ROLES:", []);
       }
 
       console.log("PROFILE:", resolvedProfile);
