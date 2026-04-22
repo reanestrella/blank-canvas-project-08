@@ -20,18 +20,41 @@ export function getUserDisplayName(user?: Pick<User, "email" | "user_metadata"> 
 }
 
 export async function ensureUserProfile(user: MinimalUser) {
+  const { data: existingProfile, error: existingProfileError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (existingProfileError) {
+    console.error("[AuthProfile] failed to fetch existing profile:", existingProfileError);
+    throw existingProfileError;
+  }
+
+  if (existingProfile) {
+    return existingProfile;
+  }
+
   const payload = {
     user_id: user.id,
     email: user.email ?? "",
     full_name: getUserDisplayName(user),
     phone: getMetadataString(user.user_metadata?.phone),
     church_id: null,
+    registration_status: "ativo",
   } as const;
+
+  const { error: insertError } = await supabase.from("profiles").insert(payload as never);
+
+  if (insertError) {
+    console.error("[AuthProfile] failed to create profile:", insertError);
+    throw insertError;
+  }
 
   const { data, error } = await supabase
     .from("profiles")
-    .upsert(payload as never, { onConflict: "user_id" })
     .select("*")
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (error) {
