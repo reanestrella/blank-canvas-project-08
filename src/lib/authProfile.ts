@@ -24,6 +24,7 @@ export async function ensureUserProfile(user: MinimalUser) {
     .from("profiles")
     .select("*")
     .eq("user_id", user.id)
+    .limit(1)
     .maybeSingle();
 
   if (existingProfileError) {
@@ -55,6 +56,7 @@ export async function ensureUserProfile(user: MinimalUser) {
     .from("profiles")
     .select("*")
     .eq("user_id", user.id)
+    .limit(1)
     .maybeSingle();
 
   if (error) {
