@@ -72,8 +72,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const prevUserIdRef = useRef<string | null>(null);
   const initialSessionHandled = useRef(false);
   const fetchingRef = useRef(false);
+  const authResolvedRef = useRef(false);
   const fetchUserData = async (userId: string) => {
     try {
+      console.log("USER:", userId);
       console.log("[Auth] fetchUserData for:", userId);
       const { data: authUserData, error: authUserError } = await supabase.auth.getUser();
       const authUser = authUserData.user;
@@ -143,6 +145,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(null);
         setChurch(null);
         setRoles([]);
+        console.log("PROFILE:", null);
+        console.log("CHURCH:", null);
+        console.log("ROLES:", []);
         return;
       }
 
@@ -180,6 +185,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setProfile(resolvedProfile);
+      console.log("PROFILE:", resolvedProfile);
+      console.log("CHURCH:", resolvedProfile.church_id ?? null);
       console.log("[Auth] profile loaded:", resolvedProfile);
       console.log("[Auth] church_id:", resolvedProfile.church_id);
 
@@ -214,9 +221,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (rolesResponse.error) {
           console.error("[Auth] error fetching roles:", rolesResponse.error);
           setRoles([]);
+          console.log("ROLES:", []);
         } else {
           const loadedRoles = (rolesResponse.data ?? []) as UserRole[];
           setRoles(loadedRoles);
+          console.log("ROLES:", loadedRoles);
           console.log("[Auth] roles loaded:", loadedRoles.map((role) => role.role));
 
           const restrictedRoles = ["tesoureiro", "secretario", "pastor"];
@@ -228,11 +237,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setChurch(null);
         setRoles([]);
+        console.log("ROLES:", []);
       }
     } catch (error) {
       console.error("[Auth] Error fetching user data:", error);
       setChurch(null);
       setRoles([]);
+      console.log("ROLES:", []);
     }
   };
 
@@ -247,6 +258,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           prevUserIdRef.current = null;
           initialSessionHandled.current = false;
           fetchingRef.current = false;
+          authResolvedRef.current = true;
           setProfile(null);
           setChurch(null);
           setRoles([]);
@@ -280,6 +292,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setTimeout(async () => {
             await fetchUserData(newUserId);
             fetchingRef.current = false;
+            authResolvedRef.current = true;
             setIsLoading(false);
           }, 0);
         } else {
@@ -287,6 +300,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(null);
           setChurch(null);
           setRoles([]);
+          authResolvedRef.current = true;
           setIsLoading(false);
         }
       }
@@ -317,6 +331,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       
+      authResolvedRef.current = true;
       setIsLoading(false);
     });
 
@@ -373,7 +388,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUserData = async () => {
     if (user) {
+      setIsLoading(true);
       await fetchUserData(user.id);
+      authResolvedRef.current = true;
+      setIsLoading(false);
     }
   };
 
@@ -386,7 +404,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         church,
         roles,
         currentChurchId,
-        isLoading,
+        isLoading: isLoading || !authResolvedRef.current,
         hasNoChurch,
         signIn,
         signOut,
