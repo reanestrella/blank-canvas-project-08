@@ -88,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from("profiles")
         .select("*")
         .eq("user_id", userId)
+        .limit(1)
         .maybeSingle();
 
       if (profileError) {
@@ -120,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .from("profiles")
                 .select("*")
                 .eq("user_id", userId)
+                .limit(1)
                 .maybeSingle();
               if (fixedProfileError) {
                 console.error("[Auth] error reloading healed profile:", fixedProfileError);
