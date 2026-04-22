@@ -1,14 +1,25 @@
-/**
- * Given an array of user role strings, returns the best dashboard route.
- * All users go to Meu App on login.
- */
-export function getRoleBasedRedirect(roles: string[]): string {
-  if (roles.includes("network_admin") || roles.includes("network_finance")) return "/rede";
-  return "/meu-app";
-}
+export function getRoleBasedRedirect(roles: string[]) {
+  // 🔒 proteção total contra undefined
+  if (!roles || roles.length === 0) {
+    return "/dashboard";
+  }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (roles.includes("pastor")) {
+    return "/admin";
+  }
 
-export function isValidUUID(value: string): boolean {
-  return UUID_RE.test(value);
+  if (roles.includes("tesoureiro")) {
+    return "/financeiro";
+  }
+
+  if (roles.includes("secretario")) {
+    return "/secretaria";
+  }
+
+  if (roles.includes("membro")) {
+    return "/dashboard";
+  }
+
+  // 🔥 fallback final (NUNCA QUEBRA)
+  return "/dashboard";
 }
