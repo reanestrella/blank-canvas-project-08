@@ -96,6 +96,18 @@ const handleSubmit = async (data: CadastroFormData) => {
     // ✅ 8. REDIRECIONA
     const redirectTo = getRoleBasedRedirect(roles);
 
+if (!redirectTo) {
+  console.error("REDIRECT UNDEFINED - roles:", roles);
+
+  toast({
+    title: "Erro interno",
+    description: "Usuário sem permissões definidas.",
+    variant: "destructive",
+  });
+
+  return;
+};
+
     window.location.href = redirectTo;
   } catch (error: any) {
     console.error(error);
