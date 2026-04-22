@@ -73,6 +73,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const initialSessionHandled = useRef(false);
   const fetchingRef = useRef(false);
   const authResolvedRef = useRef(false);
+
+  const applyResolvedAuthState = ({
+    nextSession,
+    nextUser,
+    nextProfile,
+    nextChurch,
+    nextRoles,
+  }: {
+    nextSession: Session | null;
+    nextUser: User | null;
+    nextProfile: Profile | null;
+    nextChurch: Church | null;
+    nextRoles: UserRole[];
+  }) => {
+    setSession(nextSession);
+    setUser(nextUser);
+    setProfile(nextProfile);
+    setChurch(nextChurch);
+    setRoles(nextRoles);
+    authResolvedRef.current = true;
+    setIsLoading(false);
+  };
+
   const fetchUserData = async (userId: string) => {
     try {
       console.log("USER:", userId);
@@ -144,16 +167,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!profileData) {
         console.error("[Auth] no profile available after fallback for user:", userId);
-        setProfile(null);
-        setChurch(null);
-        setRoles([]);
         console.log("PROFILE:", null);
         console.log("CHURCH:", null);
         console.log("ROLES:", []);
-        return;
+        return { profile: null, church: null, roles: [] as UserRole[] };
       }
 
       let resolvedProfile = profileData as Profile;
+      let resolvedChurch: Church | null = null;
+      let loadedRoles: UserRole[] = [];
 
       if (!resolvedProfile.member_id && resolvedProfile.church_id) {
         const emailToMatch = resolvedProfile.email || authUser?.email;
@@ -186,66 +208,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      setProfile(resolvedProfile);
       console.log("PROFILE:", resolvedProfile);
       console.log("CHURCH:", resolvedProfile.church_id ?? null);
       console.log("[Auth] profile loaded:", resolvedProfile);
       console.log("[Auth] church_id:", resolvedProfile.church_id);
 
-      if (resolvedProfile.church_id) {
-        const [churchResponse, rolesResponse] = await Promise.all([
-          supabase
-            .from("churches")
-            .select("id, name, logo_url, slug, primary_color, secondary_color, ministry_name, plan, is_active")
-            .eq("id", resolvedProfile.church_id)
-            .maybeSingle(),
-          supabase
-            .from("user_roles")
-            .select("role, church_id")
-            .eq("user_id", userId)
-            .eq("church_id", resolvedProfile.church_id),
-        ]);
+      const [churchResponse, rolesResponse] = await Promise.all([
+        resolvedProfile.church_id
+          ? supabase
+              .from("churches")
+              .select("id, name, logo_url, slug, primary_color, secondary_color, ministry_name, plan, is_active")
+              .eq("id", resolvedProfile.church_id)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        supabase
+          .from("user_roles")
+          .select("role, church_id")
+          .eq("user_id", userId),
+      ]);
 
+      if (rolesResponse.error) {
+        console.error("[Auth] error fetching roles:", rolesResponse.error);
+        console.log("ROLES:", []);
+      } else {
+        loadedRoles = (rolesResponse.data ?? []) as UserRole[];
+        console.log("ROLES:", loadedRoles);
+        console.log("[Auth] roles loaded:", loadedRoles.map((role) => role.role));
+
+        if (!resolvedProfile.church_id) {
+          const derivedChurchId = loadedRoles[0]?.church_id ?? null;
+          if (derivedChurchId) {
+            const { error: healProfileError } = await supabase
+              .from("profiles")
+              .update({ church_id: derivedChurchId })
+              .eq("user_id", userId);
+
+            if (healProfileError) {
+              console.error("[Auth] error healing profile church_id from roles:", healProfileError);
+            } else {
+              resolvedProfile = { ...resolvedProfile, church_id: derivedChurchId };
+              console.log("[Auth] healed church_id from roles:", derivedChurchId);
+            }
+          }
+        }
+
+        const restrictedRoles = ["tesoureiro", "secretario", "pastor"];
+        if (loadedRoles.some((role) => restrictedRoles.includes(role.role))) {
+          localStorage.setItem("keep_logged_in", "false");
+          sessionStorage.setItem("session_active", "1");
+        }
+      }
+
+      if (resolvedProfile.church_id) {
         if (churchResponse.error) {
           console.error("[Auth] error fetching church:", churchResponse.error);
-          setChurch(null);
         } else if (churchResponse.data) {
-          setChurch(churchResponse.data as Church);
+          resolvedChurch = churchResponse.data as Church;
           setDynamicManifest(
             resolvedProfile.church_id,
             churchResponse.data.logo_url ?? undefined,
             churchResponse.data.name,
           );
-        } else {
-          setChurch(null);
         }
-
-        if (rolesResponse.error) {
-          console.error("[Auth] error fetching roles:", rolesResponse.error);
-          setRoles([]);
-          console.log("ROLES:", []);
-        } else {
-          const loadedRoles = (rolesResponse.data ?? []) as UserRole[];
-          setRoles(loadedRoles);
-          console.log("ROLES:", loadedRoles);
-          console.log("[Auth] roles loaded:", loadedRoles.map((role) => role.role));
-
-          const restrictedRoles = ["tesoureiro", "secretario", "pastor"];
-          if (loadedRoles.some((role) => restrictedRoles.includes(role.role))) {
-            localStorage.setItem("keep_logged_in", "false");
-            sessionStorage.setItem("session_active", "1");
-          }
-        }
-      } else {
-        setChurch(null);
-        setRoles([]);
-        console.log("ROLES:", []);
       }
+
+      console.log("PROFILE:", resolvedProfile);
+      console.log("CHURCH:", resolvedProfile.church_id ?? null);
+      console.log("ROLES:", loadedRoles);
+
+      return { profile: resolvedProfile, church: resolvedChurch, roles: loadedRoles };
     } catch (error) {
       console.error("[Auth] Error fetching user data:", error);
-      setChurch(null);
-      setRoles([]);
       console.log("ROLES:", []);
+      return { profile: null, church: null, roles: [] as UserRole[] };
     }
   };
 
@@ -253,19 +288,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("[Auth] event:", event, "user:", session?.user?.id);
-        setSession(session);
-        setUser(session?.user ?? null);
         
         if (event === "SIGNED_OUT") {
           prevUserIdRef.current = null;
           initialSessionHandled.current = false;
           fetchingRef.current = false;
           authResolvedRef.current = true;
-          setProfile(null);
-          setChurch(null);
-          setRoles([]);
+          applyResolvedAuthState({
+            nextSession: null,
+            nextUser: null,
+            nextProfile: null,
+            nextChurch: null,
+            nextRoles: [],
+          });
           queryClient.clear();
-          setIsLoading(false);
           return;
         }
 
@@ -292,26 +328,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           // Defer to avoid deadlock inside onAuthStateChange
           setTimeout(async () => {
-            await fetchUserData(newUserId);
+            const resolvedData = await fetchUserData(newUserId);
+            applyResolvedAuthState({
+              nextSession: session,
+              nextUser: session.user,
+              nextProfile: resolvedData?.profile ?? null,
+              nextChurch: resolvedData?.church ?? null,
+              nextRoles: resolvedData?.roles ?? [],
+            });
             fetchingRef.current = false;
-            authResolvedRef.current = true;
-            setIsLoading(false);
           }, 0);
         } else {
           prevUserIdRef.current = null;
-          setProfile(null);
-          setChurch(null);
-          setRoles([]);
-          authResolvedRef.current = true;
-          setIsLoading(false);
+          applyResolvedAuthState({
+            nextSession: null,
+            nextUser: null,
+            nextProfile: null,
+            nextChurch: null,
+            nextRoles: [],
+          });
         }
       }
     );
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       initialSessionHandled.current = true;
-      setSession(session);
-      setUser(session?.user ?? null);
       
       if (session?.user) {
         // Check "keep logged in" preference — if not kept AND browser was closed, sign out
@@ -328,13 +369,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         prevUserIdRef.current = session.user.id;
         if (!fetchingRef.current) {
           fetchingRef.current = true;
-          await fetchUserData(session.user.id);
+          const resolvedData = await fetchUserData(session.user.id);
+          applyResolvedAuthState({
+            nextSession: session,
+            nextUser: session.user,
+            nextProfile: resolvedData?.profile ?? null,
+            nextChurch: resolvedData?.church ?? null,
+            nextRoles: resolvedData?.roles ?? [],
+          });
           fetchingRef.current = false;
         }
+      } else {
+        applyResolvedAuthState({
+          nextSession: null,
+          nextUser: null,
+          nextProfile: null,
+          nextChurch: null,
+          nextRoles: [],
+        });
       }
-      
-      authResolvedRef.current = true;
-      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -391,9 +444,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUserData = async () => {
     if (user) {
       setIsLoading(true);
-      await fetchUserData(user.id);
-      authResolvedRef.current = true;
-      setIsLoading(false);
+      const resolvedData = await fetchUserData(user.id);
+      applyResolvedAuthState({
+        nextSession: session,
+        nextUser: user,
+        nextProfile: resolvedData?.profile ?? null,
+        nextChurch: resolvedData?.church ?? null,
+        nextRoles: resolvedData?.roles ?? [],
+      });
     }
   };
 
