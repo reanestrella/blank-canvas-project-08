@@ -73,6 +73,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const initialSessionHandled = useRef(false);
   const fetchingRef = useRef(false);
   const authResolvedRef = useRef(false);
+
+  const applyResolvedAuthState = ({
+    nextSession,
+    nextUser,
+    nextProfile,
+    nextChurch,
+    nextRoles,
+  }: {
+    nextSession: Session | null;
+    nextUser: User | null;
+    nextProfile: Profile | null;
+    nextChurch: Church | null;
+    nextRoles: UserRole[];
+  }) => {
+    setSession(nextSession);
+    setUser(nextUser);
+    setProfile(nextProfile);
+    setChurch(nextChurch);
+    setRoles(nextRoles);
+    authResolvedRef.current = true;
+    setIsLoading(false);
+  };
+
   const fetchUserData = async (userId: string) => {
     try {
       console.log("USER:", userId);
@@ -144,16 +167,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!profileData) {
         console.error("[Auth] no profile available after fallback for user:", userId);
-        setProfile(null);
-        setChurch(null);
-        setRoles([]);
         console.log("PROFILE:", null);
         console.log("CHURCH:", null);
         console.log("ROLES:", []);
-        return;
+        return { profile: null, church: null, roles: [] as UserRole[] };
       }
 
       let resolvedProfile = profileData as Profile;
+      let resolvedChurch: Church | null = null;
+      let loadedRoles: UserRole[] = [];
 
       if (!resolvedProfile.member_id && resolvedProfile.church_id) {
         const emailToMatch = resolvedProfile.email || authUser?.email;
@@ -208,25 +230,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (churchResponse.error) {
           console.error("[Auth] error fetching church:", churchResponse.error);
-          setChurch(null);
         } else if (churchResponse.data) {
-          setChurch(churchResponse.data as Church);
+          resolvedChurch = churchResponse.data as Church;
           setDynamicManifest(
             resolvedProfile.church_id,
             churchResponse.data.logo_url ?? undefined,
             churchResponse.data.name,
           );
-        } else {
-          setChurch(null);
         }
 
         if (rolesResponse.error) {
           console.error("[Auth] error fetching roles:", rolesResponse.error);
-          setRoles([]);
           console.log("ROLES:", []);
         } else {
-          const loadedRoles = (rolesResponse.data ?? []) as UserRole[];
-          setRoles(loadedRoles);
+          loadedRoles = (rolesResponse.data ?? []) as UserRole[];
           console.log("ROLES:", loadedRoles);
           console.log("[Auth] roles loaded:", loadedRoles.map((role) => role.role));
 
@@ -237,15 +254,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } else {
-        setChurch(null);
-        setRoles([]);
         console.log("ROLES:", []);
       }
+
+      console.log("PROFILE:", resolvedProfile);
+      console.log("CHURCH:", resolvedProfile.church_id ?? null);
+      console.log("ROLES:", loadedRoles);
+
+      return { profile: resolvedProfile, church: resolvedChurch, roles: loadedRoles };
     } catch (error) {
       console.error("[Auth] Error fetching user data:", error);
-      setChurch(null);
-      setRoles([]);
       console.log("ROLES:", []);
+      return { profile: null, church: null, roles: [] as UserRole[] };
     }
   };
 
