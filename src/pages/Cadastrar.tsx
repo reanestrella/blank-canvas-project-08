@@ -132,11 +132,11 @@ const handleSubmit = async (data: CadastroFormData) => {
   } catch (error: any) {
     console.error("ERRO GERAL:", error);
 
-    setErrorMsg(
-      error.message === "User already registered"
-        ? "Este email já está cadastrado."
-        : error.message || "Erro ao cadastrar."
-    );
+   setErrorMsg(
+  error.message === "User already registered"
+    ? "Este email já está cadastrado."
+    : error.message || "Erro ao cadastrar."
+);
   } finally {
     setIsLoading(false);
   }
