@@ -41,7 +41,7 @@ const handleSubmit = async (data: CadastroFormData) => {
       return;
     }
 
-    // ✅ 3. ESPERA REAL (evita race condition)
+    // ✅ 3. ESPERA (EVITA BUG DE SINCRONIZAÇÃO)
     await new Promise((r) => setTimeout(r, 1000));
 
     // ✅ 4. PEGA USUÁRIO REAL
@@ -53,7 +53,7 @@ const handleSubmit = async (data: CadastroFormData) => {
 
     console.log("USER OK:", user.id);
 
-    // ✅ 5. GARANTE PROFILE
+    // ✅ 5. GARANTE PROFILE (CRÍTICO)
     await supabase.from("profiles").upsert({
       user_id: user.id,
       full_name: data.fullName,
@@ -91,11 +91,10 @@ const handleSubmit = async (data: CadastroFormData) => {
       }
     }
 
-    // ✅ 7. FALLBACK SE NÃO VIER ROLE (ANTI BUG MASTER)
+    // ✅ 7. FALLBACK (ANTI BUG)
     if (!roles || roles.length === 0) {
-      console.warn("⚠️ Usuário sem roles. Aplicando fallback.");
+      console.warn("⚠️ Usuário sem roles. Buscando no banco...");
 
-      // tenta buscar direto no banco
       const { data: rolesFromDB } = await supabase
         .from("user_roles")
         .select("role")
@@ -104,7 +103,6 @@ const handleSubmit = async (data: CadastroFormData) => {
       if (rolesFromDB && rolesFromDB.length > 0) {
         roles = rolesFromDB.map((r: any) => r.role);
       } else {
-        // fallback final
         roles = ["membro"];
       }
     }
@@ -113,37 +111,29 @@ const handleSubmit = async (data: CadastroFormData) => {
 
     // ✅ 8. ATUALIZA SESSÃO
     await supabase.auth.refreshSession();
-
     await new Promise((r) => setTimeout(r, 500));
 
     // ✅ 9. REDIRECT SEGURO
     let redirectTo = getRoleBasedRedirect(roles);
 
-    // 🔥 PROTEÇÃO TOTAL
     if (!redirectTo || typeof redirectTo !== "string") {
       console.error("REDIRECT QUEBRADO:", redirectTo);
-
-      redirectTo = "/dashboard"; // fallback definitivo
+      redirectTo = "/dashboard";
     }
 
     console.log("REDIRECT:", redirectTo);
 
     window.location.href = redirectTo;
+
   } catch (error: any) {
     console.error("ERRO GERAL:", error);
 
-   setErrorMsg(
-  error.message === "User already registered"
-    ? "Este email já está cadastrado."
-    : error.message || "Erro ao cadastrar."
-);
-  } finally {
-    setIsLoading(false);
-  }
-};
+    setErrorMsg(
+      error.message === "User already registered"
         ? "Este email já está cadastrado."
         : error.message || "Erro ao cadastrar."
     );
+
   } finally {
     setIsLoading(false);
   }
