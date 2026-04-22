@@ -141,12 +141,9 @@ export default function Cadastrar() {
       await supabase.auth.refreshSession();
       await new Promise((r) => setTimeout(r, 500));
 
-      // 9. REDIRECT SEGURO
-      let redirectTo = "/"; // 👈 força home;
-      if (!redirectTo || typeof redirectTo !== "string") {
-        redirectTo = "/dashboard";
-      }
-
+      // 9. REDIRECT SEGURO baseado em role
+      const redirectTo = getRoleBasedRedirect(roles);
+      console.log("[Cadastrar] redirecting to:", redirectTo, "roles:", roles);
       window.location.href = redirectTo;
     } catch (error: any) {
       console.error("ERRO GERAL:", error);
