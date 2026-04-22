@@ -91,7 +91,7 @@ export default function Login() {
         sessionStorage.removeItem("post_login_redirect");
         window.location.href = pendingRedirect;
       } else {
-        window.location.href = "/meu-app";
+        window.location.href = "/app";
       }
     } catch (error) {
       console.error("Erro login:", error);

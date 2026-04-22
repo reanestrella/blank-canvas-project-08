@@ -5,14 +5,17 @@ export function isValidUUID(value: string | null | undefined): boolean {
   return UUID_REGEX.test(value.trim());
 }
 
-export function getRoleBasedRedirect(roles: string[]) {
-  // 🔒 proteção total contra undefined
+/**
+ * Returns a valid in-app route based on the user's roles.
+ * Always returns a route that exists in the app router.
+ */
+export function getRoleBasedRedirect(roles: string[] | null | undefined): string {
   if (!roles || roles.length === 0) {
-    return "/dashboard";
+    return "/meu-app";
   }
 
   if (roles.includes("pastor")) {
-    return "/admin";
+    return "/app";
   }
 
   if (roles.includes("tesoureiro")) {
@@ -23,10 +26,22 @@ export function getRoleBasedRedirect(roles: string[]) {
     return "/secretaria";
   }
 
-  if (roles.includes("membro")) {
-    return "/dashboard";
+  if (roles.includes("lider_celula")) {
+    return "/celulas";
   }
 
-  // 🔥 fallback final (NUNCA QUEBRA)
-  return "/dashboard";
+  if (roles.includes("consolidacao")) {
+    return "/consolidacao";
+  }
+
+  if (roles.includes("lider_ministerio")) {
+    return "/ministerios";
+  }
+
+  if (roles.includes("network_admin") || roles.includes("network_finance")) {
+    return "/rede";
+  }
+
+  // Default: regular member goes to user app
+  return "/meu-app";
 }

@@ -172,7 +172,7 @@ export default function Convite() {
       // Full reload to ensure AuthContext picks up new church_id and roles cleanly
       await clearAuthBrowserCache();
       setTimeout(() => {
-        window.location.href = "/meu-app";
+        window.location.href = "/app";
       }, 500);
     } catch (error: any) {
       console.error("Registration error:", error);
