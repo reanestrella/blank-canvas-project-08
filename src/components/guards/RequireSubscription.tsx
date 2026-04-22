@@ -36,9 +36,9 @@ export function RequireSubscription({ children }: Props) {
     return <>{children}</>;
   }
 
-  // No church yet — let AppLayout handle this
+  // Sem igreja vinculada — enviar para o onboarding existente
   if (hasNoChurch) {
-    return <>{children}</>;
+    return <Navigate to="/registro" replace />;
   }
 
   // No active subscription — redirect to plans
