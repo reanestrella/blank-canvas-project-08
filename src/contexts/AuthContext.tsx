@@ -2,47 +2,24 @@ import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { queryClient } from "@/lib/queryClient";
-import { getRegistrationBinding, syncSelfRegistrationProfile } from "@/lib/selfRegistration";
 import { clearAuthBrowserCache, ensureUserProfile } from "@/lib/authProfile";
-import { setDynamicManifest } from "@/lib/setDynamicManifest";
 
 interface Profile {
   id: string;
   user_id: string;
   church_id: string | null;
-  congregation_id?: string | null;
-  member_id?: string | null;
   full_name: string;
   email: string;
   phone: string | null;
-  avatar_url: string | null;
-  registration_status?: string | null;
-  is_linked?: boolean | null;
 }
 
 interface Church {
   id: string;
   name: string;
-  logo_url?: string | null;
-  slug?: string | null;
-  primary_color?: string | null;
-  secondary_color?: string | null;
-  ministry_name?: string | null;
-  plan: string;
-  is_active: boolean;
 }
 
 interface UserRole {
-  role:
-    | "pastor"
-    | "tesoureiro"
-    | "secretario"
-    | "lider_celula"
-    | "lider_ministerio"
-    | "consolidacao"
-    | "membro"
-    | "network_admin"
-    | "network_finance";
+  role: string;
   church_id: string;
 }
 
@@ -57,11 +34,6 @@ interface AuthContextType {
   hasNoChurch: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
-  hasRole: (role: UserRole["role"]) => boolean;
-  hasAnyRole: (...roles: UserRole["role"][]) => boolean;
-  isAdmin: () => boolean;
-  refreshChurch: () => Promise<void>;
-  refreshUserData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -74,361 +46,147 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Single source of truth for church_id
-  const currentChurchId = profile?.church_id ?? roles[0]?.church_id ?? null;
-  const hasNoChurch = !isLoading && !!user && !currentChurchId;
-
   const prevUserIdRef = useRef<string | null>(null);
-  const initialSessionHandled = useRef(false);
-  const fetchingRef = useRef(false);
-  const authResolvedRef = useRef(false);
 
-  const applyResolvedAuthState = ({
-    nextSession,
-    nextUser,
-    nextProfile,
-    nextChurch,
-    nextRoles,
-  }: {
-    nextSession: Session | null;
-    nextUser: User | null;
-    nextProfile: Profile | null;
-    nextChurch: Church | null;
-    nextRoles: UserRole[];
-  }) => {
-    setSession(nextSession);
-    setUser(nextUser);
-    setProfile(nextProfile);
-    setChurch(nextChurch);
-    setRoles(nextRoles);
-    authResolvedRef.current = true;
-    setIsLoading(false);
-  };
+  // 🔥 CORRIGIDO (fallback inteligente)
+  const currentChurchId =
+    profile?.church_id ||
+    roles?.[0]?.church_id ||
+    null;
+
+  // 🔥 CORRIGIDO (não dispara falso positivo)
+  const hasNoChurch =
+    !isLoading &&
+    !!user &&
+    !currentChurchId &&
+    roles.length === 0;
 
   const fetchUserData = async (userId: string) => {
     try {
       console.log("USER:", userId);
-      console.log("[Auth] fetchUserData for:", userId);
 
-      const { data: authUserData, error: authUserError } = await supabase.auth.getUser();
-      const authUser = authUserData.user;
+      const { data: authData } = await supabase.auth.getUser();
+      const authUser = authData.user;
 
-      if (authUserError || !authUser || authUser.id !== userId) {
-        console.error("[Auth] could not resolve auth user for profile sync:", authUserError);
-      }
-
-      const [profileResponse, rolesResponse] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("*")
-          .eq("user_id", userId)
-          .limit(1)
-          .maybeSingle(),
-        supabase
-          .from("user_roles")
-          .select("*")
-          .eq("user_id", userId),
+      const [profileRes, rolesRes] = await Promise.all([
+        supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
+        supabase.from("user_roles").select("*").eq("user_id", userId),
       ]);
 
-      let profileData = profileResponse.data;
-      let loadedRoles: UserRole[] = [];
+      let profileData = profileRes.data;
+      let rolesData = rolesRes.data || [];
 
-      if (profileResponse.error) {
-        console.error("[Auth] Error fetching profile:", profileResponse.error);
-      }
-
-      if (rolesResponse.error) {
-        console.error("[Auth] error fetching roles:", rolesResponse.error);
-      } else {
-        loadedRoles = (rolesResponse.data ?? []) as UserRole[];
-      }
-
+      // 🔥 GARANTE PROFILE
       if (!profileData && authUser) {
-        console.log("[Auth] profile missing, creating fallback profile for:", userId);
-        try {
-          profileData = await ensureUserProfile(authUser);
-        } catch (ensureError) {
-          console.error("[Auth] fallback profile creation failed:", ensureError);
-        }
+        profileData = await ensureUserProfile(authUser);
       }
 
-      if (!profileData && authUser) {
-        profileData = await ensureUserProfile(authUser).catch((error) => {
-          console.error("[Auth] second profile fallback failed:", error);
-          return null;
-        });
-      }
+      // 🔥 DEFINE CHURCH_ID CORRETO
+      let resolvedChurchId =
+        profileData?.church_id ||
+        rolesData?.[0]?.church_id ||
+        null;
 
-      if (!profileData && authUser) {
-        console.error("[Auth] no profile available after fallback for user:", userId);
-        profileData = {
-          id: authUser.id,
-          user_id: authUser.id,
-          church_id: loadedRoles[0]?.church_id ?? null,
-          full_name:
-            typeof authUser.user_metadata?.full_name === "string"
-              ? authUser.user_metadata.full_name
-              : typeof authUser.user_metadata?.name === "string"
-                ? authUser.user_metadata.name
-                : authUser.email?.split("@")[0] ?? "Usuário",
-          email: authUser.email ?? "",
-          phone: typeof authUser.user_metadata?.phone === "string" ? authUser.user_metadata.phone : null,
-          avatar_url: null,
-          registration_status: "ativo",
-          is_linked: false,
-        } as Profile;
-      }
-
-      if (!profileData) {
-        console.log("PROFILE:", null);
-        console.log("ROLES:", loadedRoles);
-        console.log("CHURCH:", loadedRoles[0]?.church_id ?? null);
-        return { profile: null, church: null, roles: loadedRoles };
-      }
-
-      let resolvedProfile = profileData as Profile;
-      let resolvedChurch: Church | null = null;
-      let resolvedChurchId = resolvedProfile.church_id ?? loadedRoles[0]?.church_id ?? null;
-
-      if (!resolvedChurchId && authUser) {
-        const binding = getRegistrationBinding(authUser);
-        if (binding.churchId) {
-          console.log("[Auth] Self-healing: recovering church_id from metadata:", binding.churchId);
-          try {
-            const result = await syncSelfRegistrationProfile(authUser, {
-              churchId: binding.churchId,
-              congregationId: binding.congregationId,
-              fullName: binding.fullName,
-              phone: binding.phone,
-              ensurePendingUser: true,
-            });
-
-            if (result.churchId) {
-              const { data: fixedProfile, error: fixedProfileError } = await supabase
-                .from("profiles")
-                .select("*")
-                .eq("user_id", userId)
-                .limit(1)
-                .maybeSingle();
-
-              if (fixedProfileError) {
-                console.error("[Auth] error reloading healed profile:", fixedProfileError);
-              } else if (fixedProfile) {
-                resolvedProfile = fixedProfile as Profile;
-                resolvedChurchId = fixedProfile.church_id ?? binding.churchId;
-              }
-            }
-          } catch (healErr) {
-            console.error("[Auth] Self-healing failed:", healErr);
-          }
-        }
-      }
-
-      if (!resolvedProfile.church_id && resolvedChurchId) {
-        const { error: healProfileError } = await supabase
+      // 🔥 FORÇA PROFILE TER CHURCH_ID
+      if (profileData && !profileData.church_id && resolvedChurchId) {
+        await supabase
           .from("profiles")
           .update({ church_id: resolvedChurchId })
           .eq("user_id", userId);
 
-        if (healProfileError) {
-          console.error("[Auth] error healing profile church_id:", healProfileError);
-        } else {
-          resolvedProfile = { ...resolvedProfile, church_id: resolvedChurchId };
-          console.log("[Auth] healed church_id from roles:", resolvedChurchId);
-        }
+        profileData.church_id = resolvedChurchId;
       }
 
-      if (!resolvedProfile.member_id && resolvedChurchId) {
-        const emailToMatch = resolvedProfile.email || authUser?.email;
-        if (emailToMatch) {
-          const { data: memberMatch, error: memberMatchError } = await supabase
-            .from("members")
-            .select("id")
-            .eq("church_id", resolvedChurchId)
-            .eq("email", emailToMatch)
-            .limit(1)
-            .maybeSingle();
-
-          if (memberMatchError) {
-            console.error("[Auth] member auto-link error:", memberMatchError);
-          }
-
-          if (memberMatch) {
-            console.log("[Auth] Auto-linked member_id:", memberMatch.id);
-            const { error: updateMemberError } = await supabase
-              .from("profiles")
-              .update({ member_id: memberMatch.id })
-              .eq("user_id", userId);
-
-            if (updateMemberError) {
-              console.error("[Auth] member_id update error:", updateMemberError);
-            } else {
-              resolvedProfile = { ...resolvedProfile, member_id: memberMatch.id };
-            }
-          }
-        }
-      }
-
-      const restrictedRoles = ["tesoureiro", "secretario", "pastor"];
-      if (loadedRoles.some((role) => restrictedRoles.includes(role.role))) {
-        localStorage.setItem("keep_logged_in", "false");
-        sessionStorage.setItem("session_active", "1");
-      }
+      let churchData = null;
 
       if (resolvedChurchId) {
-        const churchResponse = await supabase
+        const { data } = await supabase
           .from("churches")
-          .select("id, name, logo_url, slug, primary_color, secondary_color, ministry_name, plan, is_active")
+          .select("*")
           .eq("id", resolvedChurchId)
           .maybeSingle();
 
-        if (churchResponse.error) {
-          console.error("[Auth] error fetching church:", churchResponse.error);
-        } else if (churchResponse.data) {
-          resolvedChurch = churchResponse.data as Church;
-          setDynamicManifest(
-            resolvedChurchId,
-            churchResponse.data.logo_url ?? undefined,
-            churchResponse.data.name,
-          );
-        }
+        churchData = data;
       }
 
-      console.log("PROFILE:", resolvedProfile);
-      console.log("ROLES:", loadedRoles);
+      console.log("PROFILE:", profileData);
+      console.log("ROLES:", rolesData);
       console.log("CHURCH:", resolvedChurchId);
-      console.log("[Auth] profile loaded:", resolvedProfile);
-      console.log("[Auth] roles loaded:", loadedRoles.map((role) => role.role));
-      console.log("[Auth] church_id:", resolvedChurchId);
 
       return {
-        profile: { ...resolvedProfile, church_id: resolvedChurchId },
-        church: resolvedChurch,
-        roles: loadedRoles,
+        profile: profileData,
+        roles: rolesData,
+        church: churchData,
       };
     } catch (error) {
-      console.error("[Auth] Error fetching user data:", error);
-      console.log("PROFILE:", null);
-      console.log("ROLES:", []);
-      console.log("CHURCH:", null);
-      return { profile: null, church: null, roles: [] as UserRole[] };
+      console.error("Erro fetchUserData:", error);
+      return { profile: null, roles: [], church: null };
     }
   };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("[Auth] event:", event, "user:", session?.user?.id);
-        
+        console.log("AUTH EVENT:", event);
+
         if (event === "SIGNED_OUT") {
-          prevUserIdRef.current = null;
-          initialSessionHandled.current = false;
-          fetchingRef.current = false;
-          authResolvedRef.current = true;
-          applyResolvedAuthState({
-            nextSession: null,
-            nextUser: null,
-            nextProfile: null,
-            nextChurch: null,
-            nextRoles: [],
-          });
-          queryClient.clear();
+          setUser(null);
+          setSession(null);
+          setProfile(null);
+          setRoles([]);
+          setChurch(null);
+          setIsLoading(false);
           return;
         }
 
-        // Skip INITIAL_SESSION if getSession already handled it
-        if (event === "INITIAL_SESSION" && initialSessionHandled.current) {
-          return;
-        }
-        
         if (session?.user) {
-          const newUserId = session.user.id;
-          // If user changed, clear stale state immediately
-          if (prevUserIdRef.current && prevUserIdRef.current !== newUserId) {
-            console.log("[Auth] User changed, clearing stale state");
-            setProfile(null);
-            setChurch(null);
-            setRoles([]);
-            queryClient.clear();
+          const userId = session.user.id;
+
+          if (prevUserIdRef.current !== userId) {
+            prevUserIdRef.current = userId;
+
+            setIsLoading(true);
+
+            const data = await fetchUserData(userId);
+
+            setUser(session.user);
+            setSession(session);
+            setProfile(data.profile);
+            setRoles(data.roles);
+            setChurch(data.church);
+
+            setIsLoading(false);
           }
-          prevUserIdRef.current = newUserId;
-
-          // Avoid duplicate fetches
-          if (fetchingRef.current) return;
-          fetchingRef.current = true;
-
-          // Defer to avoid deadlock inside onAuthStateChange
-          setTimeout(async () => {
-            const resolvedData = await fetchUserData(newUserId);
-            applyResolvedAuthState({
-              nextSession: session,
-              nextUser: session.user,
-              nextProfile: resolvedData?.profile ?? null,
-              nextChurch: resolvedData?.church ?? null,
-              nextRoles: resolvedData?.roles ?? [],
-            });
-            fetchingRef.current = false;
-          }, 0);
         } else {
-          prevUserIdRef.current = null;
-          applyResolvedAuthState({
-            nextSession: null,
-            nextUser: null,
-            nextProfile: null,
-            nextChurch: null,
-            nextRoles: [],
-          });
+          setUser(null);
+          setSession(null);
+          setProfile(null);
+          setRoles([]);
+          setChurch(null);
+          setIsLoading(false);
         }
       }
     );
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      initialSessionHandled.current = true;
-      
       if (session?.user) {
-        // Check "keep logged in" preference — if not kept AND browser was closed, sign out
-        const keepLoggedIn = localStorage.getItem("keep_logged_in");
-        if (keepLoggedIn === "false" && !sessionStorage.getItem("session_active")) {
-          console.log("[Auth] Session expired (browser closed without keep_logged_in)");
-          await supabase.auth.signOut();
-          setUser(null);
-          setSession(null);
-          setIsLoading(false);
-          return;
-        }
+        const data = await fetchUserData(session.user.id);
 
-        prevUserIdRef.current = session.user.id;
-        if (!fetchingRef.current) {
-          fetchingRef.current = true;
-          const resolvedData = await fetchUserData(session.user.id);
-          applyResolvedAuthState({
-            nextSession: session,
-            nextUser: session.user,
-            nextProfile: resolvedData?.profile ?? null,
-            nextChurch: resolvedData?.church ?? null,
-            nextRoles: resolvedData?.roles ?? [],
-          });
-          fetchingRef.current = false;
-        }
-      } else {
-        applyResolvedAuthState({
-          nextSession: null,
-          nextUser: null,
-          nextProfile: null,
-          nextChurch: null,
-          nextRoles: [],
-        });
+        setUser(session.user);
+        setSession(session);
+        setProfile(data.profile);
+        setRoles(data.roles);
+        setChurch(data.church);
       }
+
+      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error as Error | null };
   };
 
@@ -436,54 +194,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
     await clearAuthBrowserCache();
     setProfile(null);
-    setChurch(null);
     setRoles([]);
+    setChurch(null);
     queryClient.clear();
-  };
-
-  const hasRole = (role: UserRole["role"]) => {
-    return roles.some((r) => r.role === role);
-  };
-
-  const hasAnyRole = (...checkRoles: UserRole["role"][]) => {
-    return checkRoles.some((role) => roles.some((r) => r.role === role));
-  };
-
-  const isAdmin = () => {
-    return hasRole("pastor");
-  };
-
-  const refreshChurch = async () => {
-    if (!currentChurchId) return;
-    
-    const { data: churchData, error: churchError } = await supabase
-      .from("churches")
-      .select("id, name, logo_url, slug, primary_color, secondary_color, ministry_name, plan, is_active")
-      .eq("id", currentChurchId)
-      .maybeSingle();
-    
-    if (churchError) {
-      console.error("[Auth] refreshChurch error:", churchError);
-      return;
-    }
-    
-    if (churchData) {
-      setChurch(churchData as Church);
-    }
-  };
-
-  const refreshUserData = async () => {
-    if (user) {
-      setIsLoading(true);
-      const resolvedData = await fetchUserData(user.id);
-      applyResolvedAuthState({
-        nextSession: session,
-        nextUser: user,
-        nextProfile: resolvedData?.profile ?? null,
-        nextChurch: resolvedData?.church ?? null,
-        nextRoles: resolvedData?.roles ?? [],
-      });
-    }
   };
 
   return (
@@ -495,15 +208,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         church,
         roles,
         currentChurchId,
-        isLoading: isLoading || !authResolvedRef.current,
+        isLoading,
         hasNoChurch,
         signIn,
         signOut,
-        hasRole,
-        hasAnyRole,
-        isAdmin,
-        refreshChurch,
-        refreshUserData,
       }}
     >
       {children}
@@ -513,8 +221,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
 }
