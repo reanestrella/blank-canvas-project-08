@@ -11,11 +11,18 @@ interface Profile {
   full_name: string;
   email: string;
   phone: string | null;
+  avatar_url?: string | null;
+  member_id?: string | null;
+  [key: string]: any;
 }
 
 interface Church {
   id: string;
   name: string;
+  logo_url?: string | null;
+  primary_color?: string | null;
+  secondary_color?: string | null;
+  [key: string]: any;
 }
 
 interface UserRole {
@@ -32,6 +39,11 @@ interface AuthContextType {
   currentChurchId: string | null;
   isLoading: boolean;
   hasNoChurch: boolean;
+  isAdmin: () => boolean;
+  hasRole: (role: string) => boolean;
+  hasAnyRole: (...roles: string[]) => boolean;
+  refreshUserData: () => Promise<void>;
+  refreshChurch: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
@@ -146,24 +158,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (session?.user) {
           const userId = session.user.id;
+          prevUserIdRef.current = userId;
+          setIsLoading(true);
 
-        prevUserIdRef.current = userId;
+          try {
+            const data = await fetchUserData(userId);
 
-setIsLoading(true);
-
-try {
-  const data = await fetchUserData(userId);
-
-  setUser(session.user);
-  setSession(session);
-  setProfile(data.profile);
-  setRoles(data.roles);
-  setChurch(data.church);
-} catch (error) {
-  console.error("Erro ao carregar dados do usuário:", error);
-} finally {
-  // 🔥 ISSO AQUI É O MAIS IMPORTANTE
-  setIsLoading(false);
+            setUser(session.user);
+            setSession(session);
+            setProfile(data.profile);
+            setRoles(data.roles);
+            setChurch(data.church);
+          } catch (error) {
+            console.error("Erro ao carregar dados do usuário:", error);
+          } finally {
+            setIsLoading(false);
+          }
         } else {
           setUser(null);
           setSession(null);
@@ -206,6 +216,29 @@ try {
     queryClient.clear();
   };
 
+  const hasRole = (role: string) => roles.some((r) => r.role === role);
+  const hasAnyRole = (...checkRoles: string[]) =>
+    roles.some((r) => checkRoles.includes(r.role));
+  const isAdmin = () => hasAnyRole("pastor", "admin", "secretario");
+
+  const refreshUserData = async () => {
+    if (!user) return;
+    const data = await fetchUserData(user.id);
+    setProfile(data.profile);
+    setRoles(data.roles);
+    setChurch(data.church);
+  };
+
+  const refreshChurch = async () => {
+    if (!currentChurchId) return;
+    const { data } = await supabase
+      .from("churches")
+      .select("*")
+      .eq("id", currentChurchId)
+      .maybeSingle();
+    if (data) setChurch(data);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -217,6 +250,11 @@ try {
         currentChurchId,
         isLoading,
         hasNoChurch,
+        isAdmin,
+        hasRole,
+        hasAnyRole,
+        refreshUserData,
+        refreshChurch,
         signIn,
         signOut,
       }}
