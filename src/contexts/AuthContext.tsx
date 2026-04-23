@@ -164,7 +164,6 @@ try {
 } finally {
   // 🔥 ISSO AQUI É O MAIS IMPORTANTE
   setIsLoading(false);
-}
         } else {
           setUser(null);
           setSession(null);
