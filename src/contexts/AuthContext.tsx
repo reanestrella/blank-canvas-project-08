@@ -11,11 +11,18 @@ interface Profile {
   full_name: string;
   email: string;
   phone: string | null;
+  avatar_url?: string | null;
+  member_id?: string | null;
+  [key: string]: any;
 }
 
 interface Church {
   id: string;
   name: string;
+  logo_url?: string | null;
+  primary_color?: string | null;
+  secondary_color?: string | null;
+  [key: string]: any;
 }
 
 interface UserRole {
@@ -32,6 +39,11 @@ interface AuthContextType {
   currentChurchId: string | null;
   isLoading: boolean;
   hasNoChurch: boolean;
+  isAdmin: boolean;
+  hasRole: (role: string) => boolean;
+  hasAnyRole: (roles: string[]) => boolean;
+  refreshUserData: () => Promise<void>;
+  refreshChurch: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
