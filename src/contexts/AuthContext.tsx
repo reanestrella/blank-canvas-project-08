@@ -216,6 +216,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     queryClient.clear();
   };
 
+  const hasRole = (role: string) => roles.some((r) => r.role === role);
+  const hasAnyRole = (...checkRoles: string[]) =>
+    roles.some((r) => checkRoles.includes(r.role));
+  const isAdmin = () => hasAnyRole("pastor", "admin", "secretario");
+
+  const refreshUserData = async () => {
+    if (!user) return;
+    const data = await fetchUserData(user.id);
+    setProfile(data.profile);
+    setRoles(data.roles);
+    setChurch(data.church);
+  };
+
+  const refreshChurch = async () => {
+    if (!currentChurchId) return;
+    const { data } = await supabase
+      .from("churches")
+      .select("*")
+      .eq("id", currentChurchId)
+      .maybeSingle();
+    if (data) setChurch(data);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -227,6 +250,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         currentChurchId,
         isLoading,
         hasNoChurch,
+        isAdmin,
+        hasRole,
+        hasAnyRole,
+        refreshUserData,
+        refreshChurch,
         signIn,
         signOut,
       }}
