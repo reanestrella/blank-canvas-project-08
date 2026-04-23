@@ -39,9 +39,9 @@ interface AuthContextType {
   currentChurchId: string | null;
   isLoading: boolean;
   hasNoChurch: boolean;
-  isAdmin: boolean;
+  isAdmin: () => boolean;
   hasRole: (role: string) => boolean;
-  hasAnyRole: (roles: string[]) => boolean;
+  hasAnyRole: (...roles: string[]) => boolean;
   refreshUserData: () => Promise<void>;
   refreshChurch: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
