@@ -43,10 +43,9 @@ export default function Cadastrar() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const data = form;
 
     if (!validToken || !token) {
-      setErrorMsg("Convite inválido. Solicite um novo link de convite.");
+      setErrorMsg("Convite inválido.");
       return;
     }
 
@@ -56,65 +55,81 @@ export default function Cadastrar() {
     try {
       sessionStorage.setItem("pending_invite_token", token);
 
-      // 1. CRIA USUÁRIO
+      // 1. SIGN UP
       const { error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
+        email: form.email,
+        password: form.password,
         options: {
           data: {
-            full_name: data.fullName,
-            phone: data.phone || null,
-            birth_date: data.birthDate || null,
-            tipo: data.tipo,
+            full_name: form.fullName,
+            phone: form.phone || null,
+            birth_date: form.birthDate || null,
+            tipo: form.tipo,
           },
         },
       });
 
       if (authError) throw authError;
 
-      // 2. LOGIN FORÇADO
+      // 2. SIGN IN
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
+        email: form.email,
+        password: form.password,
       });
 
       if (signInError) {
-        toast({ title: "Conta criada!", description: "Faça login para continuar." });
+        toast({
+          title: "Conta criada!",
+          description: "Faça login para continuar.",
+        });
         navigate("/login");
         return;
       }
 
-      // 3. ESPERA (evita race condition)
-      await new Promise((r) => setTimeout(r, 1000));
+      // 🔥 3. GARANTE USUÁRIO (ANTI BUG MASTER)
+      let user = null;
 
-      // 4. PEGA USUÁRIO REAL
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      for (let i = 0; i < 10; i++) {
+        const {
+          data: { user: currentUser },
+        } = await supabase.auth.getUser();
 
-      if (!user) throw new Error("Usuário não autenticado após login.");
+        if (currentUser) {
+          user = currentUser;
+          break;
+        }
 
-      console.log("USER OK:", user.id);
+        await new Promise((r) => setTimeout(r, 300));
+      }
 
-      // 5. GARANTE PROFILE
+      if (!user) throw new Error("Usuário não autenticado.");
+
+      // 4. GARANTE PROFILE
       await supabase.from("profiles").upsert({
         user_id: user.id,
-        full_name: data.fullName,
-        email: data.email,
+        full_name: form.fullName,
+        email: form.email,
       } as never);
 
-      // 6. APLICA CONVITE
+      // 5. APLICA CONVITE
       const pendingToken = sessionStorage.getItem("pending_invite_token");
       let roles: string[] = [];
 
       if (pendingToken) {
         try {
           const result = await applyInvitationForUser(pendingToken, user);
+
           roles = result?.roles || [];
+
           sessionStorage.removeItem("pending_invite_token");
-          toast({ title: "Bem-vindo!", description: "Convite aplicado com sucesso" });
+
+          toast({
+            title: "Bem-vindo!",
+            description: "Convite aplicado com sucesso",
+          });
         } catch (err: any) {
-          console.error("ERRO CONVITE:", err);
+          console.error("Erro convite:", err);
+
           toast({
             title: "Erro ao aplicar convite",
             description: err.message,
@@ -123,30 +138,37 @@ export default function Cadastrar() {
         }
       }
 
-      // 7. FALLBACK
+      // 6. FALLBACK DE ROLES
       if (!roles || roles.length === 0) {
-        const { data: rolesFromDB } = await supabase
+        const { data } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", user.id);
 
-        if (rolesFromDB && rolesFromDB.length > 0) {
-          roles = rolesFromDB.map((r: any) => r.role);
+        if (data && data.length > 0) {
+          roles = data.map((r: any) => r.role);
         } else {
           roles = ["membro"];
         }
       }
 
-      // 8. ATUALIZA SESSÃO
+      // 7. REFRESH SESSION
       await supabase.auth.refreshSession();
       await new Promise((r) => setTimeout(r, 500));
 
-      // 9. REDIRECT SEGURO baseado em role
-      const redirectTo = getRoleBasedRedirect(roles);
-      console.log("[Cadastrar] redirecting to:", redirectTo, "roles:", roles);
+      // 8. REDIRECT SEGURO
+      let redirectTo = getRoleBasedRedirect(roles);
+
+      if (!redirectTo || typeof redirectTo !== "string") {
+        redirectTo = "/dashboard"; // fallback seguro
+      }
+
+      console.log("REDIRECT FINAL:", redirectTo);
+
       window.location.href = redirectTo;
     } catch (error: any) {
-      console.error("ERRO GERAL:", error);
+      console.error("ERRO:", error);
+
       setErrorMsg(
         error.message === "User already registered"
           ? "Este email já está cadastrado."
@@ -159,19 +181,14 @@ export default function Cadastrar() {
 
   if (!validToken) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+      <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
-              <AlertCircle className="w-6 h-6 text-destructive" />
-            </div>
             <CardTitle>Convite inválido</CardTitle>
-            <CardDescription>
-              O link de cadastro requer um convite válido. Solicite um novo link.
-            </CardDescription>
+            <CardDescription>Solicite um novo link.</CardDescription>
           </CardHeader>
-          <CardContent className="flex justify-center">
-            <Button onClick={() => navigate("/")}>Ir para página inicial</Button>
+          <CardContent>
+            <Button onClick={() => navigate("/")}>Voltar</Button>
           </CardContent>
         </Card>
       </div>
@@ -179,77 +196,28 @@ export default function Cadastrar() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 gradient-primary rounded-full flex items-center justify-center mb-4">
-            <Church className="w-6 h-6 text-primary-foreground" />
-          </div>
+          <Church className="mx-auto mb-2" />
           <CardTitle>Criar conta</CardTitle>
-          <CardDescription>Preencha seus dados para aceitar o convite.</CardDescription>
+          <CardDescription>Preencha para entrar na igreja</CardDescription>
         </CardHeader>
+
         <CardContent>
           {errorMsg && (
             <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
               <AlertDescription>{errorMsg}</AlertDescription>
             </Alert>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Nome completo *</Label>
-              <Input id="fullName" required value={form.fullName} onChange={update("fullName")} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input id="email" type="email" required value={form.email} onChange={update("email")} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha *</Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                minLength={6}
-                value={form.password}
-                onChange={update("password")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefone</Label>
-              <Input id="phone" value={form.phone} onChange={update("phone")} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="birthDate">Data de nascimento</Label>
-              <Input
-                id="birthDate"
-                type="date"
-                value={form.birthDate}
-                onChange={update("birthDate")}
-              />
-            </div>
-
+            <Input placeholder="Nome" value={form.fullName} onChange={update("fullName")} required />
+            <Input type="email" placeholder="Email" value={form.email} onChange={update("email")} required />
+            <Input type="password" placeholder="Senha" value={form.password} onChange={update("password")} required />
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Criando conta...
-                </>
-              ) : (
-                "Criar conta"
-              )}
+              {isLoading ? <Loader2 className="animate-spin" /> : "Criar conta"}
             </Button>
-
-            <p className="text-center text-sm text-muted-foreground">
-              Já tem conta?{" "}
-              <Link
-                to={`/login?redirect=${encodeURIComponent(`/accept-invite?token=${encodeURIComponent(token!)}`)}`}
-                className="text-primary hover:underline"
-              >
-                Entrar
-              </Link>
-            </p>
           </form>
         </CardContent>
       </Card>
