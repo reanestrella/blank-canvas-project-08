@@ -147,19 +147,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           const userId = session.user.id;
 
-         prevUserIdRef.current = userId;
+        prevUserIdRef.current = userId;
 
 setIsLoading(true);
 
-const data = await fetchUserData(userId);
+try {
+  const data = await fetchUserData(userId);
 
-setUser(session.user);
-setSession(session);
-setProfile(data.profile);
-setRoles(data.roles);
-setChurch(data.church);
-setIsLoading(false);
-          }
+  setUser(session.user);
+  setSession(session);
+  setProfile(data.profile);
+  setRoles(data.roles);
+  setChurch(data.church);
+} catch (error) {
+  console.error("Erro ao carregar dados do usuário:", error);
+} finally {
+  // 🔥 ISSO AQUI É O MAIS IMPORTANTE
+  setIsLoading(false);
+}
         } else {
           setUser(null);
           setSession(null);
