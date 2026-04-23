@@ -77,9 +77,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let rolesData = rolesRes.data || [];
 
       // 🔥 GARANTE PROFILE
-      if (!profileData && authUser) {
-        profileData = await ensureUserProfile(authUser);
-      }
+     if (!profileData && authUser) {
+  try {
+    profileData = await ensureUserProfile(authUser);
+  } catch (e) {
+    console.error("Erro criando profile:", e);
+    profileData = null;
+  }
+}
 
       // 🔥 DEFINE CHURCH_ID CORRETO
       let resolvedChurchId =
