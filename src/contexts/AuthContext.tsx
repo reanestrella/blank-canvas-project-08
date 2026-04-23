@@ -142,20 +142,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           const userId = session.user.id;
 
-          if (prevUserIdRef.current !== userId) {
-            prevUserIdRef.current = userId;
+         prevUserIdRef.current = userId;
 
-            setIsLoading(true);
+setIsLoading(true);
 
-            const data = await fetchUserData(userId);
+const data = await fetchUserData(userId);
 
-            setUser(session.user);
-            setSession(session);
-            setProfile(data.profile);
-            setRoles(data.roles);
-            setChurch(data.church);
-
-            setIsLoading(false);
+setUser(session.user);
+setSession(session);
+setProfile(data.profile);
+setRoles(data.roles);
+setChurch(data.church);
+setIsLoading(false);
           }
         } else {
           setUser(null);
