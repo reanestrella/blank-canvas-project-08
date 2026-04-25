@@ -47,10 +47,9 @@ export async function applyInvitationForUser(token: string, user: Pick<User, "id
   await ensureUserProfile(user);
 
   console.log("[Invite] applying invitation", { token, userId: user.id });
-  const { data, error } = await supabase.rpc("aceitar_convite", {
+  const { data, error } = await supabase.rpc("accept_invitation" as any, {
     p_token: token,
-    p_user_id: user.id,
-  });
+  } as any);
 
   if (error) {
     console.error("[Invite] accept invitation error:", error);
