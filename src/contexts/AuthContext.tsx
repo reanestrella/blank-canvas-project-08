@@ -1,19 +1,25 @@
-import { createContext, useContext, useEffect, useState, useRef } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
+import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { queryClient } from "@/lib/queryClient";
+import { APP_BRAND_LOGO, APP_BRAND_NAME } from "@/lib/brand";
+import { applyInvitationForUser } from "@/lib/authInvitation";
 import { clearAuthBrowserCache, ensureUserProfile } from "@/lib/authProfile";
 
 interface Profile {
   id: string;
   user_id: string;
   church_id: string | null;
-  full_name: string;
-  email: string;
+  congregation_id?: string | null;
+  full_name: string | null;
+  email: string | null;
   phone: string | null;
   avatar_url?: string | null;
   member_id?: string | null;
-  [key: string]: any;
+  ministry_network_id?: string | null;
+  registration_status?: string | null;
+  [key: string]: unknown;
 }
 
 interface Church {
@@ -22,7 +28,7 @@ interface Church {
   logo_url?: string | null;
   primary_color?: string | null;
   secondary_color?: string | null;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface UserRole {
@@ -49,6 +55,25 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const PENDING_INVITE_KEY = "pending_invite_token";
+const INVITE_APPLYING_KEY = "pending_invite_applying";
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+      <div className="rounded-2xl bg-sidebar p-3 shadow-[var(--shadow-lg)]">
+        <img src={APP_BRAND_LOGO} alt={APP_BRAND_NAME} className="h-14 w-auto max-w-[220px] object-contain drop-shadow-[0_0_8px_hsl(var(--primary)/0.3)]" />
+      </div>
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-1">
+        <p className="font-medium text-foreground">Carregando seu app...</p>
+        <p className="text-xs text-muted-foreground">
+          desenvolvido por <span className="font-semibold text-primary">{APP_BRAND_NAME.toLowerCase()}</span>
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -58,148 +83,208 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const prevUserIdRef = useRef<string | null>(null);
+  const isMountedRef = useRef(true);
+  const loadSeqRef = useRef(0);
+  const inviteInFlightRef = useRef<string | null>(null);
 
-  // 🔥 CORRIGIDO (fallback inteligente)
-  const currentChurchId =
-    profile?.church_id ||
-    roles?.[0]?.church_id ||
-    null;
+  const currentChurchId = profile?.church_id || roles?.[0]?.church_id || null;
+  const hasNoChurch = !isLoading && !!user && !currentChurchId && roles.length === 0;
 
-  // 🔥 CORRIGIDO (não dispara falso positivo)
-  const hasNoChurch =
-    !isLoading &&
-    !!user &&
-    !currentChurchId &&
-    roles.length === 0;
+  const resetAuthState = () => {
+    setUser(null);
+    setSession(null);
+    setProfile(null);
+    setRoles([]);
+    setChurch(null);
+  };
 
-  const fetchUserData = async (userId: string) => {
+  const applyPendingInvitationOnce = async (authUser: User) => {
+    if (typeof window === "undefined") return null;
+
+    const pathname = window.location.pathname;
+    if (pathname.startsWith("/accept-invite") || pathname.startsWith("/convite")) {
+      return null;
+    }
+
+    const token = sessionStorage.getItem(PENDING_INVITE_KEY);
+    console.log("TOKEN:", token);
+
+    if (!token) return null;
+    if (inviteInFlightRef.current === token) return null;
+    if (sessionStorage.getItem(INVITE_APPLYING_KEY) === token) return null;
+
+    inviteInFlightRef.current = token;
+    sessionStorage.setItem(INVITE_APPLYING_KEY, token);
+
     try {
-      console.log("USER:", userId);
+      const result = await applyInvitationForUser(token, authUser);
+      sessionStorage.removeItem(PENDING_INVITE_KEY);
+      return result;
+    } catch (error) {
+      console.error("[Auth] erro ao aplicar convite pendente:", error);
+      return null;
+    } finally {
+      sessionStorage.removeItem(INVITE_APPLYING_KEY);
+      inviteInFlightRef.current = null;
+    }
+  };
 
-      const { data: authData } = await supabase.auth.getUser();
-      const authUser = authData.user;
+  const fetchUserData = async (authUser: User) => {
+    console.log("USER:", authUser);
 
-      const [profileRes, rolesRes] = await Promise.all([
-        supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
-        supabase.from("user_roles").select("*").eq("user_id", userId),
-      ]);
+    try {
+      await ensureUserProfile(authUser);
+    } catch (error) {
+      console.error("[Auth] erro garantindo profile:", error);
+    }
 
-      let profileData = profileRes.data;
-      let rolesData = rolesRes.data || [];
+    const inviteResult = await applyPendingInvitationOnce(authUser);
 
-      // 🔥 GARANTE PROFILE
-     if (!profileData && authUser) {
-  try {
-    profileData = await ensureUserProfile(authUser);
-  } catch (e) {
-    console.error("Erro criando profile:", e);
-    profileData = null;
-  }
-}
+    const [profileRes, rolesRes] = await Promise.all([
+      supabase.from("profiles").select("*").eq("user_id", authUser.id).maybeSingle(),
+      supabase.from("user_roles").select("role, church_id").eq("user_id", authUser.id),
+    ]);
 
-      // 🔥 DEFINE CHURCH_ID CORRETO
-      let resolvedChurchId =
-        profileData?.church_id ||
-        rolesData?.[0]?.church_id ||
-        null;
+    if (profileRes.error) {
+      console.error("[Auth] erro buscando profile:", profileRes.error);
+      throw profileRes.error;
+    }
 
-      // 🔥 FORÇA PROFILE TER CHURCH_ID
-      if (profileData && !profileData.church_id && resolvedChurchId) {
-        await supabase
-          .from("profiles")
-          .update({ church_id: resolvedChurchId })
-          .eq("user_id", userId);
+    if (rolesRes.error) {
+      console.error("[Auth] erro buscando roles:", rolesRes.error);
+      throw rolesRes.error;
+    }
 
-        profileData.church_id = resolvedChurchId;
+    let profileData = profileRes.data as Profile | null;
+    const rolesData = (rolesRes.data || []) as UserRole[];
+    const resolvedChurchId = profileData?.church_id || rolesData?.[0]?.church_id || inviteResult?.churchId || null;
+
+    if (profileData && !profileData.church_id && resolvedChurchId) {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ church_id: resolvedChurchId } as never)
+        .eq("user_id", authUser.id);
+
+      if (error) {
+        console.error("[Auth] erro sincronizando church_id no profile:", error);
+      } else {
+        profileData = { ...profileData, church_id: resolvedChurchId };
+      }
+    }
+
+    let churchData: Church | null = null;
+
+    if (resolvedChurchId) {
+      const { data, error } = await supabase
+        .from("churches")
+        .select("*")
+        .eq("id", resolvedChurchId)
+        .maybeSingle();
+
+      if (error) {
+        console.error("[Auth] erro buscando igreja:", error);
+      } else {
+        churchData = data as Church | null;
+      }
+    }
+
+    console.log("PROFILE:", profileData);
+    console.log("ROLES:", rolesData);
+    console.log("CHURCH:", resolvedChurchId);
+
+    return {
+      profile: profileData,
+      roles: rolesData,
+      church: churchData,
+    };
+  };
+
+  const loadCurrentUser = async (reason: string, nextSession?: Session | null) => {
+    const seq = ++loadSeqRef.current;
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.getUser();
+
+      if (error) {
+        console.error("[Auth] getUser error:", error);
       }
 
-      let churchData = null;
+      const currentUser = data.user;
 
-      if (resolvedChurchId) {
-        const { data } = await supabase
-          .from("churches")
-          .select("*")
-          .eq("id", resolvedChurchId)
-          .maybeSingle();
-
-        churchData = data;
+      if (!currentUser) {
+        if (isMountedRef.current && seq === loadSeqRef.current) {
+          resetAuthState();
+        }
+        return;
       }
 
-      console.log("PROFILE:", profileData);
-      console.log("ROLES:", rolesData);
-      console.log("CHURCH:", resolvedChurchId);
+      const activeSession = nextSession ?? (await supabase.auth.getSession()).data.session;
+      const userData = await fetchUserData(currentUser);
 
-      return {
-        profile: profileData,
-        roles: rolesData,
-        church: churchData,
-      };
+      if (!isMountedRef.current || seq !== loadSeqRef.current) return;
+
+      setUser(currentUser);
+      setSession(activeSession);
+      setProfile(userData.profile);
+      setRoles(userData.roles);
+      setChurch(userData.church);
+      console.log("[Auth] dados carregados:", reason);
+
+      if (["SIGNED_IN", "TOKEN_REFRESHED", "USER_UPDATED"].includes(reason)) {
+        const pathname = window.location.pathname;
+        if (["/login", "/cadastrar", "/cadastro"].includes(pathname)) {
+          window.setTimeout(() => {
+            window.location.href = "/app";
+          }, 0);
+        }
+      }
     } catch (error) {
       console.error("Erro fetchUserData:", error);
-      return { profile: null, roles: [], church: null };
+      if (isMountedRef.current && seq === loadSeqRef.current) {
+        setProfile(null);
+        setRoles([]);
+        setChurch(null);
+      }
+    } finally {
+      if (isMountedRef.current && seq === loadSeqRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("AUTH EVENT:", event);
+    isMountedRef.current = true;
 
-        if (event === "SIGNED_OUT") {
-          setUser(null);
-          setSession(null);
-          setProfile(null);
-          setRoles([]);
-          setChurch(null);
-          setIsLoading(false);
-          return;
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      console.log("AUTH EVENT:", event);
 
-        if (session?.user) {
-          const userId = session.user.id;
-          prevUserIdRef.current = userId;
-          setIsLoading(true);
+      if (event === "INITIAL_SESSION") return;
 
-          try {
-            const data = await fetchUserData(userId);
-
-            setUser(session.user);
-            setSession(session);
-            setProfile(data.profile);
-            setRoles(data.roles);
-            setChurch(data.church);
-          } catch (error) {
-            console.error("Erro ao carregar dados do usuário:", error);
-          } finally {
-            setIsLoading(false);
-          }
-        } else {
-          setUser(null);
-          setSession(null);
-          setProfile(null);
-          setRoles([]);
-          setChurch(null);
-          setIsLoading(false);
-        }
-      }
-    );
-
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        const data = await fetchUserData(session.user.id);
-
-        setUser(session.user);
-        setSession(session);
-        setProfile(data.profile);
-        setRoles(data.roles);
-        setChurch(data.church);
+      if (!nextSession?.user) {
+        loadSeqRef.current += 1;
+        resetAuthState();
+        setIsLoading(false);
+        return;
       }
 
-      setIsLoading(false);
+      setUser(nextSession.user);
+      setSession(nextSession);
+      setIsLoading(true);
+
+      window.setTimeout(() => {
+        void loadCurrentUser(event, nextSession);
+      }, 0);
     });
 
-    return () => subscription.unsubscribe();
+    void loadCurrentUser("initial");
+
+    return () => {
+      isMountedRef.current = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -210,56 +295,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     await clearAuthBrowserCache();
-    setProfile(null);
-    setRoles([]);
-    setChurch(null);
+    resetAuthState();
     queryClient.clear();
   };
 
   const hasRole = (role: string) => roles.some((r) => r.role === role);
-  const hasAnyRole = (...checkRoles: string[]) =>
-    roles.some((r) => checkRoles.includes(r.role));
+  const hasAnyRole = (...checkRoles: string[]) => roles.some((r) => checkRoles.includes(r.role));
   const isAdmin = () => hasAnyRole("pastor", "admin", "secretario");
 
   const refreshUserData = async () => {
     if (!user) return;
-    const data = await fetchUserData(user.id);
-    setProfile(data.profile);
-    setRoles(data.roles);
-    setChurch(data.church);
+    await loadCurrentUser("manual-refresh", session);
   };
 
   const refreshChurch = async () => {
     if (!currentChurchId) return;
-    const { data } = await supabase
+
+    const { data, error } = await supabase
       .from("churches")
       .select("*")
       .eq("id", currentChurchId)
       .maybeSingle();
-    if (data) setChurch(data);
+
+    if (error) {
+      console.error("[Auth] erro atualizando igreja:", error);
+      return;
+    }
+
+    if (data) setChurch(data as Church);
   };
 
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      session,
+      profile,
+      church,
+      roles,
+      currentChurchId,
+      isLoading,
+      hasNoChurch,
+      isAdmin,
+      hasRole,
+      hasAnyRole,
+      refreshUserData,
+      refreshChurch,
+      signIn,
+      signOut,
+    }),
+    [user, session, profile, church, roles, currentChurchId, isLoading, hasNoChurch]
+  );
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        session,
-        profile,
-        church,
-        roles,
-        currentChurchId,
-        isLoading,
-        hasNoChurch,
-        isAdmin,
-        hasRole,
-        hasAnyRole,
-        refreshUserData,
-        refreshChurch,
-        signIn,
-        signOut,
-      }}
-    >
-      {children}
+    <AuthContext.Provider value={value}>
+      {isLoading ? <LoadingScreen /> : children}
     </AuthContext.Provider>
   );
 }

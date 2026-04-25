@@ -7,11 +7,6 @@ import { restoreManifestFromCache } from "./lib/setDynamicManifest";
 // so Chrome sees a valid manifest on reload after login
 restoreManifestFromCache();
 
-if (sessionStorage.getItem("auth_post_login_reload") === "1") {
-  sessionStorage.removeItem("auth_post_login_reload");
-  window.location.replace(window.location.href);
-}
-
 // Capture PWA install prompt — keep reference for InstallButton
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();

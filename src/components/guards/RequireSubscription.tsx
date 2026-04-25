@@ -28,7 +28,7 @@ export function RequireSubscription({ children }: Props) {
 
   // Not logged in
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   // Super admins bypass subscription check

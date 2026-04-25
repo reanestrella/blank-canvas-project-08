@@ -27,8 +27,8 @@ import {
 } from "lucide-react";
 
 function PastorDashboard() {
-  const { profile } = useAuth();
-  const churchId = profile?.church_id;
+  const { currentChurchId } = useAuth();
+  const churchId = currentChurchId;
   const { congregations, selectedCongregation, setSelectedCongregation } = useCongregations(churchId || undefined);
   const { stats, isLoading, members } = useDashboardStats(selectedCongregation);
   const [aiOpen, setAiOpen] = useState(false);
