@@ -1,7 +1,7 @@
 // 🔥 LOGIN SIMPLIFICADO — redireciona sempre para /meu-app
 
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -32,7 +32,6 @@ export default function Login() {
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const [searchParams] = useSearchParams();
   const rawRedirect = searchParams.get("redirect");
-  const navigate = useNavigate();
   const { toast } = useToast();
 
   // Store pending redirect (e.g. from invite link)
