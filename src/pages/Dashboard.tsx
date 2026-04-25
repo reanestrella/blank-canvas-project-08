@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCongregations } from "@/hooks/useCongregations";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
-import { pedirPermissao, type NotificationPermissionStatus } from "@/lib/onesignal";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CongregationSelector } from "@/components/layout/CongregationSelector";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -34,17 +33,25 @@ function PastorDashboard() {
   const { stats, isLoading, members } = useDashboardStats(selectedCongregation);
   const [aiOpen, setAiOpen] = useState(false);
   const [isRequestingPermission, setIsRequestingPermission] = useState(false);
-  const [notificationResult, setNotificationResult] = useState<NotificationPermissionStatus | null>(null);
+  const [notificationResult, setNotificationResult] = useState<string | null>(null);
 
-  const notificationPermission: NotificationPermissionStatus =
+  const notificationPermission =
     typeof Notification === "undefined" ? "unsupported" : Notification.permission;
 
   const canRequestNotification = notificationPermission !== "granted" && notificationPermission !== "denied" && notificationPermission !== "unsupported";
 
   const handleNotificationPermission = async () => {
     setIsRequestingPermission(true);
-    const result = await pedirPermissao();
-    setNotificationResult(result);
+    try {
+      if (typeof Notification !== "undefined" && Notification.requestPermission) {
+        const result = await Notification.requestPermission();
+        setNotificationResult(result);
+      } else {
+        setNotificationResult("unsupported");
+      }
+    } catch {
+      setNotificationResult("error");
+    }
     setIsRequestingPermission(false);
   };
 
