@@ -3,6 +3,38 @@ import { supabase } from "@/integrations/supabase/client";
 
 type MinimalUser = Pick<User, "id" | "email" | "user_metadata">;
 
+export type AuthProfileFallback = {
+  id: string;
+  user_id: string;
+  church_id: string | null;
+  congregation_id: string | null;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  avatar_url: string | null;
+  member_id: string | null;
+  ministry_network_id: string | null;
+  registration_status: string;
+  isFallback: true;
+};
+
+export function createFallbackProfile(user: MinimalUser): AuthProfileFallback {
+  return {
+    id: user.id,
+    user_id: user.id,
+    church_id: null,
+    congregation_id: null,
+    full_name: getUserDisplayName(user),
+    email: user.email ?? "",
+    phone: getMetadataString(user.user_metadata?.phone),
+    avatar_url: null,
+    member_id: null,
+    ministry_network_id: null,
+    registration_status: "ativo",
+    isFallback: true,
+  };
+}
+
 const getMetadataString = (value: unknown) => {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -20,6 +52,8 @@ export function getUserDisplayName(user?: Pick<User, "email" | "user_metadata"> 
 }
 
 export async function ensureUserProfile(user: MinimalUser) {
+  const fallbackProfile = createFallbackProfile(user);
+
   const { data: existingProfile, error: existingProfileError } = await supabase
     .from("profiles")
     .select("*")
@@ -27,13 +61,12 @@ export async function ensureUserProfile(user: MinimalUser) {
     .limit(1)
     .maybeSingle();
 
-  if (existingProfileError) {
-    console.error("[AuthProfile] failed to fetch existing profile:", existingProfileError);
-    throw existingProfileError;
+  if (!existingProfileError && existingProfile) {
+    return existingProfile;
   }
 
-  if (existingProfile) {
-    return existingProfile;
+  if (existingProfileError) {
+    console.error("[AuthProfile] failed to fetch existing profile, trying upsert:", existingProfileError);
   }
 
   const payload = {
@@ -45,11 +78,19 @@ export async function ensureUserProfile(user: MinimalUser) {
     registration_status: "ativo",
   } as const;
 
-  const { error: insertError } = await supabase.from("profiles").insert(payload as never);
+  const { data: upsertedProfile, error: upsertError } = await supabase
+    .from("profiles")
+    .upsert(payload as never, { onConflict: "user_id" })
+    .select("*")
+    .maybeSingle();
 
-  if (insertError) {
-    console.error("[AuthProfile] failed to create profile:", insertError);
-    throw insertError;
+  if (upsertError) {
+    console.error("[AuthProfile] failed to upsert profile, using fallback:", upsertError);
+    return fallbackProfile;
+  }
+
+  if (upsertedProfile) {
+    return upsertedProfile;
   }
 
   const { data, error } = await supabase
@@ -60,12 +101,13 @@ export async function ensureUserProfile(user: MinimalUser) {
     .maybeSingle();
 
   if (error) {
-    console.error("[AuthProfile] failed to ensure profile:", error);
-    throw error;
+    console.error("[AuthProfile] failed to ensure profile, using fallback:", error);
+    return fallbackProfile;
   }
 
-  return data;
+  return data ?? fallbackProfile;
 }
+
 
 export function getInviteTokenFromRedirect(redirect?: string | null) {
   if (!redirect) return null;
