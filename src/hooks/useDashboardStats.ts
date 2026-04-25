@@ -59,6 +59,7 @@ export function useDashboardStats(congregationId?: string | null) {
 
   useEffect(() => {
     if (!currentChurchId) {
+      setIsLoading(false);
       if (hasFetched) {
         setMembers([]);
         setAlerts([]);
