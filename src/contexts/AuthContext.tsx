@@ -101,6 +101,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const applyPendingInvitationOnce = async (authUser: User) => {
     if (typeof window === "undefined") return null;
 
+    const pathname = window.location.pathname;
+    if (pathname.startsWith("/accept-invite") || pathname.startsWith("/convite")) {
+      return null;
+    }
+
     const token = sessionStorage.getItem(PENDING_INVITE_KEY);
     console.log("TOKEN:", token);
 
@@ -225,6 +230,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setRoles(userData.roles);
       setChurch(userData.church);
       console.log("[Auth] dados carregados:", reason);
+
+      if (["SIGNED_IN", "TOKEN_REFRESHED", "USER_UPDATED"].includes(reason)) {
+        const pathname = window.location.pathname;
+        if (["/login", "/cadastrar", "/cadastro"].includes(pathname)) {
+          window.setTimeout(() => {
+            window.location.href = "/app";
+          }, 0);
+        }
+      }
     } catch (error) {
       console.error("Erro fetchUserData:", error);
       if (isMountedRef.current && seq === loadSeqRef.current) {
