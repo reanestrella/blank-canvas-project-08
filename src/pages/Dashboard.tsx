@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCongregations } from "@/hooks/useCongregations";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
-import { pedirPermissao, type NotificationPermissionStatus } from "@/lib/onesignal";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CongregationSelector } from "@/components/layout/CongregationSelector";
 import { StatCard } from "@/components/dashboard/StatCard";
