@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { applyInvitationForUser } from "@/lib/authInvitation";
-import { isValidUUID, getRoleBasedRedirect } from "@/lib/getRoleBasedRedirect";
+import { ensureUserProfile } from "@/lib/authProfile";
+import { isValidUUID } from "@/lib/getRoleBasedRedirect";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,10 +86,11 @@ export default function Cadastrar() {
         return;
       }
 
-      // 🔥 3. GARANTE USUÁRIO (ANTI BUG MASTER)
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       let user = null;
 
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 5; i++) {
         const {
           data: { user: currentUser },
         } = await supabase.auth.getUser();
@@ -104,68 +105,11 @@ export default function Cadastrar() {
 
       if (!user) throw new Error("Usuário não autenticado.");
 
-      // 4. GARANTE PROFILE
-      await supabase.from("profiles").upsert({
-        user_id: user.id,
-        full_name: form.fullName,
-        email: form.email,
-      } as never);
+      await ensureUserProfile(user);
 
-      // 5. APLICA CONVITE
-      const pendingToken = sessionStorage.getItem("pending_invite_token");
-      let roles: string[] = [];
-
-      if (pendingToken) {
-        try {
-          const result = await applyInvitationForUser(pendingToken, user);
-
-          roles = result?.roles || [];
-
-          sessionStorage.removeItem("pending_invite_token");
-
-          toast({
-            title: "Bem-vindo!",
-            description: "Convite aplicado com sucesso",
-          });
-        } catch (err: any) {
-          console.error("Erro convite:", err);
-
-          toast({
-            title: "Erro ao aplicar convite",
-            description: err.message,
-            variant: "destructive",
-          });
-        }
-      }
-
-      // 6. FALLBACK DE ROLES
-      if (!roles || roles.length === 0) {
-        const { data } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id);
-
-        if (data && data.length > 0) {
-          roles = data.map((r: any) => r.role);
-        } else {
-          roles = ["membro"];
-        }
-      }
-
-      // 7. REFRESH SESSION
-      await supabase.auth.refreshSession();
-      await new Promise((r) => setTimeout(r, 500));
-
-      // 8. REDIRECT SEGURO
-      let redirectTo = getRoleBasedRedirect(roles);
-
-      if (!redirectTo || typeof redirectTo !== "string") {
-        redirectTo = "/dashboard"; // fallback seguro
-      }
-
-      console.log("REDIRECT FINAL:", redirectTo);
-
-      window.location.href = redirectTo;
+      console.log("TOKEN:", sessionStorage.getItem("pending_invite_token"));
+      toast({ title: "Bem-vindo!", description: "Conta criada com sucesso." });
+      window.location.href = "/app";
     } catch (error: any) {
       console.error("ERRO:", error);
 
