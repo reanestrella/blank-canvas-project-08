@@ -16,7 +16,8 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { APP_BRAND_LOGO, APP_BRAND_NAME } from "@/lib/brand";
-import { clearAuthBrowserCache, getInviteTokenFromRedirect } from "@/lib/authProfile";
+import { applyInvitationForUser } from "@/lib/authInvitation";
+import { clearAuthBrowserCache, ensureUserProfile, getInviteTokenFromRedirect } from "@/lib/authProfile";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -77,22 +78,32 @@ export default function Login() {
         sessionStorage.setItem("session_active", "1");
       }
 
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error("Sessão não estabilizada após login.");
+      }
+
+      await ensureUserProfile(user);
+
       toast({ title: "Bem-vindo!", description: "Login realizado com sucesso." });
 
-      // Check for pending redirect (invite flow)
+      // Check for pending invite token from redirect/session storage
       const pendingRedirect = sessionStorage.getItem("post_login_redirect");
-      const inviteToken = getInviteTokenFromRedirect(pendingRedirect);
+      const inviteToken = sessionStorage.getItem("pending_invite_token") || getInviteTokenFromRedirect(pendingRedirect);
       if (inviteToken) {
-        sessionStorage.setItem("pending_invite_token", inviteToken);
+        console.log("TOKEN:", inviteToken);
+        await applyInvitationForUser(inviteToken, user);
+        sessionStorage.removeItem("pending_invite_token");
       }
+
+      sessionStorage.removeItem("post_login_redirect");
       await clearAuthBrowserCache();
-      sessionStorage.setItem("auth_post_login_reload", "1");
-      if (pendingRedirect) {
-        sessionStorage.removeItem("post_login_redirect");
-        window.location.href = pendingRedirect;
-      } else {
-        window.location.href = "/app";
-      }
+      window.location.href = "/app";
     } catch (error) {
       console.error("Erro login:", error);
       toast({ title: "Erro", description: "Erro ao fazer login.", variant: "destructive" });
