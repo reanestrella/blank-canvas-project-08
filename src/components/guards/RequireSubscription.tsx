@@ -10,12 +10,12 @@ interface Props {
 }
 
 export function RequireSubscription({ children }: Props) {
-  const { user, isLoading: authLoading, hasNoChurch } = useAuth();
+  const { user, isLoading: authLoading, hasNoChurch, currentChurchId } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
   const { isSubscribed, isLoading: subLoading } = useSubscription();
 
   // Still loading auth or subscription
-  if (authLoading || (user && !hasNoChurch && subLoading)) {
+  if (authLoading || (user && currentChurchId && !hasNoChurch && subLoading)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background px-6 text-center">
         <div className="rounded-2xl bg-sidebar p-3 shadow-[var(--shadow-lg)]">
@@ -36,9 +36,14 @@ export function RequireSubscription({ children }: Props) {
     return <>{children}</>;
   }
 
-  // Sem igreja vinculada — enviar para o onboarding existente
+  // Sem igreja vinculada real — enviar para o onboarding existente
   if (hasNoChurch) {
     return <Navigate to="/registro" replace />;
+  }
+
+  // Perfil/roles ainda indisponíveis por RLS: não bloquear usuário autenticado
+  if (!currentChurchId) {
+    return <>{children}</>;
   }
 
   // No active subscription — redirect to plans
