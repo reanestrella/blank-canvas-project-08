@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { queryClient } from "@/lib/queryClient";
 import { APP_BRAND_LOGO, APP_BRAND_NAME } from "@/lib/brand";
 import { applyInvitationForUser } from "@/lib/authInvitation";
-import { clearAuthBrowserCache, ensureUserProfile } from "@/lib/authProfile";
+import { clearAuthBrowserCache, createFallbackProfile, ensureUserProfile } from "@/lib/authProfile";
 
 interface Profile {
   id: string;
@@ -19,6 +19,7 @@ interface Profile {
   member_id?: string | null;
   ministry_network_id?: string | null;
   registration_status?: string | null;
+  isFallback?: boolean;
   [key: string]: unknown;
 }
 
@@ -88,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const inviteInFlightRef = useRef<string | null>(null);
 
   const currentChurchId = profile?.church_id || roles?.[0]?.church_id || null;
-  const hasNoChurch = !isLoading && !!user && !currentChurchId && roles.length === 0;
+  const hasNoChurch = !isLoading && !!user && !currentChurchId && roles.length === 0 && !profile?.isFallback;
 
   const resetAuthState = () => {
     setUser(null);
@@ -132,10 +133,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserData = async (authUser: User) => {
     console.log("USER:", authUser);
 
+    let ensuredProfile = createFallbackProfile(authUser) as Profile;
+
     try {
-      await ensureUserProfile(authUser);
+      ensuredProfile = (await ensureUserProfile(authUser)) as Profile;
     } catch (error) {
-      console.error("[Auth] erro garantindo profile:", error);
+      console.error("[Auth] erro garantindo profile, usando fallback:", error);
     }
 
     const inviteResult = await applyPendingInvitationOnce(authUser);
@@ -145,28 +148,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       supabase.from("user_roles").select("role, church_id").eq("user_id", authUser.id),
     ]);
 
+    let profileData = (profileRes.data as Profile | null) ?? ensuredProfile;
+    let rolesData = (rolesRes.data || []) as UserRole[];
+
     if (profileRes.error) {
-      console.error("[Auth] erro buscando profile:", profileRes.error);
-      throw profileRes.error;
+      console.error("[Auth] erro buscando profile, mantendo usuário autenticado:", profileRes.error);
+      profileData = ensuredProfile;
     }
 
     if (rolesRes.error) {
-      console.error("[Auth] erro buscando roles:", rolesRes.error);
-      throw rolesRes.error;
+      console.error("[Auth] erro buscando roles, seguindo sem bloquear UI:", rolesRes.error);
+      rolesData = [];
     }
 
-    let profileData = profileRes.data as Profile | null;
-    const rolesData = (rolesRes.data || []) as UserRole[];
     const resolvedChurchId = profileData?.church_id || rolesData?.[0]?.church_id || inviteResult?.churchId || null;
 
-    if (profileData && !profileData.church_id && resolvedChurchId) {
+    if (profileData && !profileData.isFallback && !profileData.church_id && resolvedChurchId) {
       const { error } = await supabase
         .from("profiles")
         .update({ church_id: resolvedChurchId } as never)
         .eq("user_id", authUser.id);
 
       if (error) {
-        console.error("[Auth] erro sincronizando church_id no profile:", error);
+        console.error("[Auth] erro sincronizando church_id no profile, seguindo sem bloquear:", error);
       } else {
         profileData = { ...profileData, church_id: resolvedChurchId };
       }
@@ -182,7 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle();
 
       if (error) {
-        console.error("[Auth] erro buscando igreja:", error);
+        console.error("[Auth] erro buscando igreja, seguindo sem bloquear UI:", error);
       } else {
         churchData = data as Church | null;
       }
