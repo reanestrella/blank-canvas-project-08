@@ -9,6 +9,7 @@ import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useChurchBranding } from "@/hooks/useChurchBranding";
 import { APP_BRAND_LOGO, APP_BRAND_NAME } from "@/lib/brand";
+import { TrialBanner } from "@/components/subscription/TrialBanner";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -68,6 +69,7 @@ export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
       {/* Main Content */}
       <div className={cn("md:ml-64 transition-all duration-300")}>
         <Header onMenuClick={() => setMobileMenuOpen(true)} />
+        <TrialBanner />
         <main className="p-4 md:p-6">{children}</main>
       </div>
     </div>

@@ -1,9 +1,10 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Loader2 } from "lucide-react";
 import { APP_BRAND_LOGO, APP_BRAND_NAME } from "@/lib/brand";
+import { TrialExpiredScreen } from "@/components/subscription/TrialExpiredScreen";
 
 interface Props {
   children: React.ReactNode;
@@ -12,7 +13,8 @@ interface Props {
 export function RequireSubscription({ children }: Props) {
   const { user, isLoading: authLoading, hasNoChurch, currentChurchId } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
-  const { isSubscribed, isLoading: subLoading } = useSubscription();
+  const { isSubscribed, isExpired, isLoading: subLoading } = useSubscription();
+  const location = useLocation();
 
   // Still loading auth or subscription
   if (authLoading || (user && currentChurchId && !hasNoChurch && subLoading)) {
@@ -46,7 +48,16 @@ export function RequireSubscription({ children }: Props) {
     return <>{children}</>;
   }
 
-  // No active subscription — redirect to plans
+  // Trial expirado → tela de bloqueio com CTA para /planos
+  if (isExpired) {
+    // Permite navegar para /planos sem ficar preso na tela de bloqueio
+    if (location.pathname.startsWith("/planos")) {
+      return <>{children}</>;
+    }
+    return <TrialExpiredScreen />;
+  }
+
+  // No active subscription and not in trial — redirect to plans
   if (!isSubscribed) {
     return <Navigate to="/planos" replace />;
   }
