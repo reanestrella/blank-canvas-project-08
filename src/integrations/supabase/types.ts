@@ -3366,6 +3366,8 @@ export type Database = {
           status: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
+          trial: boolean
+          trial_ends_at: string | null
           updated_at: string
           user_id: string
         }
@@ -3381,6 +3383,8 @@ export type Database = {
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          trial?: boolean
+          trial_ends_at?: string | null
           updated_at?: string
           user_id: string
         }
@@ -3396,6 +3400,8 @@ export type Database = {
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          trial?: boolean
+          trial_ends_at?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -3684,6 +3690,7 @@ export type Database = {
       }
       has_role: { Args: { role_name: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
+      mark_expired_trials: { Args: never; Returns: number }
       mark_invitation_used: { Args: { p_token: string }; Returns: undefined }
       reissue_invitation: {
         Args: {
