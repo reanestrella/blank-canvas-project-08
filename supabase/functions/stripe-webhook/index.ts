@@ -205,6 +205,8 @@ Deno.serve(async (req) => {
         price_id: priceId || null,
         plan,
         status: "ativo",
+        trial: false,
+        trial_ends_at: null,
         current_period_start: periodStart,
         current_period_end: periodEnd,
         updated_at: new Date().toISOString(),
@@ -257,6 +259,8 @@ Deno.serve(async (req) => {
             .from("subscriptions")
             .update({
               status: "ativo",
+              trial: false,
+              trial_ends_at: null,
               current_period_start: periodStart,
               current_period_end: periodEnd,
               updated_at: new Date().toISOString(),
@@ -284,6 +288,8 @@ Deno.serve(async (req) => {
                   price_id: priceId || null,
                   plan,
                   status: "ativo",
+                  trial: false,
+                  trial_ends_at: null,
                   current_period_start: periodStart,
                   current_period_end: periodEnd,
                   updated_at: new Date().toISOString(),
