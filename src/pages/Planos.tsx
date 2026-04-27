@@ -48,7 +48,7 @@ const features = [
 
 export default function Planos() {
   const { user } = useAuth();
-  const { isSubscribed, isLoading: subLoading } = useSubscription();
+  const { isActive, isLoading: subLoading } = useSubscription();
   const { toast } = useToast();
   const [loading, setLoading] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
@@ -59,7 +59,8 @@ export default function Planos() {
     if (fromUrl) setCoupon(fromUrl.trim().toUpperCase());
   }, [searchParams]);
 
-  if (user && !subLoading && isSubscribed) {
+  // Apenas redireciona quando já há assinatura paga ativa (não em trial)
+  if (user && !subLoading && isActive) {
     return <Navigate to="/meu-app" replace />;
   }
 
