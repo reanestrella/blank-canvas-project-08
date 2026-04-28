@@ -6,6 +6,7 @@ import { queryClient } from "@/lib/queryClient";
 import { APP_BRAND_LOGO, APP_BRAND_NAME } from "@/lib/brand";
 import { applyInvitationForUser } from "@/lib/authInvitation";
 import { clearAuthBrowserCache, createFallbackProfile, ensureUserProfile } from "@/lib/authProfile";
+import { getRoleBasedRedirect } from "@/lib/getRoleBasedRedirect";
 
 interface Profile {
   id: string;
@@ -238,8 +239,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (["SIGNED_IN", "TOKEN_REFRESHED", "USER_UPDATED"].includes(reason)) {
         const pathname = window.location.pathname;
         if (["/login", "/cadastrar", "/cadastro"].includes(pathname)) {
+          const target = getRoleBasedRedirect(userData.roles.map((r) => r.role));
           window.setTimeout(() => {
-            window.location.href = "/app";
+            window.location.href = target;
           }, 0);
         }
       }
