@@ -224,7 +224,11 @@ export default function Cadastrar() {
           </div>
           <CardTitle className="text-2xl">Criar conta</CardTitle>
           <CardDescription>
-            {validToken ? "Preencha seus dados para entrar na igreja" : "Cadastre-se para acessar o app da igreja"}
+            {churchName
+              ? <>Cadastre-se para acessar o app da <span className="font-semibold text-foreground">{churchName}</span></>
+              : validToken
+                ? "Preencha seus dados para entrar na igreja"
+                : "Cadastre-se para acessar o app da igreja"}
           </CardDescription>
         </CardHeader>
 
