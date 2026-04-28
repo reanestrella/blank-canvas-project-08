@@ -68,6 +68,30 @@ export default function Cadastrar() {
 
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
+  // Validate church_id exists in DB (for ?church=ID self-registration)
+  useEffect(() => {
+    if (!validChurch || !churchParam) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("churches")
+        .select("id, name, is_active")
+        .eq("id", churchParam)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error || !data) {
+        setChurchCheckError("Igreja não encontrada. Verifique o link recebido.");
+        return;
+      }
+      if (data.is_active === false) {
+        setChurchCheckError("Esta igreja não está ativa no momento.");
+        return;
+      }
+      setChurchName(data.name);
+    })();
+    return () => { cancelled = true; };
+  }, [validChurch, churchParam]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
