@@ -1,15 +1,14 @@
 import { useState } from "react";
-import { useSearchParams, useNavigate, Link } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ensureUserProfile } from "@/lib/authProfile";
 import { isValidUUID } from "@/lib/getRoleBasedRedirect";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertCircle, Church } from "lucide-react";
+import { Loader2, Church } from "lucide-react";
 
 interface CadastroFormData {
   email: string;
@@ -23,7 +22,11 @@ interface CadastroFormData {
 export default function Cadastrar() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token")?.trim() || null;
+  const churchParam = searchParams.get("church")?.trim() || null;
   const validToken = !!token && isValidUUID(token);
+  const validChurch = !!churchParam && isValidUUID(churchParam);
+  const hasValidEntry = validToken || validChurch;
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -44,8 +47,8 @@ export default function Cadastrar() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validToken || !token) {
-      setErrorMsg("Convite inválido.");
+    if (!hasValidEntry) {
+      setErrorMsg("Link inválido. Solicite um convite ou link de cadastro.");
       return;
     }
 
@@ -53,7 +56,9 @@ export default function Cadastrar() {
     setErrorMsg(null);
 
     try {
-      sessionStorage.setItem("pending_invite_token", token);
+      if (validToken && token) {
+        sessionStorage.setItem("pending_invite_token", token);
+      }
 
       // 1. SIGN UP
       const { error: authError } = await supabase.auth.signUp({
@@ -65,6 +70,7 @@ export default function Cadastrar() {
             phone: form.phone || null,
             birth_date: form.birthDate || null,
             tipo: form.tipo,
+            church_id: validChurch ? churchParam : undefined,
           },
         },
       });
@@ -78,10 +84,7 @@ export default function Cadastrar() {
       });
 
       if (signInError) {
-        toast({
-          title: "Conta criada!",
-          description: "Faça login para continuar.",
-        });
+        toast({ title: "Conta criada!", description: "Faça login para continuar." });
         navigate("/login");
         return;
       }
@@ -89,17 +92,9 @@ export default function Cadastrar() {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       let user = null;
-
       for (let i = 0; i < 5; i++) {
-        const {
-          data: { user: currentUser },
-        } = await supabase.auth.getUser();
-
-        if (currentUser) {
-          user = currentUser;
-          break;
-        }
-
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) { user = currentUser; break; }
         await new Promise((r) => setTimeout(r, 300));
       }
 
@@ -107,12 +102,51 @@ export default function Cadastrar() {
 
       await ensureUserProfile(user);
 
-      console.log("TOKEN:", sessionStorage.getItem("pending_invite_token"));
+      // CASO 2 — AUTOCADASTRO sem token: vincular church + role manualmente
+      if (!validToken && validChurch && churchParam) {
+        console.log("[Autocadastro] aplicando church_id:", churchParam);
+
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .upsert(
+            {
+              user_id: user.id,
+              email: user.email ?? form.email,
+              full_name: form.fullName,
+              phone: form.phone || null,
+              church_id: churchParam,
+              is_linked: true,
+              registration_status: "aprovado",
+            } as any,
+            { onConflict: "user_id" },
+          );
+
+        if (profileError) {
+          console.error("[Autocadastro] erro ao vincular profile:", profileError);
+        } else {
+          console.log("[Autocadastro] church_id vinculado");
+        }
+
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .upsert(
+            { user_id: user.id, church_id: churchParam, role: "membro" } as any,
+            { onConflict: "user_id,church_id,role" },
+          );
+
+        if (roleError) {
+          console.error("[Autocadastro] erro ao criar role:", roleError);
+        } else {
+          console.log("[Autocadastro] role criada (membro)");
+        }
+
+        console.log("[Autocadastro] aplicado com sucesso");
+      }
+
       toast({ title: "Bem-vindo!", description: "Conta criada com sucesso." });
       window.location.href = "/app";
     } catch (error: any) {
       console.error("ERRO:", error);
-
       setErrorMsg(
         error.message === "User already registered"
           ? "Este email já está cadastrado."
@@ -123,13 +157,13 @@ export default function Cadastrar() {
     }
   };
 
-  if (!validToken) {
+  if (!hasValidEntry) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle>Convite inválido</CardTitle>
-            <CardDescription>Solicite um novo link.</CardDescription>
+            <CardTitle>Link inválido</CardTitle>
+            <CardDescription>Solicite um novo link de convite ou cadastro.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => navigate("/")}>Voltar</Button>
@@ -145,7 +179,9 @@ export default function Cadastrar() {
         <CardHeader className="text-center">
           <Church className="mx-auto mb-2" />
           <CardTitle>Criar conta</CardTitle>
-          <CardDescription>Preencha para entrar na igreja</CardDescription>
+          <CardDescription>
+            {validToken ? "Preencha para entrar na igreja" : "Cadastre-se para acessar a igreja"}
+          </CardDescription>
         </CardHeader>
 
         <CardContent>
