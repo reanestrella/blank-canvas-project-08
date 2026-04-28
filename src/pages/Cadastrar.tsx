@@ -46,6 +46,8 @@ export default function Cadastrar() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const [churchName, setChurchName] = useState<string | null>(null);
+  const [churchCheckError, setChurchCheckError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FormData, string>>>({});
