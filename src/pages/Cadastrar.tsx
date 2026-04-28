@@ -169,16 +169,27 @@ export default function Cadastrar() {
         console.log("[Autocadastro] church_id vinculado e role 'membro' atribuída");
       }
 
+      // Refresh session so AuthContext picks up new profile/roles immediately
+      await supabase.auth.refreshSession();
+
       toast({ title: "Bem-vindo!", description: "Conta criada. Aguarde aprovação da secretaria." });
       console.log("[Autocadastro] redirecionando para /meu-app");
       window.location.href = "/meu-app";
     } catch (error: any) {
       console.error("[Autocadastro] ERRO:", error);
-      setErrorMsg(
-        error.message === "User already registered"
-          ? "Este email já está cadastrado. Faça login."
-          : error.message || "Erro ao cadastrar."
-      );
+      const msg = String(error?.message || "");
+      if (msg === "User already registered" || msg.toLowerCase().includes("already registered")) {
+        toast({
+          title: "Email já cadastrado",
+          description: "Faça login para continuar.",
+        });
+        const loginUrl = validChurch && churchParam
+          ? `/login?church=${churchParam}`
+          : "/login";
+        navigate(loginUrl);
+        return;
+      }
+      setErrorMsg(msg || "Erro ao cadastrar. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
