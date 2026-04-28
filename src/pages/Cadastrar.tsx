@@ -107,6 +107,10 @@ export default function Cadastrar() {
       setErrorMsg("Link inválido. Solicite um novo link de cadastro.");
       return;
     }
+    if (validChurch && churchCheckError) {
+      setErrorMsg(churchCheckError);
+      return;
+    }
 
     setIsLoading(true);
     console.log("[Autocadastro] iniciado", { tipo: form.tipo, validToken, validChurch });
