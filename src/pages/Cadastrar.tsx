@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,6 +46,8 @@ export default function Cadastrar() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const [churchName, setChurchName] = useState<string | null>(null);
+  const [churchCheckError, setChurchCheckError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -66,6 +68,30 @@ export default function Cadastrar() {
 
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
+  // Validate church_id exists in DB (for ?church=ID self-registration)
+  useEffect(() => {
+    if (!validChurch || !churchParam) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("churches")
+        .select("id, name, is_active")
+        .eq("id", churchParam)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error || !data) {
+        setChurchCheckError("Igreja não encontrada. Verifique o link recebido.");
+        return;
+      }
+      if (data.is_active === false) {
+        setChurchCheckError("Esta igreja não está ativa no momento.");
+        return;
+      }
+      setChurchName(data.name);
+    })();
+    return () => { cancelled = true; };
+  }, [validChurch, churchParam]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -79,6 +105,10 @@ export default function Cadastrar() {
     }
     if (!hasValidEntry) {
       setErrorMsg("Link inválido. Solicite um novo link de cadastro.");
+      return;
+    }
+    if (validChurch && churchCheckError) {
+      setErrorMsg(churchCheckError);
       return;
     }
 
@@ -143,16 +173,27 @@ export default function Cadastrar() {
         console.log("[Autocadastro] church_id vinculado e role 'membro' atribuída");
       }
 
+      // Refresh session so AuthContext picks up new profile/roles immediately
+      await supabase.auth.refreshSession();
+
       toast({ title: "Bem-vindo!", description: "Conta criada. Aguarde aprovação da secretaria." });
       console.log("[Autocadastro] redirecionando para /meu-app");
       window.location.href = "/meu-app";
     } catch (error: any) {
       console.error("[Autocadastro] ERRO:", error);
-      setErrorMsg(
-        error.message === "User already registered"
-          ? "Este email já está cadastrado. Faça login."
-          : error.message || "Erro ao cadastrar."
-      );
+      const msg = String(error?.message || "");
+      if (msg === "User already registered" || msg.toLowerCase().includes("already registered")) {
+        toast({
+          title: "Email já cadastrado",
+          description: "Faça login para continuar.",
+        });
+        const loginUrl = validChurch && churchParam
+          ? `/login?church=${churchParam}`
+          : "/login";
+        navigate(loginUrl);
+        return;
+      }
+      setErrorMsg(msg || "Erro ao cadastrar. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
@@ -183,11 +224,20 @@ export default function Cadastrar() {
           </div>
           <CardTitle className="text-2xl">Criar conta</CardTitle>
           <CardDescription>
-            {validToken ? "Preencha seus dados para entrar na igreja" : "Cadastre-se para acessar o app da igreja"}
+            {churchName
+              ? <>Cadastre-se para acessar o app da <span className="font-semibold text-foreground">{churchName}</span></>
+              : validToken
+                ? "Preencha seus dados para entrar na igreja"
+                : "Cadastre-se para acessar o app da igreja"}
           </CardDescription>
         </CardHeader>
 
         <CardContent>
+          {churchCheckError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{churchCheckError}</AlertDescription>
+            </Alert>
+          )}
           {errorMsg && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>{errorMsg}</AlertDescription>
