@@ -233,6 +233,11 @@ export default function Cadastrar() {
         </CardHeader>
 
         <CardContent>
+          {churchCheckError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{churchCheckError}</AlertDescription>
+            </Alert>
+          )}
           {errorMsg && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>{errorMsg}</AlertDescription>
