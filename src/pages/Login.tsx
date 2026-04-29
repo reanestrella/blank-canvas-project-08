@@ -219,7 +219,7 @@ export default function Login() {
                   htmlFor="keep-logged-in"
                   className="text-sm text-muted-foreground cursor-pointer select-none"
                 >
-                  Manter conectado
+                  Lembrar-me
                 </label>
               </div>
 
