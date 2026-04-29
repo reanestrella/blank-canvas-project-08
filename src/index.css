@@ -15,6 +15,24 @@ html {
   }
 }
 
+/* Mobile performance: lighter animations + GPU promotion */
+@media (max-width: 768px) {
+  *, *::before, *::after {
+    animation-duration: 0.2s !important;
+    transition-duration: 0.2s !important;
+  }
+  .animate-floaty,
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-scale-in {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+  /* Reduce expensive blur/shadow on low-power devices */
+  .backdrop-blur-xl { backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important; }
+}
+
 /* CHURCH ONEFY Design System — Deep Blue + Vibrant Yellow */
 
 @layer base {
