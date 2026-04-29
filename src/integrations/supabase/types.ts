@@ -3733,6 +3733,8 @@ export type Database = {
         Args: { _church_name: string; _email: string; _full_name: string }
         Returns: Json
       }
+      user_belongs_to_church: { Args: { _church_id: string }; Returns: boolean }
+      user_is_church_admin: { Args: { _church_id: string }; Returns: boolean }
       validate_invitation: {
         Args: { p_token: string }
         Returns: {
