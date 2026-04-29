@@ -89,7 +89,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadSeqRef = useRef(0);
   const inviteInFlightRef = useRef<string | null>(null);
 
-  const currentChurchId = profile?.church_id || roles?.[0]?.church_id || null;
+  // Use profile.church_id only if user actually has a role on that church (multi-tenant safety).
+  const profileChurchValid = profile?.church_id
+    ? roles.some((r) => r.church_id === profile.church_id)
+    : false;
+  const currentChurchId = (profileChurchValid ? profile?.church_id : null) || roles?.[0]?.church_id || null;
   const hasNoChurch = !isLoading && !!user && !currentChurchId && roles.length === 0 && !profile?.isFallback;
 
   const resetAuthState = () => {
@@ -162,9 +166,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       rolesData = [];
     }
 
-    const resolvedChurchId = profileData?.church_id || rolesData?.[0]?.church_id || inviteResult?.churchId || null;
+    // Multi-tenant integrity: prioritize the church where the user holds the highest-privilege role.
+    // This prevents stale profile.church_id from leaking data of another tenant when the user is
+    // actually pastor/admin of a different church.
+    const ROLE_PRIORITY = ["pastor", "admin", "secretario", "tesoureiro", "lider", "membro", "visitante"];
+    const sortedRoles = [...rolesData].sort((a, b) => {
+      const ai = ROLE_PRIORITY.indexOf(a.role);
+      const bi = ROLE_PRIORITY.indexOf(b.role);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
+    const primaryRoleChurchId = sortedRoles[0]?.church_id ?? null;
 
-    if (profileData && !profileData.isFallback && !profileData.church_id && resolvedChurchId) {
+    // Detect mismatch: profile.church_id points to a church where the user has NO role.
+    const profileChurchHasRole = profileData?.church_id
+      ? rolesData.some((r) => r.church_id === profileData.church_id)
+      : false;
+
+    let resolvedChurchId =
+      (profileChurchHasRole ? profileData?.church_id : null) ||
+      primaryRoleChurchId ||
+      profileData?.church_id ||
+      inviteResult?.churchId ||
+      null;
+
+    // Heal the profile if it points to the wrong tenant.
+    if (
+      profileData &&
+      !profileData.isFallback &&
+      resolvedChurchId &&
+      profileData.church_id !== resolvedChurchId
+    ) {
       const { error } = await supabase
         .from("profiles")
         .update({ church_id: resolvedChurchId } as never)
@@ -173,6 +204,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.error("[Auth] erro sincronizando church_id no profile, seguindo sem bloquear:", error);
       } else {
+        console.log(
+          "[Auth] church_id corrigido no profile:",
+          profileData.church_id,
+          "->",
+          resolvedChurchId,
+        );
         profileData = { ...profileData, church_id: resolvedChurchId };
       }
     }
