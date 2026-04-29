@@ -61,8 +61,47 @@ export function ChurchLogoUpload({ churchId, currentLogoUrl, onLogoUpdated }: Ch
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      toast({ title: "Formato inválido", description: "Envie uma imagem PNG ou JPG.", variant: "destructive" });
+      toast({ title: "Formato inválido", description: "Envie uma imagem PNG ou SVG.", variant: "destructive" });
       return;
+    }
+
+    // Recommend PNG/SVG (warn — não bloqueia)
+    const isPngOrSvg = /image\/(png|svg\+xml)/.test(file.type);
+    if (!isPngOrSvg) {
+      toast({
+        title: "Formato não recomendado",
+        description: "Para melhor qualidade, prefira PNG ou SVG.",
+      });
+    }
+
+    // Validate dimensions BEFORE processing — avoid upscale of small images
+    try {
+      const dims = await new Promise<{ w: number; h: number }>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+        img.onerror = () => reject(new Error("Não foi possível ler a imagem"));
+        img.src = URL.createObjectURL(file);
+      });
+
+      if (dims.w < 512 || dims.h < 512) {
+        toast({
+          title: "Imagem muito pequena",
+          description: `Sua logo tem ${dims.w}×${dims.h}px. A logo ideal deve ter no mínimo 512×512px, formato PNG ou SVG, proporção quadrada (1:1), para garantir qualidade no app instalado.`,
+          variant: "destructive",
+        });
+        if (inputRef.current) inputRef.current.value = "";
+        return;
+      }
+
+      const ratio = dims.w / dims.h;
+      if (ratio < 0.95 || ratio > 1.05) {
+        toast({
+          title: "Proporção não ideal",
+          description: "Recomendamos uma imagem quadrada (1:1). A logo será ajustada automaticamente, mas pode perder qualidade visual.",
+        });
+      }
+    } catch (err) {
+      console.warn("Não foi possível validar dimensões da logo:", err);
     }
 
     try {
