@@ -27,6 +27,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useInvitations } from "@/hooks/useInvitations";
+import { useSubscription } from "@/hooks/useSubscription";
 import { useCongregations } from "@/hooks/useCongregations";
 import { useChurchSettings } from "@/hooks/useChurchSettings";
 import { useAuth } from "@/contexts/AuthContext";
