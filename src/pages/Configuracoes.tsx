@@ -39,26 +39,34 @@ import { ChurchLogoUpload } from "@/components/settings/ChurchLogoUpload";
 import { ResetDataSection } from "@/components/settings/ResetDataSection";
 import type { Congregation, CreateCongregationData } from "@/hooks/useCongregations";
 
-const plans = [
+const PLANS = [
   {
-    name: "Free",
-    price: "Grátis",
-    current: true,
-    features: ["Até 50 membros", "1 célula", "Secretaria básica", "Meu App básico"],
-    limitations: ["Sem relatórios avançados", "Sem financeiro completo", "Suporte por email"],
+    id: "mensal",
+    name: "Mensal",
+    price: "R$ 79,90/mês",
+    priceId: "price_1TNAPIG15I82n9DcRbJgolli",
+    features: [
+      "Membros e células ilimitados",
+      "Gestão financeira completa",
+      "Escalas de ministério",
+      "Ensino e discipulado",
+      "Relatórios com IA",
+      "App personalizado",
+    ],
   },
   {
-    name: "Igreja Pequena",
-    price: "R$ 49/mês",
-    current: false,
+    id: "anual",
+    name: "Anual",
+    price: "R$ 790,00/ano",
+    priceId: "price_1TNAPmG15I82n9DcvXnRaGKu",
     recommended: true,
-    features: ["Membros ilimitados", "Células ilimitadas", "Financeiro completo", "Ensino & Discipulado", "Relatórios completos", "Suporte prioritário"],
-  },
-  {
-    name: "Igreja Média",
-    price: "R$ 99/mês",
-    current: false,
-    features: ["Tudo do plano anterior", "Relatórios avançados", "Indicadores espirituais", "Múltiplos líderes", "API de integração", "Suporte dedicado"],
+    savings: "Economize R$ 168,80",
+    features: [
+      "Tudo do plano mensal",
+      "Economia equivalente a 2 meses grátis",
+      "Suporte prioritário",
+      "Atualizações contínuas",
+    ],
   },
 ];
 
