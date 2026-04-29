@@ -92,12 +92,47 @@ export default function Configuracoes() {
   const [churchPhone, setChurchPhone] = useState("");
   const [churchAddress, setChurchAddress] = useState("");
   
-  const { profile, refreshChurch } = useAuth();
+  const { profile, refreshChurch, user } = useAuth();
   const { toast } = useToast();
   const churchId = profile?.church_id;
   const { invitations, isLoading, createInvitation, deleteInvitation, getInviteLink } = useInvitations();
   const { congregations, isLoading: loadingCongregations, createCongregation, updateCongregation } = useCongregations(churchId || undefined);
   const { church, isLoading: loadingChurch, isSaving, updateChurch, fetchChurch } = useChurchSettings();
+  const { isActive: isPremium } = useSubscription();
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+
+  const handleUpgrade = async (priceId: string, planId: string) => {
+    if (!user) {
+      toast({ title: "Faça login primeiro", variant: "destructive" });
+      return;
+    }
+    setCheckoutLoading(planId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/stripe-checkout`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ price_id: priceId }),
+        }
+      );
+      const data = await res.json();
+      if (data.error) {
+        toast({ title: "Erro", description: data.error, variant: "destructive" });
+        return;
+      }
+      if (data.url) window.location.href = data.url;
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível iniciar o checkout.", variant: "destructive" });
+    } finally {
+      setCheckoutLoading(null);
+    }
+  };
 
   // Initialize form with church data
   useEffect(() => {
