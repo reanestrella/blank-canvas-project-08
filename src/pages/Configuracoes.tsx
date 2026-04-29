@@ -420,45 +420,60 @@ export default function Configuracoes() {
           </TabsContent>
 
           <TabsContent value="plan" className="space-y-6 mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {plans.map((plan) => (
-                <Card key={plan.name} className={`relative ${plan.recommended ? "border-secondary shadow-lg" : plan.current ? "border-primary" : ""}`}>
-                  {plan.recommended && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-secondary text-secondary-foreground">Recomendado</Badge>
-                    </div>
-                  )}
-                  {plan.current && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge>Plano Atual</Badge>
-                    </div>
-                  )}
-                  <CardHeader className="text-center pt-8">
-                    <CardTitle className="text-xl">{plan.name}</CardTitle>
-                    <div className="text-3xl font-bold mt-2">{plan.price}</div>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3">
-                      {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-center gap-2 text-sm">
-                          <Check className="w-4 h-4 text-success" />
-                          {feature}
-                        </li>
-                      ))}
-                      {plan.limitations?.map((limitation) => (
-                        <li key={limitation} className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <span className="w-4 h-4 flex items-center justify-center">-</span>
-                          {limitation}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button className={`w-full mt-6 ${plan.recommended ? "gradient-accent text-secondary-foreground" : ""}`} variant={plan.current ? "outline" : "default"} disabled={plan.current}>
-                      {plan.current ? "Plano Atual" : "Fazer Upgrade"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {isPremium ? (
+              <Card className="border-secondary">
+                <CardHeader className="text-center pt-8">
+                  <div className="mx-auto mb-2 inline-flex items-center justify-center w-12 h-12 rounded-full bg-secondary/15">
+                    <Crown className="w-6 h-6 text-secondary" />
+                  </div>
+                  <CardTitle className="text-xl">Plano Premium ativo</CardTitle>
+                  <CardDescription>Sua igreja já possui acesso completo a todos os recursos.</CardDescription>
+                </CardHeader>
+                <CardContent className="text-center text-sm text-muted-foreground">
+                  Obrigado por apoiar a missão. Para gerenciar a assinatura ou alterar forma de pagamento, fale com o suporte.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
+                {PLANS.map((plan) => (
+                  <Card key={plan.id} className={`relative ${plan.recommended ? "border-secondary shadow-lg" : ""}`}>
+                    {plan.recommended && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <Badge className="bg-secondary text-secondary-foreground">Mais vantajoso</Badge>
+                      </div>
+                    )}
+                    <CardHeader className="text-center pt-8">
+                      <CardTitle className="text-xl">{plan.name}</CardTitle>
+                      <div className="text-3xl font-bold mt-2">{plan.price}</div>
+                      {plan.savings && (
+                        <p className="mt-1 text-xs font-semibold text-success">{plan.savings}</p>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-3">
+                        {plan.features.map((feature) => (
+                          <li key={feature} className="flex items-center gap-2 text-sm">
+                            <Check className="w-4 h-4 text-success" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                      <Button
+                        className={`w-full mt-6 ${plan.recommended ? "gradient-accent text-secondary-foreground" : ""}`}
+                        onClick={() => handleUpgrade(plan.priceId, plan.id)}
+                        disabled={!!checkoutLoading}
+                      >
+                        {checkoutLoading === plan.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          "Assinar agora"
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="reset" className="space-y-6 mt-6">
