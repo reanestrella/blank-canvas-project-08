@@ -50,6 +50,16 @@ export default function Login() {
     defaultValues: { email: "", password: "" },
   });
 
+  // Pre-fill remembered email
+  useEffect(() => {
+    const remembered = localStorage.getItem("remembered_email");
+    if (remembered) {
+      form.setValue("email", remembered);
+      setKeepLoggedIn(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
