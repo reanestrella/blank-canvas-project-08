@@ -50,6 +50,16 @@ export default function Login() {
     defaultValues: { email: "", password: "" },
   });
 
+  // Pre-fill remembered email
+  useEffect(() => {
+    const remembered = localStorage.getItem("remembered_email");
+    if (remembered) {
+      form.setValue("email", remembered);
+      setKeepLoggedIn(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
@@ -72,8 +82,10 @@ export default function Login() {
       // Session persistence preference
       if (keepLoggedIn) {
         localStorage.setItem("keep_logged_in", "true");
+        localStorage.setItem("remembered_email", data.email);
       } else {
         localStorage.setItem("keep_logged_in", "false");
+        localStorage.removeItem("remembered_email");
         sessionStorage.setItem("session_active", "1");
       }
 
@@ -88,6 +100,26 @@ export default function Login() {
       }
 
       await ensureUserProfile(user);
+
+      // Restrição de sessão por role: admin/tesoureiro NÃO mantêm sessão persistente
+      try {
+        const { data: rolesData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id);
+        const userRoles = (rolesData || []).map((r: { role: string }) => r.role);
+        const isSensitiveRole = userRoles.some((r) =>
+          ["pastor", "admin", "tesoureiro", "secretario"].includes(r)
+        );
+        if (isSensitiveRole) {
+          // Sessão curta: marca como não-persistente (logout ao fechar a aba via sw / app reload)
+          localStorage.setItem("keep_logged_in", "false");
+          localStorage.removeItem("remembered_email");
+          sessionStorage.setItem("session_active", "1");
+        }
+      } catch (e) {
+        console.warn("[Login] não foi possível avaliar roles para política de sessão:", e);
+      }
 
       toast({ title: "Bem-vindo!", description: "Login realizado com sucesso." });
 
@@ -187,7 +219,7 @@ export default function Login() {
                   htmlFor="keep-logged-in"
                   className="text-sm text-muted-foreground cursor-pointer select-none"
                 >
-                  Manter conectado
+                  Lembrar-me
                 </label>
               </div>
 

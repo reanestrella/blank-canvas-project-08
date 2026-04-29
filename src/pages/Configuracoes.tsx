@@ -27,6 +27,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useInvitations } from "@/hooks/useInvitations";
+import { useSubscription } from "@/hooks/useSubscription";
 import { useCongregations } from "@/hooks/useCongregations";
 import { useChurchSettings } from "@/hooks/useChurchSettings";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,26 +40,34 @@ import { ChurchLogoUpload } from "@/components/settings/ChurchLogoUpload";
 import { ResetDataSection } from "@/components/settings/ResetDataSection";
 import type { Congregation, CreateCongregationData } from "@/hooks/useCongregations";
 
-const plans = [
+const PLANS = [
   {
-    name: "Free",
-    price: "Grátis",
-    current: true,
-    features: ["Até 50 membros", "1 célula", "Secretaria básica", "Meu App básico"],
-    limitations: ["Sem relatórios avançados", "Sem financeiro completo", "Suporte por email"],
+    id: "mensal",
+    name: "Mensal",
+    price: "R$ 79,90/mês",
+    priceId: "price_1TNAPIG15I82n9DcRbJgolli",
+    features: [
+      "Membros e células ilimitados",
+      "Gestão financeira completa",
+      "Escalas de ministério",
+      "Ensino e discipulado",
+      "Relatórios com IA",
+      "App personalizado",
+    ],
   },
   {
-    name: "Igreja Pequena",
-    price: "R$ 49/mês",
-    current: false,
+    id: "anual",
+    name: "Anual",
+    price: "R$ 790,00/ano",
+    priceId: "price_1TNAPmG15I82n9DcvXnRaGKu",
     recommended: true,
-    features: ["Membros ilimitados", "Células ilimitadas", "Financeiro completo", "Ensino & Discipulado", "Relatórios completos", "Suporte prioritário"],
-  },
-  {
-    name: "Igreja Média",
-    price: "R$ 99/mês",
-    current: false,
-    features: ["Tudo do plano anterior", "Relatórios avançados", "Indicadores espirituais", "Múltiplos líderes", "API de integração", "Suporte dedicado"],
+    savings: "Economize R$ 168,80",
+    features: [
+      "Tudo do plano mensal",
+      "Economia equivalente a 2 meses grátis",
+      "Suporte prioritário",
+      "Atualizações contínuas",
+    ],
   },
 ];
 
@@ -84,12 +93,47 @@ export default function Configuracoes() {
   const [churchPhone, setChurchPhone] = useState("");
   const [churchAddress, setChurchAddress] = useState("");
   
-  const { profile, refreshChurch } = useAuth();
+  const { profile, refreshChurch, user } = useAuth();
   const { toast } = useToast();
   const churchId = profile?.church_id;
   const { invitations, isLoading, createInvitation, deleteInvitation, getInviteLink } = useInvitations();
   const { congregations, isLoading: loadingCongregations, createCongregation, updateCongregation } = useCongregations(churchId || undefined);
   const { church, isLoading: loadingChurch, isSaving, updateChurch, fetchChurch } = useChurchSettings();
+  const { isActive: isPremium } = useSubscription();
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+
+  const handleUpgrade = async (priceId: string, planId: string) => {
+    if (!user) {
+      toast({ title: "Faça login primeiro", variant: "destructive" });
+      return;
+    }
+    setCheckoutLoading(planId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/stripe-checkout`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ price_id: priceId }),
+        }
+      );
+      const data = await res.json();
+      if (data.error) {
+        toast({ title: "Erro", description: data.error, variant: "destructive" });
+        return;
+      }
+      if (data.url) window.location.href = data.url;
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível iniciar o checkout.", variant: "destructive" });
+    } finally {
+      setCheckoutLoading(null);
+    }
+  };
 
   // Initialize form with church data
   useEffect(() => {
@@ -412,45 +456,60 @@ export default function Configuracoes() {
           </TabsContent>
 
           <TabsContent value="plan" className="space-y-6 mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {plans.map((plan) => (
-                <Card key={plan.name} className={`relative ${plan.recommended ? "border-secondary shadow-lg" : plan.current ? "border-primary" : ""}`}>
-                  {plan.recommended && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-secondary text-secondary-foreground">Recomendado</Badge>
-                    </div>
-                  )}
-                  {plan.current && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge>Plano Atual</Badge>
-                    </div>
-                  )}
-                  <CardHeader className="text-center pt-8">
-                    <CardTitle className="text-xl">{plan.name}</CardTitle>
-                    <div className="text-3xl font-bold mt-2">{plan.price}</div>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3">
-                      {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-center gap-2 text-sm">
-                          <Check className="w-4 h-4 text-success" />
-                          {feature}
-                        </li>
-                      ))}
-                      {plan.limitations?.map((limitation) => (
-                        <li key={limitation} className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <span className="w-4 h-4 flex items-center justify-center">-</span>
-                          {limitation}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button className={`w-full mt-6 ${plan.recommended ? "gradient-accent text-secondary-foreground" : ""}`} variant={plan.current ? "outline" : "default"} disabled={plan.current}>
-                      {plan.current ? "Plano Atual" : "Fazer Upgrade"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {isPremium ? (
+              <Card className="border-secondary">
+                <CardHeader className="text-center pt-8">
+                  <div className="mx-auto mb-2 inline-flex items-center justify-center w-12 h-12 rounded-full bg-secondary/15">
+                    <Crown className="w-6 h-6 text-secondary" />
+                  </div>
+                  <CardTitle className="text-xl">Plano Premium ativo</CardTitle>
+                  <CardDescription>Sua igreja já possui acesso completo a todos os recursos.</CardDescription>
+                </CardHeader>
+                <CardContent className="text-center text-sm text-muted-foreground">
+                  Obrigado por apoiar a missão. Para gerenciar a assinatura ou alterar forma de pagamento, fale com o suporte.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
+                {PLANS.map((plan) => (
+                  <Card key={plan.id} className={`relative ${plan.recommended ? "border-secondary shadow-lg" : ""}`}>
+                    {plan.recommended && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <Badge className="bg-secondary text-secondary-foreground">Mais vantajoso</Badge>
+                      </div>
+                    )}
+                    <CardHeader className="text-center pt-8">
+                      <CardTitle className="text-xl">{plan.name}</CardTitle>
+                      <div className="text-3xl font-bold mt-2">{plan.price}</div>
+                      {plan.savings && (
+                        <p className="mt-1 text-xs font-semibold text-success">{plan.savings}</p>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-3">
+                        {plan.features.map((feature) => (
+                          <li key={feature} className="flex items-center gap-2 text-sm">
+                            <Check className="w-4 h-4 text-success" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                      <Button
+                        className={`w-full mt-6 ${plan.recommended ? "gradient-accent text-secondary-foreground" : ""}`}
+                        onClick={() => handleUpgrade(plan.priceId, plan.id)}
+                        disabled={!!checkoutLoading}
+                      >
+                        {checkoutLoading === plan.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          "Assinar agora"
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="reset" className="space-y-6 mt-6">
