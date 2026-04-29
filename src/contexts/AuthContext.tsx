@@ -89,7 +89,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadSeqRef = useRef(0);
   const inviteInFlightRef = useRef<string | null>(null);
 
-  const currentChurchId = profile?.church_id || roles?.[0]?.church_id || null;
+  // Use profile.church_id only if user actually has a role on that church (multi-tenant safety).
+  const profileChurchValid = profile?.church_id
+    ? roles.some((r) => r.church_id === profile.church_id)
+    : false;
+  const currentChurchId = (profileChurchValid ? profile?.church_id : null) || roles?.[0]?.church_id || null;
   const hasNoChurch = !isLoading && !!user && !currentChurchId && roles.length === 0 && !profile?.isFallback;
 
   const resetAuthState = () => {
