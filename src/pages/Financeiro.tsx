@@ -462,6 +462,17 @@ export default function Financeiro() {
             <FinancialSummaryTab transactions={filteredTransactions} categories={categories} />
           </TabsContent>
 
+          {/* Percentages Tab */}
+          <TabsContent value="percentages" className="mt-6">
+            {churchId && (
+              <PercentagesTab
+                churchId={churchId}
+                transactions={filteredTransactions}
+                periodLabel={periodLabel}
+              />
+            )}
+          </TabsContent>
+
           {/* Tithers Tab */}
           <TabsContent value="tithers" className="space-y-6 mt-6">
             {/* Tither Period Filters */}
