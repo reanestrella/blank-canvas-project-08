@@ -340,11 +340,67 @@ export default function Planos() {
           <div className="inline-flex items-center gap-2 text-muted-foreground">
             <Lock className="h-4 w-4" />
             <p className="text-xs">
-              Pagamento seguro via Stripe · Cancele a qualquer momento · Sem taxa de cancelamento
+              Pagamento seguro via Stripe e Asaas · Cartão, Pix ou Boleto · Cancele quando quiser
             </p>
           </div>
         </div>
       </div>
+
+      {/* Modal Pix */}
+      <Dialog open={pixModal.open} onOpenChange={(o) => setPixModal((p) => ({ ...p, open: o }))}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5 text-primary" />
+              Pague com Pix
+            </DialogTitle>
+            <DialogDescription>
+              Escaneie o QR Code abaixo ou copie o código Pix. A liberação é automática após a confirmação.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {pixModal.qr && (
+              <div className="flex justify-center bg-white p-4 rounded-xl border">
+                <img src={pixModal.qr} alt="QR Code Pix" className="w-56 h-56 object-contain" />
+              </div>
+            )}
+            {pixModal.payload && (
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground uppercase">Código Pix copia e cola</label>
+                <div className="flex gap-2">
+                  <input
+                    readOnly
+                    value={pixModal.payload}
+                    className="flex-1 rounded-lg border border-border bg-muted px-3 py-2 text-xs font-mono truncate"
+                  />
+                  <Button size="sm" variant="outline" onClick={copyPix}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => refetchSub()}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Já paguei — verificar
+            </Button>
+            {pixModal.invoiceUrl && (
+              <a
+                href={pixModal.invoiceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="block text-center text-xs text-muted-foreground underline"
+              >
+                Abrir fatura no Asaas
+              </a>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
