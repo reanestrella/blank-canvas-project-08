@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.ai-dashboard-report]
 verify_jwt = false
+
+[functions.asaas-webhook]
+verify_jwt = false

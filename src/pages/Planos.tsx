@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CheckCircle, ArrowRight, Crown, Loader2, Shield, Sparkles, Zap, Users, Star, Lock, Church, BarChart3, BookOpen, Calendar, Tag } from "lucide-react";
+import { CheckCircle, ArrowRight, Crown, Loader2, Shield, Sparkles, Zap, Users, Star, Lock, Church, BarChart3, BookOpen, Calendar, Tag, CreditCard, QrCode, FileText, Copy, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { APP_BRAND_LOGO } from "@/lib/brand";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const PLANS = [
   {
@@ -47,19 +48,25 @@ const features = [
 ];
 
 export default function Planos() {
-  const { user } = useAuth();
-  const { isActive, isLoading: subLoading } = useSubscription();
+  const { user, currentChurchId } = useAuth();
+  const { isActive, isLoading: subLoading, refetch: refetchSub } = useSubscription();
   const { toast } = useToast();
   const [loading, setLoading] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const [coupon, setCoupon] = useState<string>("");
+  const [pixModal, setPixModal] = useState<{
+    open: boolean;
+    plan?: string;
+    qr?: string | null;
+    payload?: string | null;
+    invoiceUrl?: string;
+  }>({ open: false });
 
   useEffect(() => {
     const fromUrl = searchParams.get("cupom") || searchParams.get("coupon");
     if (fromUrl) setCoupon(fromUrl.trim().toUpperCase());
   }, [searchParams]);
 
-  // Apenas redireciona quando já há assinatura paga ativa (não em trial)
   if (user && !subLoading && isActive) {
     return <Navigate to="/meu-app" replace />;
   }
@@ -69,11 +76,9 @@ export default function Planos() {
       toast({ title: "Faça login primeiro", variant: "destructive" });
       return;
     }
-
-    setLoading(planId);
+    setLoading(`stripe-${planId}`);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/stripe-checkout`,
@@ -86,22 +91,64 @@ export default function Planos() {
           body: JSON.stringify({ price_id: priceId, coupon: coupon || undefined }),
         }
       );
-
       const data = await res.json();
-
       if (data.error) {
         toast({ title: "Erro", description: data.error, variant: "destructive" });
         return;
       }
-
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (err: any) {
+      if (data.url) window.location.href = data.url;
+    } catch {
       toast({ title: "Erro", description: "Não foi possível iniciar o checkout.", variant: "destructive" });
     } finally {
       setLoading(null);
     }
+  };
+
+  const handleAsaas = async (planId: "mensal" | "anual", billing: "PIX" | "BOLETO") => {
+    if (!user) {
+      toast({ title: "Faça login primeiro", variant: "destructive" });
+      return;
+    }
+    if (!currentChurchId) {
+      toast({ title: "Igreja não identificada", description: "Recarregue a página e tente novamente.", variant: "destructive" });
+      return;
+    }
+    setLoading(`${billing}-${planId}`);
+    try {
+      const { data, error } = await supabase.functions.invoke("asaas-create-payment", {
+        body: { plan: planId, billing_type: billing, church_id: currentChurchId },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Falha ao gerar cobrança");
+
+      if (billing === "PIX") {
+        setPixModal({
+          open: true,
+          plan: planId,
+          qr: data.pix_qr_code,
+          payload: data.pix_payload,
+          invoiceUrl: data.invoice_url,
+        });
+      } else {
+        const url = data.bank_slip_url || data.invoice_url;
+        if (url) window.open(url, "_blank");
+        toast({ title: "Boleto gerado!", description: "Abrimos o boleto em uma nova aba." });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Erro ao gerar cobrança",
+        description: err.message ?? "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const copyPix = async () => {
+    if (!pixModal.payload) return;
+    await navigator.clipboard.writeText(pixModal.payload);
+    toast({ title: "Código Pix copiado!" });
   };
 
   return (
@@ -212,25 +259,61 @@ export default function Planos() {
                 )}
               </div>
 
-              <Button
-                size="lg"
-                className={`w-full rounded-xl py-6 text-base font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
-                  plan.highlight
-                    ? "bg-secondary hover:bg-secondary/90 text-secondary-foreground shadow-[0_4px_20px_rgba(234,179,8,0.25)]"
-                    : "bg-primary hover:bg-primary/90 text-primary-foreground"
-                }`}
-                onClick={() => handleCheckout(plan.priceId, plan.id)}
-                disabled={!!loading}
-              >
-                {loading === plan.id ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <>
-                    Começar agora
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </>
-                )}
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  size="lg"
+                  className={`w-full rounded-xl py-6 text-base font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
+                    plan.highlight
+                      ? "bg-secondary hover:bg-secondary/90 text-secondary-foreground shadow-[0_4px_20px_rgba(234,179,8,0.25)]"
+                      : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                  }`}
+                  onClick={() => handleCheckout(plan.priceId, plan.id)}
+                  disabled={!!loading}
+                >
+                  {loading === `stripe-${plan.id}` ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <>
+                      <CreditCard className="w-5 h-5" />
+                      Cartão de crédito
+                      <ArrowRight className="w-5 h-5 ml-1" />
+                    </>
+                  )}
+                </Button>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    className="rounded-xl py-5 text-sm font-semibold"
+                    onClick={() => handleAsaas(plan.id as "mensal" | "anual", "PIX")}
+                    disabled={!!loading}
+                  >
+                    {loading === `PIX-${plan.id}` ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <QrCode className="w-4 h-4" />
+                        Pix
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="rounded-xl py-5 text-sm font-semibold"
+                    onClick={() => handleAsaas(plan.id as "mensal" | "anual", "BOLETO")}
+                    disabled={!!loading}
+                  >
+                    {loading === `BOLETO-${plan.id}` ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <FileText className="w-4 h-4" />
+                        Boleto
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -257,11 +340,67 @@ export default function Planos() {
           <div className="inline-flex items-center gap-2 text-muted-foreground">
             <Lock className="h-4 w-4" />
             <p className="text-xs">
-              Pagamento seguro via Stripe · Cancele a qualquer momento · Sem taxa de cancelamento
+              Pagamento seguro via Stripe e Asaas · Cartão, Pix ou Boleto · Cancele quando quiser
             </p>
           </div>
         </div>
       </div>
+
+      {/* Modal Pix */}
+      <Dialog open={pixModal.open} onOpenChange={(o) => setPixModal((p) => ({ ...p, open: o }))}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5 text-primary" />
+              Pague com Pix
+            </DialogTitle>
+            <DialogDescription>
+              Escaneie o QR Code abaixo ou copie o código Pix. A liberação é automática após a confirmação.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {pixModal.qr && (
+              <div className="flex justify-center bg-white p-4 rounded-xl border">
+                <img src={pixModal.qr} alt="QR Code Pix" className="w-56 h-56 object-contain" />
+              </div>
+            )}
+            {pixModal.payload && (
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground uppercase">Código Pix copia e cola</label>
+                <div className="flex gap-2">
+                  <input
+                    readOnly
+                    value={pixModal.payload}
+                    className="flex-1 rounded-lg border border-border bg-muted px-3 py-2 text-xs font-mono truncate"
+                  />
+                  <Button size="sm" variant="outline" onClick={copyPix}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => refetchSub()}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Já paguei — verificar
+            </Button>
+            {pixModal.invoiceUrl && (
+              <a
+                href={pixModal.invoiceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="block text-center text-xs text-muted-foreground underline"
+              >
+                Abrir fatura no Asaas
+              </a>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
