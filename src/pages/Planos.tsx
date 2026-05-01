@@ -227,6 +227,25 @@ export default function Planos() {
           )}
         </div>
 
+        {/* CPF/CNPJ input (Pix/Boleto) */}
+        <div className="max-w-md mx-auto mb-8">
+          <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            <FileText className="h-3.5 w-3.5" />
+            CPF ou CNPJ (para Pix e Boleto)
+          </label>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={cpfCnpj}
+            onChange={(e) => setCpfCnpj(e.target.value)}
+            placeholder="Somente números"
+            className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+          />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Necessário para emissão da cobrança no Asaas. Não usado para cartão de crédito.
+          </p>
+        </div>
+
         {/* Plans Grid */}
         <div className="grid md:grid-cols-2 gap-6 md:gap-8 max-w-3xl mx-auto mb-16">
           {PLANS.map((plan) => (
