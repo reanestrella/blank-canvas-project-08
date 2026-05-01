@@ -27,23 +27,33 @@ async function asaas(path: string, init: RequestInit = {}) {
   let data: any = {};
   try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
   if (!res.ok) {
-    throw new Error(`Asaas ${path} [${res.status}]: ${JSON.stringify(data)}`);
+    const err: any = new Error(`Asaas ${path} [${res.status}]`);
+    err.status = res.status;
+    err.payload = data;
+    throw err;
   }
   return data;
+}
+
+function jsonResponse(body: any, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    if (!ASAAS_API_KEY) throw new Error("ASAAS_API_KEY não configurada");
+    if (!ASAAS_API_KEY) {
+      console.error("[asaas] ASAAS_API_KEY não configurada");
+      return jsonResponse({ success: false, error: "ASAAS_API_KEY não configurada" }, 500);
+    }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ success: false, error: "Unauthorized" }, 401);
     }
 
     const supabase = createClient(
@@ -56,18 +66,15 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsErr } = await supabase.auth.getClaims(token);
-    if (claimsErr || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const { data: userData, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !userData?.user) {
+      console.error("[asaas] auth.getUser falhou:", userErr);
+      return jsonResponse({ success: false, error: "Unauthorized" }, 401);
     }
-    const userId = claimsData.claims.sub;
-    const userEmail = claimsData.claims.email as string | undefined;
+    const userId = userData.user.id;
+    const userEmail = userData.user.email;
 
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const { plan, billing_type, church_id, cpf_cnpj } = body as {
       plan: "mensal" | "anual";
       billing_type: "PIX" | "BOLETO";
@@ -75,13 +82,12 @@ Deno.serve(async (req) => {
       cpf_cnpj?: string;
     };
 
-    if (!plan || !PLAN_VALUES[plan]) throw new Error("Plano inválido");
-    if (!["PIX", "BOLETO"].includes(billing_type)) throw new Error("billing_type inválido");
-    if (!church_id) throw new Error("church_id obrigatório");
+    if (!plan || !PLAN_VALUES[plan]) return jsonResponse({ success: false, error: "Plano inválido" }, 400);
+    if (!["PIX", "BOLETO"].includes(billing_type)) return jsonResponse({ success: false, error: "billing_type inválido" }, 400);
+    if (!church_id) return jsonResponse({ success: false, error: "church_id obrigatório" }, 400);
 
     const value = PLAN_VALUES[plan];
 
-    // Buscar profile + nome
     const { data: profile } = await admin
       .from("profiles")
       .select("full_name, email")
@@ -90,9 +96,16 @@ Deno.serve(async (req) => {
 
     const fullName = profile?.full_name || userEmail?.split("@")[0] || "Cliente";
     const email = profile?.email || userEmail;
-    if (!email) throw new Error("Email do usuário não encontrado");
+    if (!email) return jsonResponse({ success: false, error: "Email do usuário não encontrado" }, 400);
 
-    // Reaproveita asaas_customer_id se já existir na subscription
+    const cleanedDoc = (cpf_cnpj || "").replace(/\D/g, "");
+    if (!cleanedDoc || (cleanedDoc.length !== 11 && cleanedDoc.length !== 14)) {
+      return jsonResponse(
+        { success: false, error: "CPF ou CNPJ é obrigatório para gerar a cobrança", code: "cpf_cnpj_required" },
+        400,
+      );
+    }
+
     const { data: existingSub } = await admin
       .from("subscriptions")
       .select("asaas_customer_id")
@@ -107,14 +120,23 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           name: fullName,
           email,
-          ...(cpf_cnpj ? { cpfCnpj: cpf_cnpj.replace(/\D/g, "") } : {}),
+          cpfCnpj: cleanedDoc,
           externalReference: userId,
         }),
       });
       customerId = customer.id;
+    } else {
+      // Garante que CPF/CNPJ esteja atualizado no cliente Asaas
+      try {
+        await asaas(`/customers/${customerId}`, {
+          method: "POST",
+          body: JSON.stringify({ cpfCnpj: cleanedDoc, name: fullName, email }),
+        });
+      } catch (e) {
+        console.warn("[asaas] não conseguiu atualizar customer existente:", (e as any)?.payload || e);
+      }
     }
 
-    // Vencimento: hoje + 1 dia (boleto) / hoje (pix)
     const due = new Date();
     if (billing_type === "BOLETO") due.setDate(due.getDate() + 3);
     else due.setDate(due.getDate() + 1);
@@ -140,7 +162,6 @@ Deno.serve(async (req) => {
       pixPayload = qr.payload || null;
     }
 
-    // Salva log
     await admin.from("asaas_payments").insert({
       church_id,
       user_id: userId,
@@ -158,7 +179,6 @@ Deno.serve(async (req) => {
       raw_payload: payment,
     });
 
-    // Atualiza subscription com referência
     await admin
       .from("subscriptions")
       .upsert(
@@ -170,28 +190,34 @@ Deno.serve(async (req) => {
           asaas_customer_id: customerId,
           payment_method: billing_type.toLowerCase(),
           plan,
-          status: "trial", // mantém acesso atual; webhook ativa
+          status: "trial",
         },
         { onConflict: "church_id" },
       );
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        payment_id: payment.id,
-        invoice_url: payment.invoiceUrl,
-        bank_slip_url: payment.bankSlipUrl,
-        pix_qr_code: pixQrCode,
-        pix_payload: pixPayload,
-        due_date: dueDate,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return jsonResponse({
+      success: true,
+      payment_id: payment.id,
+      invoice_url: payment.invoiceUrl,
+      bank_slip_url: payment.bankSlipUrl,
+      pix_qr_code: pixQrCode,
+      pix_payload: pixPayload,
+      due_date: dueDate,
+    });
   } catch (err: any) {
-    console.error("asaas-create-payment error:", err);
-    return new Response(
-      JSON.stringify({ success: false, error: err.message ?? String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    const detail = err?.payload?.errors?.[0]?.description || err?.payload || err?.message || String(err);
+    console.error("[asaas-create-payment] ERRO:", {
+      message: err?.message,
+      status: err?.status,
+      payload: err?.payload,
+    });
+    return jsonResponse(
+      {
+        success: false,
+        error: typeof detail === "string" ? detail : (err?.message ?? "Erro inesperado"),
+        details: err?.payload ?? null,
+      },
+      err?.status && err.status < 500 ? 400 : 500,
     );
   }
 });

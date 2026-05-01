@@ -61,6 +61,10 @@ export default function Planos() {
     payload?: string | null;
     invoiceUrl?: string;
   }>({ open: false });
+  const [cpfCnpj, setCpfCnpj] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("asaas_cpf_cnpj") || "";
+  });
 
   useEffect(() => {
     const fromUrl = searchParams.get("cupom") || searchParams.get("coupon");
@@ -113,10 +117,20 @@ export default function Planos() {
       toast({ title: "Igreja não identificada", description: "Recarregue a página e tente novamente.", variant: "destructive" });
       return;
     }
+    const cleaned = cpfCnpj.replace(/\D/g, "");
+    if (!cleaned || (cleaned.length !== 11 && cleaned.length !== 14)) {
+      toast({
+        title: "CPF ou CNPJ obrigatório",
+        description: "Informe seu CPF (11 dígitos) ou CNPJ (14 dígitos) para gerar a cobrança.",
+        variant: "destructive",
+      });
+      return;
+    }
+    localStorage.setItem("asaas_cpf_cnpj", cleaned);
     setLoading(`${billing}-${planId}`);
     try {
       const { data, error } = await supabase.functions.invoke("asaas-create-payment", {
-        body: { plan: planId, billing_type: billing, church_id: currentChurchId },
+        body: { plan: planId, billing_type: billing, church_id: currentChurchId, cpf_cnpj: cleaned },
       });
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "Falha ao gerar cobrança");
@@ -211,6 +225,25 @@ export default function Planos() {
               ✓ Cupom <span className="font-bold">{coupon}</span> será aplicado no checkout
             </p>
           )}
+        </div>
+
+        {/* CPF/CNPJ input (Pix/Boleto) */}
+        <div className="max-w-md mx-auto mb-8">
+          <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            <FileText className="h-3.5 w-3.5" />
+            CPF ou CNPJ (para Pix e Boleto)
+          </label>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={cpfCnpj}
+            onChange={(e) => setCpfCnpj(e.target.value)}
+            placeholder="Somente números"
+            className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+          />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Necessário para emissão da cobrança no Asaas. Não usado para cartão de crédito.
+          </p>
         </div>
 
         {/* Plans Grid */}
