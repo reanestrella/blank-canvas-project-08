@@ -61,6 +61,10 @@ export default function Planos() {
     payload?: string | null;
     invoiceUrl?: string;
   }>({ open: false });
+  const [cpfCnpj, setCpfCnpj] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("asaas_cpf_cnpj") || "";
+  });
 
   useEffect(() => {
     const fromUrl = searchParams.get("cupom") || searchParams.get("coupon");
