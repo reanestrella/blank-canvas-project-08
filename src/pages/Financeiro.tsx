@@ -30,6 +30,7 @@ import { FinancialImportModal } from "@/components/financial/FinancialImportModa
 import { PatrimonioTab } from "@/components/patrimonio/PatrimonioTab";
 import { FinancialChartsTab } from "@/components/financial/FinancialChartsTab";
 import { FinancialSummaryTab } from "@/components/financial/FinancialSummaryTab";
+import { PercentagesTab } from "@/components/financial/PercentagesTab";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
