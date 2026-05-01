@@ -117,10 +117,20 @@ export default function Planos() {
       toast({ title: "Igreja não identificada", description: "Recarregue a página e tente novamente.", variant: "destructive" });
       return;
     }
+    const cleaned = cpfCnpj.replace(/\D/g, "");
+    if (!cleaned || (cleaned.length !== 11 && cleaned.length !== 14)) {
+      toast({
+        title: "CPF ou CNPJ obrigatório",
+        description: "Informe seu CPF (11 dígitos) ou CNPJ (14 dígitos) para gerar a cobrança.",
+        variant: "destructive",
+      });
+      return;
+    }
+    localStorage.setItem("asaas_cpf_cnpj", cleaned);
     setLoading(`${billing}-${planId}`);
     try {
       const { data, error } = await supabase.functions.invoke("asaas-create-payment", {
-        body: { plan: planId, billing_type: billing, church_id: currentChurchId },
+        body: { plan: planId, billing_type: billing, church_id: currentChurchId, cpf_cnpj: cleaned },
       });
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "Falha ao gerar cobrança");
