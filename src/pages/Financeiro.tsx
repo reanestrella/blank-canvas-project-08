@@ -276,6 +276,7 @@ export default function Financeiro() {
             <TabsTrigger value="extrato">Extrato</TabsTrigger>
             <TabsTrigger value="charts">Gráficos</TabsTrigger>
             <TabsTrigger value="summary">Resumo</TabsTrigger>
+            <TabsTrigger value="percentages">Percentuais</TabsTrigger>
             <TabsTrigger value="tithers">Dizimistas</TabsTrigger>
             <TabsTrigger value="accounts">Contas</TabsTrigger>
             <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
