@@ -287,6 +287,69 @@ export type Database = {
           },
         ]
       }
+      asaas_payments: {
+        Row: {
+          asaas_customer_id: string | null
+          asaas_payment_id: string
+          bank_slip_url: string | null
+          billing_type: string
+          church_id: string
+          created_at: string
+          due_date: string | null
+          id: string
+          invoice_url: string | null
+          paid_at: string | null
+          pix_payload: string | null
+          pix_qr_code: string | null
+          plan: string
+          raw_payload: Json | null
+          status: string
+          updated_at: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          asaas_customer_id?: string | null
+          asaas_payment_id: string
+          bank_slip_url?: string | null
+          billing_type: string
+          church_id: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          invoice_url?: string | null
+          paid_at?: string | null
+          pix_payload?: string | null
+          pix_qr_code?: string | null
+          plan: string
+          raw_payload?: Json | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          value: number
+        }
+        Update: {
+          asaas_customer_id?: string | null
+          asaas_payment_id?: string
+          bank_slip_url?: string | null
+          billing_type?: string
+          church_id?: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          invoice_url?: string | null
+          paid_at?: string | null
+          pix_payload?: string | null
+          pix_qr_code?: string | null
+          plan?: string
+          raw_payload?: Json | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -3355,14 +3418,18 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          asaas_customer_id: string | null
+          asaas_payment_id: string | null
           church_id: string
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
           email: string | null
           id: string
+          payment_method: string | null
           plan: string
           price_id: string | null
+          provider: string | null
           status: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -3372,14 +3439,18 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          asaas_customer_id?: string | null
+          asaas_payment_id?: string | null
           church_id: string
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
           email?: string | null
           id?: string
+          payment_method?: string | null
           plan?: string
           price_id?: string | null
+          provider?: string | null
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -3389,14 +3460,18 @@ export type Database = {
           user_id: string
         }
         Update: {
+          asaas_customer_id?: string | null
+          asaas_payment_id?: string | null
           church_id?: string
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
           email?: string | null
           id?: string
+          payment_method?: string | null
           plan?: string
           price_id?: string | null
+          provider?: string | null
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
