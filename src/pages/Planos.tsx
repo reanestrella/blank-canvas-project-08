@@ -48,19 +48,25 @@ const features = [
 ];
 
 export default function Planos() {
-  const { user } = useAuth();
-  const { isActive, isLoading: subLoading } = useSubscription();
+  const { user, currentChurchId } = useAuth();
+  const { isActive, isLoading: subLoading, refetch: refetchSub } = useSubscription();
   const { toast } = useToast();
   const [loading, setLoading] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const [coupon, setCoupon] = useState<string>("");
+  const [pixModal, setPixModal] = useState<{
+    open: boolean;
+    plan?: string;
+    qr?: string | null;
+    payload?: string | null;
+    invoiceUrl?: string;
+  }>({ open: false });
 
   useEffect(() => {
     const fromUrl = searchParams.get("cupom") || searchParams.get("coupon");
     if (fromUrl) setCoupon(fromUrl.trim().toUpperCase());
   }, [searchParams]);
 
-  // Apenas redireciona quando já há assinatura paga ativa (não em trial)
   if (user && !subLoading && isActive) {
     return <Navigate to="/meu-app" replace />;
   }
@@ -70,11 +76,9 @@ export default function Planos() {
       toast({ title: "Faça login primeiro", variant: "destructive" });
       return;
     }
-
-    setLoading(planId);
+    setLoading(`stripe-${planId}`);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/stripe-checkout`,
@@ -87,22 +91,64 @@ export default function Planos() {
           body: JSON.stringify({ price_id: priceId, coupon: coupon || undefined }),
         }
       );
-
       const data = await res.json();
-
       if (data.error) {
         toast({ title: "Erro", description: data.error, variant: "destructive" });
         return;
       }
-
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (err: any) {
+      if (data.url) window.location.href = data.url;
+    } catch {
       toast({ title: "Erro", description: "Não foi possível iniciar o checkout.", variant: "destructive" });
     } finally {
       setLoading(null);
     }
+  };
+
+  const handleAsaas = async (planId: "mensal" | "anual", billing: "PIX" | "BOLETO") => {
+    if (!user) {
+      toast({ title: "Faça login primeiro", variant: "destructive" });
+      return;
+    }
+    if (!currentChurchId) {
+      toast({ title: "Igreja não identificada", description: "Recarregue a página e tente novamente.", variant: "destructive" });
+      return;
+    }
+    setLoading(`${billing}-${planId}`);
+    try {
+      const { data, error } = await supabase.functions.invoke("asaas-create-payment", {
+        body: { plan: planId, billing_type: billing, church_id: currentChurchId },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Falha ao gerar cobrança");
+
+      if (billing === "PIX") {
+        setPixModal({
+          open: true,
+          plan: planId,
+          qr: data.pix_qr_code,
+          payload: data.pix_payload,
+          invoiceUrl: data.invoice_url,
+        });
+      } else {
+        const url = data.bank_slip_url || data.invoice_url;
+        if (url) window.open(url, "_blank");
+        toast({ title: "Boleto gerado!", description: "Abrimos o boleto em uma nova aba." });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Erro ao gerar cobrança",
+        description: err.message ?? "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const copyPix = async () => {
+    if (!pixModal.payload) return;
+    await navigator.clipboard.writeText(pixModal.payload);
+    toast({ title: "Código Pix copiado!" });
   };
 
   return (
