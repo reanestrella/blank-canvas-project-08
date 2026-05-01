@@ -259,25 +259,61 @@ export default function Planos() {
                 )}
               </div>
 
-              <Button
-                size="lg"
-                className={`w-full rounded-xl py-6 text-base font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
-                  plan.highlight
-                    ? "bg-secondary hover:bg-secondary/90 text-secondary-foreground shadow-[0_4px_20px_rgba(234,179,8,0.25)]"
-                    : "bg-primary hover:bg-primary/90 text-primary-foreground"
-                }`}
-                onClick={() => handleCheckout(plan.priceId, plan.id)}
-                disabled={!!loading}
-              >
-                {loading === plan.id ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <>
-                    Começar agora
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </>
-                )}
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  size="lg"
+                  className={`w-full rounded-xl py-6 text-base font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
+                    plan.highlight
+                      ? "bg-secondary hover:bg-secondary/90 text-secondary-foreground shadow-[0_4px_20px_rgba(234,179,8,0.25)]"
+                      : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                  }`}
+                  onClick={() => handleCheckout(plan.priceId, plan.id)}
+                  disabled={!!loading}
+                >
+                  {loading === `stripe-${plan.id}` ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <>
+                      <CreditCard className="w-5 h-5" />
+                      Cartão de crédito
+                      <ArrowRight className="w-5 h-5 ml-1" />
+                    </>
+                  )}
+                </Button>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    className="rounded-xl py-5 text-sm font-semibold"
+                    onClick={() => handleAsaas(plan.id as "mensal" | "anual", "PIX")}
+                    disabled={!!loading}
+                  >
+                    {loading === `PIX-${plan.id}` ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <QrCode className="w-4 h-4" />
+                        Pix
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="rounded-xl py-5 text-sm font-semibold"
+                    onClick={() => handleAsaas(plan.id as "mensal" | "anual", "BOLETO")}
+                    disabled={!!loading}
+                  >
+                    {loading === `BOLETO-${plan.id}` ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <FileText className="w-4 h-4" />
+                        Boleto
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
           ))}
         </div>
