@@ -1961,6 +1961,45 @@ export type Database = {
           },
         ]
       }
+      financial_percentages: {
+        Row: {
+          base: string
+          church_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          percentage: number
+          updated_at: string
+        }
+        Insert: {
+          base?: string
+          church_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          percentage: number
+          updated_at?: string
+        }
+        Update: {
+          base?: string
+          church_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          percentage?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       financial_transactions: {
         Row: {
           account_id: string | null

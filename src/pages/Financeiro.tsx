@@ -30,6 +30,7 @@ import { FinancialImportModal } from "@/components/financial/FinancialImportModa
 import { PatrimonioTab } from "@/components/patrimonio/PatrimonioTab";
 import { FinancialChartsTab } from "@/components/financial/FinancialChartsTab";
 import { FinancialSummaryTab } from "@/components/financial/FinancialSummaryTab";
+import { PercentagesTab } from "@/components/financial/PercentagesTab";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -275,6 +276,7 @@ export default function Financeiro() {
             <TabsTrigger value="extrato">Extrato</TabsTrigger>
             <TabsTrigger value="charts">Gráficos</TabsTrigger>
             <TabsTrigger value="summary">Resumo</TabsTrigger>
+            <TabsTrigger value="percentages">Percentuais</TabsTrigger>
             <TabsTrigger value="tithers">Dizimistas</TabsTrigger>
             <TabsTrigger value="accounts">Contas</TabsTrigger>
             <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
@@ -458,6 +460,17 @@ export default function Financeiro() {
           {/* Summary Tab */}
           <TabsContent value="summary" className="mt-6">
             <FinancialSummaryTab transactions={filteredTransactions} categories={categories} />
+          </TabsContent>
+
+          {/* Percentages Tab */}
+          <TabsContent value="percentages" className="mt-6">
+            {churchId && (
+              <PercentagesTab
+                churchId={churchId}
+                transactions={filteredTransactions}
+                periodLabel={periodLabel}
+              />
+            )}
           </TabsContent>
 
           {/* Tithers Tab */}
