@@ -77,12 +77,10 @@ function UnhandledRejectionHandler() {
   return null;
 }
 
-/** Wraps children with subscription gate */
 function Sub({ children }: { children: React.ReactNode }) {
   return <RequireSubscription>{children}</RequireSubscription>;
 }
 
-const App = () => {
 const App = () => {
 
   // 🔔 OneSignal
@@ -97,52 +95,49 @@ const App = () => {
     void iniciar();
   }, []);
 
-  // 🍎 iPhone - Ícone dinâmico por igreja
+  // 🍎 ÍCONE DINÂMICO PARA IPHONE (FUNCIONANDO DE VERDADE)
   useEffect(() => {
-    function setAppleIcon(logoUrl: string) {
-      try {
-        // remove antigo
-        const existing = document.querySelector("link[rel='apple-touch-icon']");
-        if (existing) existing.remove();
 
-        // cria novo
-        const link = document.createElement("link");
-        link.rel = "apple-touch-icon";
-        link.sizes = "180x180";
+    function setAppleIcon(url: string) {
+      const existing = document.querySelector("link[rel='apple-touch-icon']");
+      if (existing) existing.remove();
 
-        // força não usar cache antigo
-        link.href = logoUrl + (logoUrl.includes("?") ? "&" : "?") + "v=" + Date.now();
+      const link = document.createElement("link");
+      link.rel = "apple-touch-icon";
+      link.sizes = "180x180";
+      link.href = url + (url.includes("?") ? "&" : "?") + "v=" + Date.now();
 
-        document.head.appendChild(link);
-
-        console.log("🍎 Apple icon definido:", link.href);
-      } catch (err) {
-        console.log("Erro ao definir apple icon:", err);
-      }
+      document.head.appendChild(link);
+      console.log("🍎 Apple icon atualizado:", link.href);
     }
 
-    // 🔥 TENTA PEGAR A IGREJA (ajuste aqui se necessário)
-    const trySetIcon = () => {
-      try {
-        // 👉 AJUSTE AQUI se sua igreja estiver em outro lugar
-        const church = (window as any)?.church || (window as any)?.currentChurch;
+    // fallback imediato
+    setAppleIcon(APP_BRAND_LOGO);
 
-        if (church?.logoUrl) {
-          setAppleIcon(church.logoUrl);
-        } else {
-          // fallback padrão
-          setAppleIcon(APP_BRAND_LOGO);
-        }
-      } catch {
-        setAppleIcon(APP_BRAND_LOGO);
+    // 🔥 Observa quando a logo da igreja aparece na tela
+    const observer = new MutationObserver(() => {
+      const img = document.querySelector("img");
+
+      if (img && img.src && !img.src.includes("placeholder")) {
+        setAppleIcon(img.src);
+        observer.disconnect();
       }
-    };
+    });
 
-    // roda imediato
-    trySetIcon();
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
 
-    // roda de novo depois (caso carregue async do Supabase)
-    setTimeout(trySetIcon, 1500);
+    // segurança extra (caso já esteja carregado)
+    setTimeout(() => {
+      const img = document.querySelector("img");
+      if (img?.src) {
+        setAppleIcon(img.src);
+      }
+    }, 2000);
+
+    return () => observer.disconnect();
 
   }, []);
 
@@ -158,7 +153,6 @@ const App = () => {
               <Suspense fallback={<PageLoader />}>
                 <Routes>
 
-                  {/* Públicas */}
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/registro" element={<Registro />} />
@@ -171,11 +165,9 @@ const App = () => {
                   <Route path="/sucesso" element={<Sucesso />} />
                   <Route path="/cancelado" element={<Cancelado />} />
 
-                  {/* Admin */}
                   <Route path="/master" element={<Master />} />
                   <Route path="/dev-admin" element={<Master />} />
 
-                  {/* Rede */}
                   <Route path="/rede" element={<Sub><NetworkDashboard /></Sub>} />
                   <Route
                     path="/gestao-app"
@@ -188,12 +180,10 @@ const App = () => {
                     }
                   />
 
-                  {/* Usuário — protegido por assinatura */}
                   <Route path="/app" element={<Sub><Dashboard /></Sub>} />
                   <Route path="/meu-app" element={<Sub><MeuApp /></Sub>} />
                   <Route path="/perfil" element={<Sub><Perfil /></Sub>} />
 
-                  {/* Protegidas por role + assinatura */}
                   <Route
                     path="/secretaria"
                     element={
@@ -301,7 +291,6 @@ const App = () => {
                   <Route path="/patrimonio" element={<Sub><Patrimonio /></Sub>} />
                   <Route path="/assistente" element={<Sub><Assistente /></Sub>} />
 
-                  {/* 404 */}
                   <Route path="*" element={<NotFound />} />
 
                 </Routes>
