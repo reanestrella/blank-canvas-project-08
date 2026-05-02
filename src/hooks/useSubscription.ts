@@ -14,6 +14,10 @@ export interface Subscription {
   current_period_end: string | null;
   trial: boolean | null;
   trial_ends_at: string | null;
+  is_gift?: boolean | null;
+  due_date?: string | null;
+  grace_period_days?: number | null;
+  provider?: string | null;
 }
 
 export function useSubscription() {
@@ -32,12 +36,15 @@ export function useSubscription() {
       return data as Subscription | null;
     },
     enabled: !!currentChurchId,
-    refetchInterval: 1000 * 60 * 5, // re-checa a cada 5 min para detectar expiração
+    refetchInterval: 1000 * 60 * 5,
   });
 
   const sub = query.data;
   const now = Date.now();
   const trialEndsAt = sub?.trial_ends_at ? new Date(sub.trial_ends_at).getTime() : null;
+
+  // Gift libera acesso sem checagem de vencimento
+  const isGift = sub?.is_gift === true;
 
   // Trial ainda válido
   const isTrial =
@@ -47,27 +54,35 @@ export function useSubscription() {
     trialEndsAt !== null &&
     trialEndsAt > now;
 
-  // Trial expirou (status pode ainda estar como 'trial' antes do cron rodar)
+  // Pago/ativo (mantém compat com 'ativo' do webhook + 'active' do prompt)
+  const isPaid = sub?.status === "ativo" || sub?.status === "active";
+
+  // Cálculo de bloqueio por vencimento + grace period
+  const grace = sub?.grace_period_days ?? 3;
+  const dueDateMs = sub?.due_date ? new Date(sub.due_date + "T23:59:59").getTime() : null;
+  const graceUntil = dueDateMs ? dueDateMs + grace * 24 * 60 * 60 * 1000 : null;
+  const overdue = !isGift && dueDateMs !== null && now > (graceUntil ?? dueDateMs);
+
+  // Trial expirou
   const isExpired =
     sub?.status === "expired" ||
     (sub?.trial === true &&
       sub?.status === "trial" &&
       trialEndsAt !== null &&
-      trialEndsAt <= now);
+      trialEndsAt <= now) ||
+    (overdue && !isPaid);
 
-  // Assinatura paga ativa
-  const isActive = sub?.status === "ativo";
+  // Acesso ativo final
+  const isActive = isGift || (isPaid && !overdue);
 
-  // Acesso liberado: pago OU trial vigente
+  // Acesso liberado: ativo OU trial vigente
   const isSubscribed = isActive || isTrial;
 
-  // Dias restantes do trial (arredondado para cima)
   const trialDaysLeft =
     isTrial && trialEndsAt !== null
       ? Math.max(0, Math.ceil((trialEndsAt - now) / (1000 * 60 * 60 * 24)))
       : 0;
 
-  // Horas restantes (para alerta no último dia)
   const trialHoursLeft =
     isTrial && trialEndsAt !== null
       ? Math.max(0, Math.ceil((trialEndsAt - now) / (1000 * 60 * 60)))
@@ -80,6 +95,7 @@ export function useSubscription() {
     isTrial,
     isExpired,
     isActive,
+    isGift,
     trialDaysLeft,
     trialHoursLeft,
     trialEndsAt: sub?.trial_ends_at ?? null,

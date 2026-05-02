@@ -215,17 +215,18 @@ export default function Financeiro() {
               Gestão financeira transparente da sua igreja
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setImportModalOpen(true)}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" className="flex-1 sm:flex-none min-w-[110px]" onClick={() => setImportModalOpen(true)}>
               <Upload className="w-4 h-4 mr-2" />
               Importar
             </Button>
-            <Button variant="outline" onClick={() => handleOpenNewTransaction("despesa")}>
+            <Button variant="outline" size="sm" className="flex-1 sm:flex-none min-w-[140px]" onClick={() => handleOpenNewTransaction("despesa")}>
               <ArrowDownRight className="w-4 h-4 mr-2" />
               Nova Despesa
             </Button>
             <Button
-              className="gradient-accent text-secondary-foreground shadow-lg hover:shadow-xl transition-all"
+              size="sm"
+              className="flex-1 sm:flex-none min-w-[140px] gradient-accent text-secondary-foreground shadow-lg hover:shadow-xl transition-all"
               onClick={() => handleOpenNewTransaction("receita")}
             >
               <Plus className="w-4 h-4 mr-2" />
