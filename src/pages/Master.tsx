@@ -13,10 +13,11 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
+import { SubscriptionsTab } from "@/components/admin/SubscriptionsTab";
 import {
   Loader2, Shield, Church, Bot, Calendar, AlertTriangle,
   Users, Building2, Palette, Power, Edit2, Save, X, Plus, LogOut,
-  Trash2, Network,
+  Trash2, Network, DollarSign,
 } from "lucide-react";
 
 interface ChurchItem {
@@ -417,10 +418,15 @@ export default function Master() {
         <Tabs defaultValue="churches" className="space-y-4">
           <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="churches">Igrejas</TabsTrigger>
+            <TabsTrigger value="subscriptions"><DollarSign className="w-3.5 h-3.5 mr-1" />Financeiro</TabsTrigger>
             <TabsTrigger value="networks">Redes</TabsTrigger>
             <TabsTrigger value="ai">IA</TabsTrigger>
             <TabsTrigger value="logs">Logs</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="subscriptions" className="space-y-4">
+            <SubscriptionsTab churches={churches.map(c => ({ id: c.id, name: c.name }))} />
+          </TabsContent>
 
           {/* Churches Tab */}
           <TabsContent value="churches" className="space-y-4">

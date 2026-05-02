@@ -80,8 +80,11 @@ Deno.serve(async (req) => {
           trial: false,
           provider: "asaas",
           plan: row.plan,
+          payment_method: (event?.payment?.billingType || "").toString().toLowerCase(),
           current_period_start: now.toISOString(),
           current_period_end: periodEnd.toISOString(),
+          due_date: periodEnd.toISOString().slice(0, 10),
+          is_gift: false,
           updated_at: now.toISOString(),
         })
         .eq("church_id", row.church_id);

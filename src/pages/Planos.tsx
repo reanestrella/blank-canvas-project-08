@@ -49,7 +49,7 @@ const features = [
 
 export default function Planos() {
   const { user, currentChurchId } = useAuth();
-  const { isActive, isLoading: subLoading, refetch: refetchSub } = useSubscription();
+  const { isActive, isLoading: subLoading, refetch: refetchSub, subscription } = useSubscription();
   const { toast } = useToast();
   const [loading, setLoading] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
@@ -206,6 +206,44 @@ export default function Planos() {
             Todos os módulos inclusos. Sem surpresas. Cancele quando quiser.
           </p>
         </div>
+
+        {/* Aviso assinatura existente — botão para gerar nova cobrança rápida */}
+        {user && subscription && subscription.provider === "asaas" && !isActive && (
+          <div className="max-w-3xl mx-auto mb-8 p-4 rounded-2xl border border-secondary/40 bg-secondary/5">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-foreground">
+                  Você já tem uma assinatura ({subscription.plan}). Gere uma nova cobrança para reativar.
+                </p>
+                {subscription.due_date && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Vencimento: {new Date(subscription.due_date + "T12:00:00").toLocaleDateString("pt-BR")}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl"
+                  onClick={() => handleAsaas((subscription.plan === "anual" ? "anual" : "mensal") as any, "PIX")}
+                  disabled={!!loading}
+                >
+                  <QrCode className="w-4 h-4" /> Gerar Pix
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl"
+                  onClick={() => handleAsaas((subscription.plan === "anual" ? "anual" : "mensal") as any, "BOLETO")}
+                  disabled={!!loading}
+                >
+                  <FileText className="w-4 h-4" /> Gerar Boleto
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Coupon input */}
         <div className="max-w-md mx-auto mb-8">
