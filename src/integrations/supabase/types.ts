@@ -3463,8 +3463,11 @@ export type Database = {
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
+          due_date: string | null
           email: string | null
+          grace_period_days: number
           id: string
+          is_gift: boolean
           payment_method: string | null
           plan: string
           price_id: string | null
@@ -3484,8 +3487,11 @@ export type Database = {
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
+          due_date?: string | null
           email?: string | null
+          grace_period_days?: number
           id?: string
+          is_gift?: boolean
           payment_method?: string | null
           plan?: string
           price_id?: string | null
@@ -3505,8 +3511,11 @@ export type Database = {
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
+          due_date?: string | null
           email?: string | null
+          grace_period_days?: number
           id?: string
+          is_gift?: boolean
           payment_method?: string | null
           plan?: string
           price_id?: string | null
