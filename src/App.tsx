@@ -83,6 +83,7 @@ function Sub({ children }: { children: React.ReactNode }) {
 }
 
 const App = () => {
+const App = () => {
 
   // 🔔 OneSignal
   useEffect(() => {
@@ -96,6 +97,54 @@ const App = () => {
     void iniciar();
   }, []);
 
+  // 🍎 iPhone - Ícone dinâmico por igreja
+  useEffect(() => {
+    function setAppleIcon(logoUrl: string) {
+      try {
+        // remove antigo
+        const existing = document.querySelector("link[rel='apple-touch-icon']");
+        if (existing) existing.remove();
+
+        // cria novo
+        const link = document.createElement("link");
+        link.rel = "apple-touch-icon";
+        link.sizes = "180x180";
+
+        // força não usar cache antigo
+        link.href = logoUrl + (logoUrl.includes("?") ? "&" : "?") + "v=" + Date.now();
+
+        document.head.appendChild(link);
+
+        console.log("🍎 Apple icon definido:", link.href);
+      } catch (err) {
+        console.log("Erro ao definir apple icon:", err);
+      }
+    }
+
+    // 🔥 TENTA PEGAR A IGREJA (ajuste aqui se necessário)
+    const trySetIcon = () => {
+      try {
+        // 👉 AJUSTE AQUI se sua igreja estiver em outro lugar
+        const church = (window as any)?.church || (window as any)?.currentChurch;
+
+        if (church?.logoUrl) {
+          setAppleIcon(church.logoUrl);
+        } else {
+          // fallback padrão
+          setAppleIcon(APP_BRAND_LOGO);
+        }
+      } catch {
+        setAppleIcon(APP_BRAND_LOGO);
+      }
+    };
+
+    // roda imediato
+    trySetIcon();
+
+    // roda de novo depois (caso carregue async do Supabase)
+    setTimeout(trySetIcon, 1500);
+
+  }, []);
 
   return (
     <GlobalErrorBoundary>
