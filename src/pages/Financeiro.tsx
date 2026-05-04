@@ -387,12 +387,19 @@ export default function Financeiro() {
 
           <TabsContent value="transactions" className="mt-6">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <CardTitle className="text-lg">Movimentações ({filteredTransactions.length})</CardTitle>
-                <Button variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                  Exportar
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={() => exportTransactionsPdf("receita")}>
+                    <Download className="w-4 h-4 mr-2" /> Entradas
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => exportTransactionsPdf("despesa")}>
+                    <Download className="w-4 h-4 mr-2" /> Saídas
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => exportTransactionsPdf()}>
+                    <Download className="w-4 h-4 mr-2" /> Tudo
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
