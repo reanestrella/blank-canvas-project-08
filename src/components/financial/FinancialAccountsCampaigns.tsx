@@ -30,8 +30,14 @@ import {
   Loader2,
   Edit,
   Trash2,
+  ArrowRightLeft,
+  Eye,
+  Download,
 } from "lucide-react";
 import { useFinancialAccounts, FinancialAccount, FinancialCampaign, CreateAccountData, CreateCampaignData } from "@/hooks/useFinancialAccounts";
+import { TransferModal } from "@/components/modals/TransferModal";
+import { AccountDetailsModal } from "@/components/financial/AccountDetailsModal";
+import { exportToPdf, formatBRL } from "@/lib/pdfExport";
 
 interface FinancialAccountsTabProps {
   churchId: string;
