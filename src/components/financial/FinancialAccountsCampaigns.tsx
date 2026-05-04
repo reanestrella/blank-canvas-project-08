@@ -264,6 +264,19 @@ export function FinancialAccountsTab({ churchId }: FinancialAccountsTabProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <TransferModal
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        accounts={accounts}
+        churchId={churchId}
+      />
+
+      <AccountDetailsModal
+        open={!!detailsAccount}
+        onOpenChange={(o) => !o && setDetailsAccount(null)}
+        account={detailsAccount}
+      />
     </div>
   );
 }
