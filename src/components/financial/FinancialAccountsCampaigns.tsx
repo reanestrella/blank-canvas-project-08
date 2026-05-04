@@ -53,6 +53,8 @@ const accountTypeLabels: Record<FinancialAccount["account_type"], { label: strin
 export function FinancialAccountsTab({ churchId }: FinancialAccountsTabProps) {
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<FinancialAccount | null>(null);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [detailsAccount, setDetailsAccount] = useState<FinancialAccount | null>(null);
   const [formData, setFormData] = useState<CreateAccountData>({
     name: "",
     account_type: "carteira",
