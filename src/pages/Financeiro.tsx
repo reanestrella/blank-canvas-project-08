@@ -206,6 +206,36 @@ export default function Financeiro() {
     return updateTransaction(editingTransaction.id, data);
   };
 
+  const exportTransactionsPdf = (only?: "receita" | "despesa") => {
+    const data = only ? filteredTransactions.filter((t) => t.type === only) : filteredTransactions;
+    const totalIn = data.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0);
+    const totalOut = data.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
+    exportToPdf({
+      title: only === "receita" ? "Entradas" : only === "despesa" ? "Saídas" : "Movimentações",
+      period: periodLabel,
+      columns: [
+        { header: "Data", dataKey: "date" },
+        { header: "Descrição", dataKey: "desc" },
+        { header: "Conta", dataKey: "acc" },
+        { header: "Tipo", dataKey: "type" },
+        { header: "Valor", dataKey: "amount", align: "right" },
+      ],
+      rows: data.map((t) => ({
+        date: new Date(t.transaction_date + "T12:00:00").toLocaleDateString("pt-BR"),
+        desc: t.description,
+        acc: accounts.find((a) => a.id === t.account_id)?.name || "—",
+        type: t.type === "receita" ? "Entrada" : "Saída",
+        amount: `${t.type === "receita" ? "+" : "-"} R$ ${formatBRL(Number(t.amount))}`,
+      })),
+      totals: only ? [{ label: "Total", value: `R$ ${formatBRL(only === "receita" ? totalIn : totalOut)}` }] : [
+        { label: "Entradas", value: `R$ ${formatBRL(totalIn)}` },
+        { label: "Saídas", value: `R$ ${formatBRL(totalOut)}` },
+        { label: "Saldo", value: `R$ ${formatBRL(totalIn - totalOut)}` },
+      ],
+      filename: `${only || "movimentacoes"}-${new Date().toISOString().slice(0, 10)}.pdf`,
+    });
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
