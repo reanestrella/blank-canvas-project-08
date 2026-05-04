@@ -38,6 +38,7 @@ import { CongregationModal } from "@/components/modals/CongregationModal";
 import { RolesPanel } from "@/components/admin/RolesPanel";
 import { ChurchLogoUpload } from "@/components/settings/ChurchLogoUpload";
 import { ResetDataSection } from "@/components/settings/ResetDataSection";
+import { ChangePasswordCard } from "@/components/settings/ChangePasswordCard";
 import type { Congregation, CreateCongregationData } from "@/hooks/useCongregations";
 
 const PLANS = [
@@ -218,6 +219,10 @@ export default function Configuracoes() {
             <TabsTrigger value="plan" className="gap-2">
               <Crown className="w-4 h-4" />
               <span className="hidden sm:inline">Plano</span>
+            </TabsTrigger>
+            <TabsTrigger value="security" className="gap-2">
+              <Shield className="w-4 h-4" />
+              <span className="hidden sm:inline">Segurança</span>
             </TabsTrigger>
             <TabsTrigger value="reset" className="gap-2 text-destructive data-[state=active]:text-destructive">
               <AlertTriangle className="w-4 h-4" />
@@ -510,6 +515,10 @@ export default function Configuracoes() {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="security" className="space-y-6 mt-6">
+            <ChangePasswordCard />
           </TabsContent>
 
           <TabsContent value="reset" className="space-y-6 mt-6">

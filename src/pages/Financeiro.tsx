@@ -31,9 +31,11 @@ import { PatrimonioTab } from "@/components/patrimonio/PatrimonioTab";
 import { FinancialChartsTab } from "@/components/financial/FinancialChartsTab";
 import { FinancialSummaryTab } from "@/components/financial/FinancialSummaryTab";
 import { PercentagesTab } from "@/components/financial/PercentagesTab";
+import { PayablesTab } from "@/components/financial/PayablesTab";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { exportToPdf, formatBRL } from "@/lib/pdfExport";
 import type { FinancialTransaction } from "@/hooks/useFinancial";
 
 // Contribuição App moved to Gestão App page
@@ -204,6 +206,36 @@ export default function Financeiro() {
     return updateTransaction(editingTransaction.id, data);
   };
 
+  const exportTransactionsPdf = (only?: "receita" | "despesa") => {
+    const data = only ? filteredTransactions.filter((t) => t.type === only) : filteredTransactions;
+    const totalIn = data.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0);
+    const totalOut = data.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
+    exportToPdf({
+      title: only === "receita" ? "Entradas" : only === "despesa" ? "Saídas" : "Movimentações",
+      period: periodLabel,
+      columns: [
+        { header: "Data", dataKey: "date" },
+        { header: "Descrição", dataKey: "desc" },
+        { header: "Conta", dataKey: "acc" },
+        { header: "Tipo", dataKey: "type" },
+        { header: "Valor", dataKey: "amount", align: "right" },
+      ],
+      rows: data.map((t) => ({
+        date: new Date(t.transaction_date + "T12:00:00").toLocaleDateString("pt-BR"),
+        desc: t.description,
+        acc: accounts.find((a) => a.id === t.account_id)?.name || "—",
+        type: t.type === "receita" ? "Entrada" : "Saída",
+        amount: `${t.type === "receita" ? "+" : "-"} R$ ${formatBRL(Number(t.amount))}`,
+      })),
+      totals: only ? [{ label: "Total", value: `R$ ${formatBRL(only === "receita" ? totalIn : totalOut)}` }] : [
+        { label: "Entradas", value: `R$ ${formatBRL(totalIn)}` },
+        { label: "Saídas", value: `R$ ${formatBRL(totalOut)}` },
+        { label: "Saldo", value: `R$ ${formatBRL(totalIn - totalOut)}` },
+      ],
+      filename: `${only || "movimentacoes"}-${new Date().toISOString().slice(0, 10)}.pdf`,
+    });
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -274,6 +306,7 @@ export default function Financeiro() {
            <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="transactions">Movimentações</TabsTrigger>
+            <TabsTrigger value="payables">Contas a Pagar</TabsTrigger>
             <TabsTrigger value="extrato">Extrato</TabsTrigger>
             <TabsTrigger value="charts">Gráficos</TabsTrigger>
             <TabsTrigger value="summary">Resumo</TabsTrigger>
@@ -354,12 +387,19 @@ export default function Financeiro() {
 
           <TabsContent value="transactions" className="mt-6">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <CardTitle className="text-lg">Movimentações ({filteredTransactions.length})</CardTitle>
-                <Button variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                  Exportar
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={() => exportTransactionsPdf("receita")}>
+                    <Download className="w-4 h-4 mr-2" /> Entradas
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => exportTransactionsPdf("despesa")}>
+                    <Download className="w-4 h-4 mr-2" /> Saídas
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => exportTransactionsPdf()}>
+                    <Download className="w-4 h-4 mr-2" /> Tudo
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
@@ -438,6 +478,13 @@ export default function Financeiro() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Payables Tab */}
+          <TabsContent value="payables" className="mt-6">
+            {churchId && (
+              <PayablesTab churchId={churchId} accounts={accounts} categories={categories} />
+            )}
           </TabsContent>
 
           {/* Extrato Tab */}

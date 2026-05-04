@@ -1961,6 +1961,92 @@ export type Database = {
           },
         ]
       }
+      financial_payables: {
+        Row: {
+          account_id: string | null
+          amount: number
+          category_id: string | null
+          church_id: string
+          created_at: string
+          created_by: string | null
+          description: string
+          due_date: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          paid_transaction_id: string | null
+          parent_payable_id: string | null
+          recurrence: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          category_id?: string | null
+          church_id: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          due_date: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_transaction_id?: string | null
+          parent_payable_id?: string | null
+          recurrence?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          category_id?: string | null
+          church_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          due_date?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_transaction_id?: string | null
+          parent_payable_id?: string | null
+          recurrence?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_payables_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_payables_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_payables_paid_transaction_id_fkey"
+            columns: ["paid_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_payables_parent_payable_id_fkey"
+            columns: ["parent_payable_id"]
+            isOneToOne: false
+            referencedRelation: "financial_payables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_percentages: {
         Row: {
           base: string
@@ -2011,6 +2097,7 @@ export type Database = {
           created_by: string | null
           description: string
           id: string
+          is_transfer: boolean
           member_id: string | null
           notes: string | null
           payment_method: string | null
@@ -2028,6 +2115,7 @@ export type Database = {
           created_by?: string | null
           description: string
           id?: string
+          is_transfer?: boolean
           member_id?: string | null
           notes?: string | null
           payment_method?: string | null
@@ -2045,6 +2133,7 @@ export type Database = {
           created_by?: string | null
           description?: string
           id?: string
+          is_transfer?: boolean
           member_id?: string | null
           notes?: string | null
           payment_method?: string | null
@@ -2086,6 +2175,77 @@ export type Database = {
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_transfers: {
+        Row: {
+          amount: number
+          church_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          from_account_id: string
+          id: string
+          in_transaction_id: string | null
+          out_transaction_id: string | null
+          to_account_id: string
+          transfer_date: string
+        }
+        Insert: {
+          amount: number
+          church_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          from_account_id: string
+          id?: string
+          in_transaction_id?: string | null
+          out_transaction_id?: string | null
+          to_account_id: string
+          transfer_date?: string
+        }
+        Update: {
+          amount?: number
+          church_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          from_account_id?: string
+          id?: string
+          in_transaction_id?: string | null
+          out_transaction_id?: string | null
+          to_account_id?: string
+          transfer_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_transfers_from_account_id_fkey"
+            columns: ["from_account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transfers_in_transaction_id_fkey"
+            columns: ["in_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transfers_out_transaction_id_fkey"
+            columns: ["out_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transfers_to_account_id_fkey"
+            columns: ["to_account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -3789,6 +3949,17 @@ export type Database = {
       aceitar_convite:
         | { Args: { p_token: string }; Returns: Json }
         | { Args: { p_token: string; p_user_id: string }; Returns: Json }
+      create_account_transfer: {
+        Args: {
+          p_amount: number
+          p_church_id: string
+          p_date: string
+          p_description: string
+          p_from_account_id: string
+          p_to_account_id: string
+        }
+        Returns: string
+      }
       delete_church_cascade: { Args: { p_church_id: string }; Returns: Json }
       enable_ai_trial: {
         Args: { p_church_id: string; p_trial_days?: number }

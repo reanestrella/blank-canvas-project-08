@@ -288,7 +288,8 @@ export function TransactionModal({
                         churchId={churchId}
                         value={field.value || ""}
                         onChange={field.onChange}
-                        placeholder="Digite 3 letras para buscar..."
+                        placeholder="Digite o nome (cria se não existir)"
+                        allowCreate
                       />
                     </FormControl>
                     <FormMessage />

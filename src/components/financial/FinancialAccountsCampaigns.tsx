@@ -30,8 +30,14 @@ import {
   Loader2,
   Edit,
   Trash2,
+  ArrowRightLeft,
+  Eye,
+  Download,
 } from "lucide-react";
 import { useFinancialAccounts, FinancialAccount, FinancialCampaign, CreateAccountData, CreateCampaignData } from "@/hooks/useFinancialAccounts";
+import { TransferModal } from "@/components/modals/TransferModal";
+import { AccountDetailsModal } from "@/components/financial/AccountDetailsModal";
+import { exportToPdf, formatBRL } from "@/lib/pdfExport";
 
 interface FinancialAccountsTabProps {
   churchId: string;
@@ -47,6 +53,8 @@ const accountTypeLabels: Record<FinancialAccount["account_type"], { label: strin
 export function FinancialAccountsTab({ churchId }: FinancialAccountsTabProps) {
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<FinancialAccount | null>(null);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [detailsAccount, setDetailsAccount] = useState<FinancialAccount | null>(null);
   const [formData, setFormData] = useState<CreateAccountData>({
     name: "",
     account_type: "carteira",
@@ -91,14 +99,44 @@ export function FinancialAccountsTab({ churchId }: FinancialAccountsTabProps) {
     );
   }
 
+  const handleExportPdf = () => {
+    const totalBalance = accounts.reduce((s, a) => s + Number(a.current_balance ?? 0), 0);
+    exportToPdf({
+      title: "Contas Financeiras",
+      columns: [
+        { header: "Conta", dataKey: "name" },
+        { header: "Tipo", dataKey: "type" },
+        { header: "Banco", dataKey: "bank" },
+        { header: "Saldo inicial", dataKey: "init", align: "right" },
+        { header: "Saldo atual", dataKey: "balance", align: "right" },
+      ],
+      rows: accounts.map((a) => ({
+        name: a.name,
+        type: accountTypeLabels[a.account_type].label,
+        bank: a.bank_name || "—",
+        init: `R$ ${formatBRL(Number(a.initial_balance ?? 0))}`,
+        balance: `R$ ${formatBRL(Number(a.current_balance ?? 0))}`,
+      })),
+      totals: [{ label: "Saldo total", value: `R$ ${formatBRL(totalBalance)}` }],
+      filename: `contas-financeiras-${new Date().toISOString().slice(0, 10)}.pdf`,
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h3 className="text-lg font-semibold">Contas Financeiras</h3>
-        <Button onClick={handleOpenNew}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Conta
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={!accounts.length}>
+            <Download className="w-4 h-4 mr-2" /> PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setTransferOpen(true)} disabled={accounts.length < 2}>
+            <ArrowRightLeft className="w-4 h-4 mr-2" /> Transferir
+          </Button>
+          <Button size="sm" onClick={handleOpenNew}>
+            <Plus className="w-4 h-4 mr-2" /> Nova Conta
+          </Button>
+        </div>
       </div>
 
       {accounts.length === 0 ? (
@@ -121,7 +159,8 @@ export function FinancialAccountsTab({ churchId }: FinancialAccountsTabProps) {
             const config = accountTypeLabels[account.account_type];
             const Icon = config.icon;
             return (
-              <Card key={account.id}>
+              <Card key={account.id} className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setDetailsAccount(account)}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -133,7 +172,10 @@ export function FinancialAccountsTab({ churchId }: FinancialAccountsTabProps) {
                         <p className="text-xs text-muted-foreground">{config.label}</p>
                       </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" title="Ver extrato" onClick={() => setDetailsAccount(account)}>
+                        <Eye className="w-4 h-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(account)}>
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -222,6 +264,19 @@ export function FinancialAccountsTab({ churchId }: FinancialAccountsTabProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <TransferModal
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        accounts={accounts}
+        churchId={churchId}
+      />
+
+      <AccountDetailsModal
+        open={!!detailsAccount}
+        onOpenChange={(o) => !o && setDetailsAccount(null)}
+        account={detailsAccount}
+      />
     </div>
   );
 }
