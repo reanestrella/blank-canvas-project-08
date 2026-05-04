@@ -480,6 +480,13 @@ export default function Financeiro() {
             </Card>
           </TabsContent>
 
+          {/* Payables Tab */}
+          <TabsContent value="payables" className="mt-6">
+            {churchId && (
+              <PayablesTab churchId={churchId} accounts={accounts} categories={categories} />
+            )}
+          </TabsContent>
+
           {/* Extrato Tab */}
           <TabsContent value="extrato" className="mt-6">
             <ExtratoTab
