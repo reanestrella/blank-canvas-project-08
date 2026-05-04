@@ -306,6 +306,7 @@ export default function Financeiro() {
            <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="transactions">Movimentações</TabsTrigger>
+            <TabsTrigger value="payables">Contas a Pagar</TabsTrigger>
             <TabsTrigger value="extrato">Extrato</TabsTrigger>
             <TabsTrigger value="charts">Gráficos</TabsTrigger>
             <TabsTrigger value="summary">Resumo</TabsTrigger>
