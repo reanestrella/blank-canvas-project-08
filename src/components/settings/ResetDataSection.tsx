@@ -51,27 +51,6 @@ type ModuleKey =
   | "visitas"
   | "kids"
   | "convites";
-} from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-
-interface ResetDataSectionProps {
-  churchId: string;
-}
-
-type ModuleKey =
-  | "membros"
-  | "celulas"
-  | "financeiro"
-  | "eventos"
-  | "cursos"
-  | "discipulado"
-  | "consolidacao"
-  | "ministerios"
-  | "patrimonio"
-  | "visitas"
-  | "kids"
-  | "convites";
 
 const MODULES: Array<{
   key: ModuleKey;
