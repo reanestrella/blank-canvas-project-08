@@ -31,13 +31,16 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const [searchParams] = useSearchParams();
-  const rawRedirect = searchParams.get("redirect");
-  const { toast } = useToast();
+ useEffect(() => {
+  const tokenFromUrl = searchParams.get("token");
 
-  // 🔥 Captura token do convite
-  useEffect(() => {
-    if (!rawRedirect) return;
-    const decoded = decodeURIComponent(rawRedirect);
+  if (tokenFromUrl) {
+    console.log("TOKEN DIRETO DA URL (LOGIN):", tokenFromUrl);
+
+    sessionStorage.setItem("pending_invite_token", tokenFromUrl);
+    localStorage.setItem("pending_invite_token", tokenFromUrl);
+  }
+}, [searchParams]);
     sessionStorage.setItem("post_login_redirect", decoded);
 
     const inviteToken = getInviteTokenFromRedirect(decoded);
