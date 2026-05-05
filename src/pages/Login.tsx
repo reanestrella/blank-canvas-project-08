@@ -1,4 +1,4 @@
-// 🔥 LOGIN SIMPLIFICADO — redireciona sempre para /meu-app
+// 🔥 LOGIN SIMPLIFICADO — redireciona sempre para /app
 
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -34,13 +34,13 @@ export default function Login() {
   const rawRedirect = searchParams.get("redirect");
   const { toast } = useToast();
 
-  // Store pending redirect (e.g. from invite link)
+  // 🔥 Captura token do convite
   useEffect(() => {
     if (!rawRedirect) return;
     const decoded = decodeURIComponent(rawRedirect);
     sessionStorage.setItem("post_login_redirect", decoded);
+
     const inviteToken = getInviteTokenFromRedirect(decoded);
-    console.log("TOKEN NO LOGIN:", inviteToken);
     if (inviteToken) {
       sessionStorage.setItem("pending_invite_token", inviteToken);
     }
@@ -51,51 +51,15 @@ export default function Login() {
     defaultValues: { email: "", password: "" },
   });
 
-  // Pre-fill remembered email
   useEffect(() => {
     const remembered = localStorage.getItem("remembered_email");
     if (remembered) {
       form.setValue("email", remembered);
       setKeepLoggedIn(true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-const getUserWithRetry = async () => {
-  let attempts = 0;
 
-  while (attempts < 5) {
-    const { data } = await supabase.auth.getSession();
-    const user = data.session?.user;
-
-    if (user) return user;
-
-    await new Promise((r) => setTimeout(r, 500));
-    attempts++;
-  }
-
-  throw new Error("Usuário não disponível após login.");
-};
-  const handleSubmit = async (data: LoginFormData) => {
-    setIsLoading(true);
-    try {
-  const { error } = await supabase.auth.signInWithPassword({
-    email: data.email,
-    password: data.password,
-  });
-
-  if (error) {
-    toast({
-      title: "Erro de autenticação",
-      description:
-        error.message === "Invalid login credentials"
-          ? "Email ou senha incorretos."
-          : error.message,
-      variant: "destructive",
-    });
-    return;
-  }
-
-  // 🔥 AGUARDA SESSÃO ESTABILIZAR
+  // 🔥 FUNÇÃO CORRETA PARA PEGAR USER
   const getUserWithRetry = async () => {
     let attempts = 0;
 
@@ -112,84 +76,85 @@ const getUserWithRetry = async () => {
     throw new Error("Usuário não disponível após login.");
   };
 
-  const user = await getUserWithRetry();
+  const handleSubmit = async (data: LoginFormData) => {
+    setIsLoading(true);
 
-  await ensureUserProfile(user);
+    try {
+      // 🔐 LOGIN
+      const { error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
 
-  // 🔥 APLICA CONVITE
-  const inviteToken = sessionStorage.getItem("pending_invite_token");
+      if (error) {
+        toast({
+          title: "Erro de autenticação",
+          description:
+            error.message === "Invalid login credentials"
+              ? "Email ou senha incorretos."
+              : error.message,
+          variant: "destructive",
+        });
+        return;
+      }
 
-  console.log("TOKEN NO LOGIN:", inviteToken);
-
-  if (inviteToken) {
-    console.log("APLICANDO CONVITE:", inviteToken);
-
-    await applyInvitationForUser(inviteToken, user);
-
-    sessionStorage.removeItem("pending_invite_token");
-  }
-
-  await clearAuthBrowserCache();
-
-  window.location.href = "/app";
-
-} catch (error) {
-  console.error("Erro login:", error);
-
-  toast({
-    title: "Erro",
-    description: "Erro ao fazer login.",
-    variant: "destructive",
-  });
-}
-
-     const getUserWithRetry = async () => {
-  let attempts = 0;
-
-  while (attempts < 5) {
-   const user = await getUserWithRetry();
-
-await ensureUserProfile(user);
+      // 🔥 GARANTE USER
+      const user = await getUserWithRetry();
 
       await ensureUserProfile(user);
 
-      // Restrição de sessão por role: admin/tesoureiro NÃO mantêm sessão persistente
+      // 🔥 APLICA CONVITE
+      const inviteToken = sessionStorage.getItem("pending_invite_token");
+
+      console.log("TOKEN NO LOGIN:", inviteToken);
+
+      if (inviteToken) {
+        console.log("APLICANDO CONVITE:", inviteToken);
+
+        await applyInvitationForUser(inviteToken, user);
+
+        sessionStorage.removeItem("pending_invite_token");
+      }
+
+      // 🔒 CONTROLE DE SESSÃO POR ROLE
       try {
         const { data: rolesData } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", user.id);
-        const userRoles = (rolesData || []).map((r: { role: string }) => r.role);
-        const isSensitiveRole = userRoles.some((r) =>
+
+        const userRoles = (rolesData || []).map((r: any) => r.role);
+
+        const isSensitiveRole = userRoles.some((r: string) =>
           ["pastor", "admin", "tesoureiro", "secretario"].includes(r)
         );
+
         if (isSensitiveRole) {
-          // Sessão curta: marca como não-persistente (logout ao fechar a aba via sw / app reload)
           localStorage.setItem("keep_logged_in", "false");
           localStorage.removeItem("remembered_email");
           sessionStorage.setItem("session_active", "1");
         }
       } catch (e) {
-        console.warn("[Login] não foi possível avaliar roles para política de sessão:", e);
+        console.warn("[Login] erro ao verificar roles:", e);
       }
 
       toast({ title: "Bem-vindo!", description: "Login realizado com sucesso." });
 
-      // Check for pending invite token from redirect/session storage
-      const pendingRedirect = sessionStorage.getItem("post_login_redirect");
-      const inviteToken = sessionStorage.getItem("pending_invite_token") || getInviteTokenFromRedirect(pendingRedirect);
-      if (inviteToken) {
-        console.log("TOKEN:", inviteToken);
-        await applyInvitationForUser(inviteToken, user);
-        sessionStorage.removeItem("pending_invite_token");
-      }
-
       sessionStorage.removeItem("post_login_redirect");
+
       await clearAuthBrowserCache();
+
       window.location.href = "/app";
+
     } catch (error) {
       console.error("Erro login:", error);
-      toast({ title: "Erro", description: "Erro ao fazer login.", variant: "destructive" });
+
+      toast({
+        title: "Erro",
+        description: "Erro ao fazer login.",
+        variant: "destructive",
+      });
+
     } finally {
       setIsLoading(false);
     }
@@ -201,16 +166,13 @@ await ensureUserProfile(user);
         <CardHeader className="text-center">
           <Link to="/" className="mb-4 flex flex-col items-center justify-center gap-3">
             <div className="rounded-2xl bg-sidebar p-3 shadow-[var(--shadow-lg)]">
-              <img
-                src={APP_BRAND_LOGO}
-                alt={APP_BRAND_NAME}
-                className="h-14 w-auto max-w-[220px] object-contain drop-shadow-[0_0_8px_rgba(37,99,235,0.3)]"
-              />
+              <img src={APP_BRAND_LOGO} alt={APP_BRAND_NAME} className="h-14 w-auto" />
             </div>
             <span className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
               {APP_BRAND_NAME}
             </span>
           </Link>
+
           <CardTitle className="text-2xl">Bem-vindo de volta</CardTitle>
           <CardDescription>
             Entre com seu email e senha para acessar o sistema
@@ -244,11 +206,12 @@ await ensureUserProfile(user);
                       <div className="relative">
                         <Input
                           type={showPassword ? "text" : "password"}
-                          placeholder="••••••••"
                           {...field}
                         />
                         <Button
-                          type="button" variant="ghost" size="icon"
+                          type="button"
+                          variant="ghost"
+                          size="icon"
                           className="absolute right-0 top-0"
                           onClick={() => setShowPassword(!showPassword)}
                         >
@@ -261,41 +224,12 @@ await ensureUserProfile(user);
                 )}
               />
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="keep-logged-in"
-                  checked={keepLoggedIn}
-                  onCheckedChange={(checked) => setKeepLoggedIn(checked === true)}
-                />
-                <label
-                  htmlFor="keep-logged-in"
-                  className="text-sm text-muted-foreground cursor-pointer select-none"
-                >
-                  Lembrar-me
-                </label>
-              </div>
-
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Entrar
               </Button>
             </form>
           </Form>
-
-          <div className="mt-6 text-center text-sm">
-            <p className="text-muted-foreground">
-              Não tem uma conta?{" "}
-              <Link to="/registro" className="text-primary hover:underline font-medium">
-                Criar conta
-              </Link>
-            </p>
-          </div>
-
-          <div className="mt-4 text-center">
-            <Link to="/" className="text-sm text-muted-foreground hover:text-primary">
-              ← Voltar para o site
-            </Link>
-          </div>
         </CardContent>
       </Card>
     </div>
