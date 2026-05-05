@@ -58,6 +58,7 @@ const MODULES: Array<{
   description: string;
   icon: typeof Users;
 }> = [
+  { key: "all", label: "RESET GERAL (todos os dados)", description: "Apaga TODOS os dados de TODOS os módulos da igreja: membros, células, financeiro, ministérios, etc. A igreja, usuários e configurações continuam.", icon: RotateCcw },
   { key: "membros", label: "Membros", description: "Apaga todos os membros e dados vinculados (vínculos em células, escalas, etc).", icon: Users },
   { key: "celulas", label: "Células", description: "Apaga células, relatórios, presenças, visitantes e cuidados pastorais.", icon: Home },
   { key: "financeiro", label: "Financeiro", description: "Apaga lançamentos, contas, categorias e campanhas financeiras.", icon: DollarSign },
