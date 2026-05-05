@@ -1154,10 +1154,14 @@ export type Database = {
       }
       consolidation_records: {
         Row: {
+          baptism_date: string | null
           cell_integration_date: string | null
           church_id: string
+          consolidation_end_date: string | null
+          consolidation_start_date: string | null
           consolidator_id: string | null
           contact_date: string | null
+          contact_evaluation: string | null
           contact_made: boolean | null
           contact_reason: string | null
           created_at: string | null
@@ -1168,15 +1172,21 @@ export type Database = {
           last_visit_date: string | null
           member_id: string
           notes: string | null
+          stage: string
           status: string | null
           updated_at: string | null
           visit_count: number
+          visit_date: string | null
         }
         Insert: {
+          baptism_date?: string | null
           cell_integration_date?: string | null
           church_id: string
+          consolidation_end_date?: string | null
+          consolidation_start_date?: string | null
           consolidator_id?: string | null
           contact_date?: string | null
+          contact_evaluation?: string | null
           contact_made?: boolean | null
           contact_reason?: string | null
           created_at?: string | null
@@ -1187,15 +1197,21 @@ export type Database = {
           last_visit_date?: string | null
           member_id: string
           notes?: string | null
+          stage?: string
           status?: string | null
           updated_at?: string | null
           visit_count?: number
+          visit_date?: string | null
         }
         Update: {
+          baptism_date?: string | null
           cell_integration_date?: string | null
           church_id?: string
+          consolidation_end_date?: string | null
+          consolidation_start_date?: string | null
           consolidator_id?: string | null
           contact_date?: string | null
+          contact_evaluation?: string | null
           contact_made?: boolean | null
           contact_reason?: string | null
           created_at?: string | null
@@ -1206,9 +1222,11 @@ export type Database = {
           last_visit_date?: string | null
           member_id?: string
           notes?: string | null
+          stage?: string
           status?: string | null
           updated_at?: string | null
           visit_count?: number
+          visit_date?: string | null
         }
         Relationships: [
           {

@@ -2,17 +2,31 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+export type ConsolidationStage =
+  | "visitante"
+  | "decidido"
+  | "em_consolidacao"
+  | "consolidado"
+  | "batizado";
+
 export interface ConsolidationRecord {
   id: string;
   church_id: string;
   member_id: string;
   consolidator_id: string | null;
   status: "contato" | "acompanhamento" | "integracao" | "concluido" | "desistente";
+  stage: ConsolidationStage;
   contact_date: string | null;
   first_visit_date: string | null;
   cell_integration_date: string | null;
   contact_made: boolean;
   contact_reason: string | null;
+  contact_evaluation: string | null;
+  visit_date: string | null;
+  decision_date: string | null;
+  consolidation_start_date: string | null;
+  consolidation_end_date: string | null;
+  baptism_date: string | null;
   notes: string | null;
   created_by: string | null;
   created_at: string;
@@ -25,10 +39,17 @@ export interface CreateConsolidationData {
   member_id: string;
   consolidator_id?: string;
   status?: ConsolidationRecord["status"];
+  stage?: ConsolidationStage;
   contact_date?: string;
+  visit_date?: string;
+  decision_date?: string;
+  consolidation_start_date?: string;
+  consolidation_end_date?: string;
+  baptism_date?: string;
   notes?: string;
   contact_made?: boolean;
   contact_reason?: string;
+  contact_evaluation?: string;
 }
 
 export function useConsolidation(churchId?: string) {
