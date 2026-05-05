@@ -144,9 +144,9 @@ export default function Login() {
 
       await clearAuthBrowserCache();
 
-      window.location.href = "/app";
+    window.location.href = "/app";
 
-    } catch (error) {
+} catch (error) {
       console.error("Erro login:", error);
 
       toast({
