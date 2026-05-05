@@ -92,9 +92,21 @@ export default function Login() {
 
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+     const getUserWithRetry = async () => {
+  let attempts = 0;
+
+  while (attempts < 5) {
+    const { data } = await supabase.auth.getSession();
+    const user = data.session?.user;
+
+    if (user) return user;
+
+    await new Promise((r) => setTimeout(r, 500));
+    attempts++;
+  }
+
+  throw new Error("Usuário não disponível após login.");
+};
 
       if (!user) {
         throw new Error("Sessão não estabilizada após login.");
