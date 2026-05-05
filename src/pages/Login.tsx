@@ -78,33 +78,70 @@ const getUserWithRetry = async () => {
   const handleSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
-      });
+  const { error } = await supabase.auth.signInWithPassword({
+    email: data.email,
+    password: data.password,
+  });
 
-      if (error) {
-        toast({
-          title: "Erro de autenticação",
-          description: error.message === "Invalid login credentials"
-            ? "Email ou senha incorretos."
-            : error.message,
-          variant: "destructive",
-        });
-        return;
-      }
+  if (error) {
+    toast({
+      title: "Erro de autenticação",
+      description:
+        error.message === "Invalid login credentials"
+          ? "Email ou senha incorretos."
+          : error.message,
+      variant: "destructive",
+    });
+    return;
+  }
 
-      // Session persistence preference
-      if (keepLoggedIn) {
-        localStorage.setItem("keep_logged_in", "true");
-        localStorage.setItem("remembered_email", data.email);
-      } else {
-        localStorage.setItem("keep_logged_in", "false");
-        localStorage.removeItem("remembered_email");
-        sessionStorage.setItem("session_active", "1");
-      }
+  // 🔥 AGUARDA SESSÃO ESTABILIZAR
+  const getUserWithRetry = async () => {
+    let attempts = 0;
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+    while (attempts < 5) {
+      const { data } = await supabase.auth.getSession();
+      const user = data.session?.user;
+
+      if (user) return user;
+
+      await new Promise((r) => setTimeout(r, 500));
+      attempts++;
+    }
+
+    throw new Error("Usuário não disponível após login.");
+  };
+
+  const user = await getUserWithRetry();
+
+  await ensureUserProfile(user);
+
+  // 🔥 APLICA CONVITE
+  const inviteToken = sessionStorage.getItem("pending_invite_token");
+
+  console.log("TOKEN NO LOGIN:", inviteToken);
+
+  if (inviteToken) {
+    console.log("APLICANDO CONVITE:", inviteToken);
+
+    await applyInvitationForUser(inviteToken, user);
+
+    sessionStorage.removeItem("pending_invite_token");
+  }
+
+  await clearAuthBrowserCache();
+
+  window.location.href = "/app";
+
+} catch (error) {
+  console.error("Erro login:", error);
+
+  toast({
+    title: "Erro",
+    description: "Erro ao fazer login.",
+    variant: "destructive",
+  });
+}
 
      const getUserWithRetry = async () => {
   let attempts = 0;
