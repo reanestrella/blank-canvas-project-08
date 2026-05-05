@@ -29,7 +29,7 @@ export default function AcceptInvite() {
         Já tenho conta
       </button>
 
-      <button onClick={() => navigate("/registro?invite=true"); style={{ margin: 10 }}>
+      <button onClick={() => navigate("/registro?invite=true")} style={{ margin: 10 }}>
         Criar conta
       </button>
     </div>
