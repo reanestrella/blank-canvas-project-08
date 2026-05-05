@@ -233,7 +233,7 @@ export default function Consolidacao() {
   const renderStageTable = (
     list: ConsolidationRecord[],
     stage: ConsolidationStage,
-    nextActions: Array<{ kind: ActionKind; label: string }>,
+    nextActions: Array<{ kind: ActionKind; label: React.ReactNode }>,
   ) => (
     <Card>
       <CardContent className="p-0">
