@@ -1,4 +1,4 @@
-import AcceptInvite from "./pages/accept-invite";
+import AcceptInvite from "./pages/AcceptInvite";
 import { lazy, Suspense, useEffect } from "react";
 import { initOneSignal } from "@/lib/onesignal";
 
