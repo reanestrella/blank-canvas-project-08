@@ -25,11 +25,11 @@ export default function AcceptInvite() {
 
       <p>Escolha como deseja continuar:</p>
 
-      <button onClick={() => navigate(`/login?token=${token}`) style={{ margin: 10 }}>
+      <button onClick={() => navigate(`/login?token=${token}`)} style={{ margin: 10 }}>
         Já tenho conta
       </button>
 
-      <button onClick={() => navigate(`/registro?invite=true&token=${token}`) style={{ margin: 10 }}>
+      <button onClick={() => navigate(`/registro?invite=true&token=${token}`)} style={{ margin: 10 }}>
         Criar conta
       </button>
     </div>
