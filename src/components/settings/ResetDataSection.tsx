@@ -27,7 +27,6 @@ import {
   Mail,
   Loader2,
   AlertTriangle,
-  Sparkles as SparklesIcon,
   RotateCcw,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
