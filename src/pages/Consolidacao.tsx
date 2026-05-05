@@ -57,8 +57,8 @@ export default function Consolidacao() {
   const [editVisitor, setEditVisitor] = useState<any>(null);
   const [actionModal, setActiveAction] = useState<{ kind: ActionKind; member: any; record?: ConsolidationRecord; date: string } | null>(null);
 
-  // Visitor add modal (manual visit_date)
-  const [addVisitorDate, setAddVisitorDate] = useState<{ memberId: string; date: string } | null>(null);
+
+
 
   const now = new Date();
   const [periodMode, setPeriodMode] = useState<PeriodMode>("month");
