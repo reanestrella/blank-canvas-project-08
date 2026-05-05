@@ -1,5 +1,3 @@
-// 🔥 LOGIN SIMPLIFICADO — redireciona sempre para /app
-
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -7,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
@@ -17,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { APP_BRAND_LOGO, APP_BRAND_NAME } from "@/lib/brand";
 import { applyInvitationForUser } from "@/lib/authInvitation";
-import { clearAuthBrowserCache, ensureUserProfile, getInviteTokenFromRedirect } from "@/lib/authProfile";
+import { clearAuthBrowserCache, ensureUserProfile } from "@/lib/authProfile";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -29,40 +26,27 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const [searchParams] = useSearchParams();
- useEffect(() => {
-  const tokenFromUrl = searchParams.get("token");
+  const { toast } = useToast();
 
-  if (tokenFromUrl) {
-    console.log("TOKEN DIRETO DA URL (LOGIN):", tokenFromUrl);
+  // 🔥 CAPTURA TOKEN DIRETO DA URL
+  useEffect(() => {
+    const token = searchParams.get("token");
 
-    sessionStorage.setItem("pending_invite_token", tokenFromUrl);
-    localStorage.setItem("pending_invite_token", tokenFromUrl);
-  }
-}, [searchParams]);
-    sessionStorage.setItem("post_login_redirect", decoded);
+    if (token) {
+      console.log("TOKEN DIRETO DA URL:", token);
 
-    const inviteToken = getInviteTokenFromRedirect(decoded);
-    if (inviteToken) {
-      sessionStorage.setItem("pending_invite_token", inviteToken);
+      sessionStorage.setItem("pending_invite_token", token);
+      localStorage.setItem("pending_invite_token", token);
     }
-  }, [rawRedirect]);
+  }, [searchParams]);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
 
-  useEffect(() => {
-    const remembered = localStorage.getItem("remembered_email");
-    if (remembered) {
-      form.setValue("email", remembered);
-      setKeepLoggedIn(true);
-    }
-  }, []);
-
-  // 🔥 FUNÇÃO CORRETA PARA PEGAR USER
+  // 🔥 GARANTE USER APÓS LOGIN
   const getUserWithRetry = async () => {
     let attempts = 0;
 
@@ -83,7 +67,6 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      // 🔐 LOGIN
       const { error } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
@@ -92,22 +75,20 @@ export default function Login() {
       if (error) {
         toast({
           title: "Erro de autenticação",
-          description:
-            error.message === "Invalid login credentials"
-              ? "Email ou senha incorretos."
-              : error.message,
+          description: "Email ou senha incorretos.",
           variant: "destructive",
         });
         return;
       }
 
-      // 🔥 GARANTE USER
       const user = await getUserWithRetry();
 
       await ensureUserProfile(user);
 
       // 🔥 APLICA CONVITE
-      const inviteToken = sessionStorage.getItem("pending_invite_token");
+      const inviteToken =
+        sessionStorage.getItem("pending_invite_token") ||
+        localStorage.getItem("pending_invite_token");
 
       console.log("TOKEN NO LOGIN:", inviteToken);
 
@@ -117,39 +98,14 @@ export default function Login() {
         await applyInvitationForUser(inviteToken, user);
 
         sessionStorage.removeItem("pending_invite_token");
+        localStorage.removeItem("pending_invite_token");
       }
-
-      // 🔒 CONTROLE DE SESSÃO POR ROLE
-      try {
-        const { data: rolesData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id);
-
-        const userRoles = (rolesData || []).map((r: any) => r.role);
-
-        const isSensitiveRole = userRoles.some((r: string) =>
-          ["pastor", "admin", "tesoureiro", "secretario"].includes(r)
-        );
-
-        if (isSensitiveRole) {
-          localStorage.setItem("keep_logged_in", "false");
-          localStorage.removeItem("remembered_email");
-          sessionStorage.setItem("session_active", "1");
-        }
-      } catch (e) {
-        console.warn("[Login] erro ao verificar roles:", e);
-      }
-
-      toast({ title: "Bem-vindo!", description: "Login realizado com sucesso." });
-
-      sessionStorage.removeItem("post_login_redirect");
 
       await clearAuthBrowserCache();
 
-    window.location.href = "/app";
+      window.location.href = "/app";
 
-} catch (error) {
+    } catch (error) {
       console.error("Erro login:", error);
 
       toast({
@@ -165,26 +121,19 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary/10 via-background to-background p-4">
-      <Card className="w-full max-w-md border-primary/15 shadow-[var(--shadow-lg)]">
+      <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <Link to="/" className="mb-4 flex flex-col items-center justify-center gap-3">
-            <div className="rounded-2xl bg-sidebar p-3 shadow-[var(--shadow-lg)]">
-              <img src={APP_BRAND_LOGO} alt={APP_BRAND_NAME} className="h-14 w-auto" />
-            </div>
-            <span className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
-              {APP_BRAND_NAME}
-            </span>
-          </Link>
-
-          <CardTitle className="text-2xl">Bem-vindo de volta</CardTitle>
+          <img src={APP_BRAND_LOGO} className="h-14 mx-auto mb-2" />
+          <CardTitle>Bem-vindo de volta</CardTitle>
           <CardDescription>
-            Entre com seu email e senha para acessar o sistema
+            Entre com seu email e senha
           </CardDescription>
         </CardHeader>
 
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+
               <FormField
                 control={form.control}
                 name="email"
@@ -192,7 +141,7 @@ export default function Login() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="seu@email.com" {...field} />
+                      <Input type="email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -231,6 +180,7 @@ export default function Login() {
                 {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Entrar
               </Button>
+
             </form>
           </Form>
         </CardContent>
