@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -19,35 +19,46 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Plus, Users, UserCheck, UserPlus, Heart, Loader2, MoreHorizontal,
-  Phone, Mail, Eye, Droplets, Send, CheckCircle2, PhoneOff,
-  UserX,
+  Users, UserCheck, Heart, MoreHorizontal,
+  Phone, Mail, Eye, Droplets, ArrowDown, Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useConsolidation, ConsolidationRecord } from "@/hooks/useConsolidation";
+import { useConsolidation, ConsolidationRecord, ConsolidationStage } from "@/hooks/useConsolidation";
 import { useMembers } from "@/hooks/useMembers";
-import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-  contato: { label: "Contato Realizado", color: "bg-info/20 text-info" },
-  acompanhamento: { label: "Em Consolidação", color: "bg-secondary/20 text-secondary" },
-  concluido: { label: "Consolidado", color: "bg-success/20 text-success" },
-  desistente: { label: "Desistente", color: "bg-destructive/20 text-destructive" },
+const stageConfig: Record<ConsolidationStage, { label: string; color: string }> = {
+  visitante:       { label: "Visitante",        color: "bg-muted text-muted-foreground" },
+  decidido:        { label: "Decidido",         color: "bg-success/20 text-success" },
+  em_consolidacao: { label: "Em Consolidação",  color: "bg-secondary/20 text-secondary" },
+  consolidado:     { label: "Consolidado",      color: "bg-primary/20 text-primary" },
+  batizado:        { label: "Batizado",         color: "bg-info/20 text-info" },
+};
+
+const today = () => new Date().toISOString().split("T")[0];
+
+type ActionKind = "decidiu" | "iniciar" | "finalizar" | "batizar";
+
+const actionConfig: Record<ActionKind, {
+  title: string;
+  dateLabel: string;
+  nextStage: ConsolidationStage;
+  dateField: keyof ConsolidationRecord;
+}> = {
+  decidiu:    { title: "Registrar Decisão",        dateLabel: "Data da decisão",       nextStage: "decidido",        dateField: "decision_date" },
+  iniciar:    { title: "Iniciar Consolidação",     dateLabel: "Data de início",        nextStage: "em_consolidacao", dateField: "consolidation_start_date" },
+  finalizar:  { title: "Finalizar Consolidação",   dateLabel: "Data de finalização",   nextStage: "consolidado",     dateField: "consolidation_end_date" },
+  batizar:    { title: "Registrar Batismo",        dateLabel: "Data do batismo",       nextStage: "batizado",        dateField: "baptism_date" },
 };
 
 export default function Consolidacao() {
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
-  const [selectedConsolidatorId, setSelectedConsolidatorId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("visitantes");
   const [editingRecord, setEditingRecord] = useState<ConsolidationRecord | null>(null);
-  const [editForm, setEditForm] = useState({ consolidator_id: "", notes: "", contact_date: "", status: "" });
-  const [editingVisitor, setEditingVisitor] = useState<any>(null);
-  
-  // Contact tracking
-  const [contactModal, setContactModal] = useState<{ memberId: string; type: "feito" | "nao_feito" } | null>(null);
-  const [contactReason, setContactReason] = useState("");
+  const [editVisitor, setEditVisitor] = useState<any>(null);
+  const [actionModal, setActiveAction] = useState<{ kind: ActionKind; member: any; record?: ConsolidationRecord; date: string } | null>(null);
+
+  // Visitor add modal (manual visit_date)
+  const [addVisitorDate, setAddVisitorDate] = useState<{ memberId: string; date: string } | null>(null);
 
   const now = new Date();
   const [periodMode, setPeriodMode] = useState<PeriodMode>("month");
@@ -56,256 +67,238 @@ export default function Consolidacao() {
 
   const { profile } = useAuth();
   const churchId = profile?.church_id;
-  const { records, stats: consolidationStats, isLoading, createRecord, updateRecord, updateStatus, deleteRecord } = useConsolidation(churchId || undefined);
+  const { records, isLoading, createRecord, updateRecord, deleteRecord } = useConsolidation(churchId || undefined);
   const { members, updateMember } = useMembers(churchId || undefined);
 
-  // Filter records by time period
-  const filteredRecords = useMemo(() => {
-    return records.filter((r) => {
-      if (r.status !== "concluido" && r.status !== "desistente") return true;
-      if (periodMode === "all") return true;
-      const d = new Date(r.contact_date || r.created_at || "");
-      if (periodMode === "year") return d.getFullYear() === filterYear;
-      return d.getFullYear() === filterYear && d.getMonth() === filterMonth;
+  // Most recent record per member (drives "current stage" of a person)
+  const recordByMember = useMemo(() => {
+    const map = new Map<string, ConsolidationRecord>();
+    for (const r of records) {
+      const prev = map.get(r.member_id);
+      if (!prev || new Date(r.updated_at) > new Date(prev.updated_at)) map.set(r.member_id, r);
+    }
+    return map;
+  }, [records]);
+
+  const memberById = useMemo(() => new Map(members.map(m => [m.id, m])), [members]);
+
+  // ----- LISTS BY STAGE (não some por mês) -----
+  // Visitantes = members.spiritual_status='visitante' E (sem record OU record.stage='visitante')
+  const visitorsList = useMemo(() => {
+    return members.filter(m => {
+      if (!m.is_active || m.spiritual_status !== "visitante") return false;
+      const r = recordByMember.get(m.id);
+      return !r || r.stage === "visitante";
     });
-  }, [records, periodMode, filterMonth, filterYear]);
+  }, [members, recordByMember]);
 
-  // Visitors = members with spiritual_status "visitante" (tab 1)
-  const visitors = useMemo(() => {
-    const visitantes = members.filter(m => m.is_active && m.spiritual_status === "visitante");
-    if (periodMode === "all") return visitantes;
-    return visitantes.filter(m => {
-      const d = new Date(m.created_at || "");
-      if (periodMode === "year") return d.getFullYear() === filterYear;
-      return d.getFullYear() === filterYear && d.getMonth() === filterMonth;
-    });
-  }, [members, periodMode, filterMonth, filterYear]);
+  const recordsByStage = (stage: ConsolidationStage) =>
+    Array.from(recordByMember.values()).filter(r => r.stage === stage);
 
-  const memberById = useMemo(
-    () => new Map(members.map((member) => [member.id, member])),
-    [members],
-  );
+  const decididosList = useMemo(() => recordsByStage("decidido"), [recordByMember]);
+  const emConsolidacaoList = useMemo(() => recordsByStage("em_consolidacao"), [recordByMember]);
+  const consolidadosList = useMemo(() => recordsByStage("consolidado"), [recordByMember]);
+  const batizadosList = useMemo(() => recordsByStage("batizado"), [recordByMember]);
 
-  // Em Consolidação = only new converts with status "acompanhamento" (tab 2)
-  const emConsolidacao = useMemo(() =>
-    filteredRecords.filter((record) => {
-      const member = memberById.get(record.member_id);
-      return record.status === "acompanhamento" && member?.spiritual_status === "novo_convertido";
-    }),
-  [filteredRecords, memberById]);
+  // ----- DASHBOARD: filter by DATE -----
+  const inPeriod = (dateStr?: string | null) => {
+    if (!dateStr) return false;
+    if (periodMode === "all") return true;
+    const d = new Date(dateStr + "T12:00:00");
+    if (periodMode === "year") return d.getFullYear() === filterYear;
+    return d.getFullYear() === filterYear && d.getMonth() === filterMonth;
+  };
 
-  // Consolidados = records with status "concluido" (tab 3)
-  const consolidados = useMemo(() =>
-    filteredRecords.filter(r => r.status === "concluido"),
-  [filteredRecords]);
-
-  // Check if visitor has a consolidation contact
-  const getVisitorFollowUp = (member: typeof members[0]) => {
-    const record = records.find(r => r.member_id === member.id);
-    const createdAt = new Date(member.created_at || "");
-    const diffDays = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-    return { 
-      diffDays, 
-      hasConsolidation: !!record,
-      contactMade: record?.contact_made === true,
-      contactReason: record?.contact_reason,
+  const dashCounts = useMemo(() => {
+    const visit = members.filter(m => m.spiritual_status === "visitante").reduce((acc, m) => {
+      const r = recordByMember.get(m.id);
+      const d = r?.visit_date || (m as any).created_at?.split("T")[0];
+      return acc + (inPeriod(d) ? 1 : 0);
+    }, 0);
+    const allRecs = Array.from(recordByMember.values());
+    return {
+      visitantes:   visit,
+      decididos:    allRecs.filter(r => inPeriod(r.decision_date)).length,
+      emConsol:     allRecs.filter(r => r.stage === "em_consolidacao" && inPeriod(r.consolidation_start_date || r.updated_at?.split("T")[0])).length,
+      consolidados: allRecs.filter(r => inPeriod(r.consolidation_end_date)).length,
+      batizados:    allRecs.filter(r => inPeriod(r.baptism_date)).length,
     };
+  }, [members, recordByMember, periodMode, filterMonth, filterYear]);
+
+  const funnelSteps = [
+    { label: "Visitantes",     value: dashCounts.visitantes,   color: "bg-muted-foreground", gradient: "from-muted-foreground/20 to-muted-foreground/5" },
+    { label: "Decidiram",      value: dashCounts.decididos,    color: "bg-success",          gradient: "from-success/20 to-success/5" },
+    { label: "Em Consolidação",value: dashCounts.emConsol,     color: "bg-secondary",        gradient: "from-secondary/20 to-secondary/5" },
+    { label: "Consolidados",   value: dashCounts.consolidados, color: "bg-primary",          gradient: "from-primary/20 to-primary/5" },
+    { label: "Batizados",      value: dashCounts.batizados,    color: "bg-info",             gradient: "from-info/20 to-info/5" },
+  ];
+  const maxFunnel = Math.max(...funnelSteps.map(s => s.value), 1);
+
+  // ----- ACTIONS -----
+  const openAction = (kind: ActionKind, member: any, record?: ConsolidationRecord) => {
+    const cfg = actionConfig[kind];
+    const existingDate = record ? (record[cfg.dateField] as string | null) : null;
+    setActiveAction({ kind, member, record, date: existingDate || today() });
   };
 
-  // Marcar contato feito
-  const handleContactMade = async (memberId: string) => {
-    const existingRecord = records.find(r => r.member_id === memberId);
-    if (existingRecord) {
-      await updateRecord(existingRecord.id, {
-        contact_made: true,
-        contact_date: new Date().toISOString().split("T")[0],
-      } as any);
-    } else {
-      await createRecord({
-        member_id: memberId,
-        status: "contato" as any,
-        contact_date: new Date().toISOString().split("T")[0],
-        contact_made: true,
-      } as any);
-    }
-    setActiveTab("visitantes");
-  };
+  const confirmAction = async () => {
+    if (!actionModal) return;
+    const { kind, member, record, date } = actionModal;
+    if (!date) return;
+    const cfg = actionConfig[kind];
 
-  // Marcar contato NÃO feito (com motivo obrigatório)
-  const handleContactNotMade = async () => {
-    if (!contactModal || !contactReason.trim()) return;
-    const memberId = contactModal.memberId;
-    const existingRecord = records.find(r => r.member_id === memberId);
-    if (existingRecord) {
-      await updateRecord(existingRecord.id, {
-        contact_made: false,
-        contact_reason: contactReason,
-        contact_date: new Date().toISOString().split("T")[0],
-      } as any);
-    } else {
-      await createRecord({
-        member_id: memberId,
-        status: "contato" as any,
-        contact_date: new Date().toISOString().split("T")[0],
-        contact_made: false,
-        contact_reason: contactReason,
-      } as any);
-    }
-    setContactModal(null);
-    setContactReason("");
-    setActiveTab("visitantes");
-  };
+    const payload: any = {
+      stage: cfg.nextStage,
+      [cfg.dateField]: date,
+    };
 
-  // Converter visitante para novo convertido → vai para aba "Em Consolidação"
-  const handleConvertToNewConvert = async (member: any) => {
-    await updateMember(member.id, { spiritual_status: "novo_convertido" } as any);
-    const existingRecord = records.find(r => r.member_id === member.id);
-    if (existingRecord) {
-      await updateStatus(existingRecord.id, "acompanhamento" as any);
+    if (record) {
+      await updateRecord(record.id, payload);
     } else {
+      // Create record. Always carry visit_date (member created_at fallback)
+      const memberRow = memberById.get(member.id);
+      const visit_date = (memberRow as any)?.created_at?.split("T")[0] || today();
       await createRecord({
         member_id: member.id,
-        status: "acompanhamento" as any,
-        contact_date: new Date().toISOString().split("T")[0],
-      });
+        visit_date,
+        ...payload,
+      } as any);
     }
-    setEditingVisitor(null);
+
+    // Sync spiritual_status when relevant
+    if (cfg.nextStage === "em_consolidacao" || cfg.nextStage === "consolidado") {
+      await updateMember(member.id, { spiritual_status: "novo_convertido" } as any);
+    } else if (cfg.nextStage === "batizado") {
+      await updateMember(member.id, { spiritual_status: "membro", is_baptized: true, baptism_date: date } as any);
+    }
+
+    setActiveAction(null);
   };
 
-  // Nova consolidação direta
-  const handleStartConsolidation = async () => {
-    if (!selectedMemberId) return;
-    await createRecord({
-      member_id: selectedMemberId,
-      consolidator_id: selectedConsolidatorId || undefined,
-      status: "acompanhamento" as any,
-      contact_date: new Date().toISOString().split("T")[0],
-    });
-    setSelectedMemberId(null);
-    setSelectedConsolidatorId(null);
-    setShowAddForm(false);
-  };
-
-  const handleEditRecord = (record: ConsolidationRecord) => {
-    setEditingRecord(record);
-    setEditForm({
-      consolidator_id: record.consolidator_id || "",
-      notes: record.notes || "",
-      contact_date: record.contact_date || "",
-      status: record.status,
-    });
-  };
-
-  const handleSaveEdit = async () => {
+  // ----- EDIT FULL RECORD -----
+  const openEdit = (r: ConsolidationRecord) => setEditingRecord({ ...r });
+  const saveEdit = async () => {
     if (!editingRecord) return;
-    await updateRecord(editingRecord.id, {
-      consolidator_id: editForm.consolidator_id || undefined,
-      notes: editForm.notes || undefined,
-      contact_date: editForm.contact_date || undefined,
+    const r = editingRecord;
+    await updateRecord(r.id, {
+      stage: r.stage,
+      visit_date: r.visit_date || undefined,
+      decision_date: r.decision_date || undefined,
+      consolidation_start_date: r.consolidation_start_date || undefined,
+      consolidation_end_date: r.consolidation_end_date || undefined,
+      baptism_date: r.baptism_date || undefined,
+      contact_made: r.contact_made,
+      contact_evaluation: r.contact_evaluation || undefined,
+      contact_date: r.contact_date || undefined,
+      notes: r.notes || undefined,
     } as any);
-    if (editForm.status !== editingRecord.status) {
-      await updateStatus(editingRecord.id, editForm.status as any);
-    }
     setEditingRecord(null);
+  };
+
+  // ----- VISITOR EDIT (visit_date + contato) -----
+  const saveVisitorEdit = async () => {
+    if (!editVisitor) return;
+    const r = recordByMember.get(editVisitor.id);
+    const payload: any = {
+      visit_date: editVisitor.visit_date || today(),
+      contact_made: !!editVisitor.contact_made,
+      contact_date: editVisitor.contact_date || null,
+      contact_evaluation: editVisitor.contact_evaluation || null,
+      stage: "visitante",
+    };
+    if (r) {
+      await updateRecord(r.id, payload);
+    } else {
+      await createRecord({ member_id: editVisitor.id, ...payload } as any);
+    }
+    setEditVisitor(null);
   };
 
   if (!churchId) return null;
 
-  // Stats
-  const contatosFeitos = records.filter(r => r.contact_made === true).length;
-  const contatosNaoFeitos = records.filter(r => r.contact_made === false).length;
+  const personCell = (name?: string | null, sub?: string | null) => (
+    <div className="flex items-center gap-3 min-w-0">
+      <Avatar className="w-8 h-8 shrink-0">
+        <AvatarFallback className="bg-primary/10 text-primary text-xs">
+          {(name || "?").split(" ").map(n => n[0]).join("").slice(0, 2)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0">
+        <p className="font-medium text-sm truncate">{name || "—"}</p>
+        {sub && <p className="text-xs text-muted-foreground truncate">{sub}</p>}
+      </div>
+    </div>
+  );
 
-  const funnelSteps = [
-    { label: "Visitantes", value: visitors.length, icon: Eye, color: "bg-muted text-muted-foreground" },
-    { label: "Contatos Feitos", value: contatosFeitos, icon: Phone, color: "bg-success/20 text-success" },
-    { label: "Contatos Pendentes", value: contatosNaoFeitos, icon: PhoneOff, color: "bg-destructive/20 text-destructive" },
-    { label: "Em Consolidação", value: emConsolidacao.length, icon: UserCheck, color: "bg-secondary/20 text-secondary" },
-    { label: "Consolidados", value: consolidados.length, icon: Heart, color: "bg-success/20 text-success" },
-    { label: "Desistentes", value: consolidationStats.desistente, icon: UserX, color: "bg-destructive/20 text-destructive" },
-    { label: "Batizados", value: members.filter(m => m.is_active && (m as any).is_baptized).length, icon: Droplets, color: "bg-info/20 text-info" },
-  ];
-
-  const renderRecordsTable = (recs: ConsolidationRecord[], showActions: boolean = true) => (
+  const renderStageTable = (
+    list: ConsolidationRecord[],
+    stage: ConsolidationStage,
+    nextActions: Array<{ kind: ActionKind; label: string }>,
+  ) => (
     <Card>
       <CardContent className="p-0">
-        {recs.length === 0 ? (
+        {list.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 text-center">
-            <Users className="w-12 h-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">Nenhum registro</h3>
+            <Users className="w-12 h-12 text-muted-foreground mb-3" />
+            <h3 className="text-base font-medium">Nenhum registro nesta etapa</h3>
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Pessoa</TableHead>
                 <TableHead className="hidden md:table-cell">Contato</TableHead>
-                <TableHead className="hidden md:table-cell">Consolidador</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="hidden md:table-cell">Data</TableHead>
-                {showActions && <TableHead className="w-[50px]"></TableHead>}
+                <TableHead className="hidden sm:table-cell">Data</TableHead>
+                <TableHead>Etapa</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recs.map((record) => {
-                const cfg = statusConfig[record.status] || { label: record.status, color: "" };
+              {list.map(r => {
+                const m = memberById.get(r.member_id);
+                const dateField = stage === "visitante" ? r.visit_date
+                  : stage === "decidido" ? r.decision_date
+                  : stage === "em_consolidacao" ? r.consolidation_start_date
+                  : stage === "consolidado" ? r.consolidation_end_date
+                  : r.baptism_date;
                 return (
-                  <TableRow key={record.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="w-8 h-8">
-                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                            {record.member?.full_name?.split(" ").map((n) => n[0]).join("").slice(0, 2) || "?"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium">{record.member?.full_name || "—"}</span>
-                      </div>
-                    </TableCell>
+                  <TableRow key={r.id}>
+                    <TableCell>{personCell(r.member?.full_name || m?.full_name)}</TableCell>
                     <TableCell className="hidden md:table-cell">
-                      <div className="flex flex-col gap-1">
-                        {record.member?.phone && <span className="text-xs flex items-center gap-1"><Phone className="w-3 h-3" />{record.member.phone}</span>}
-                        {record.member?.email && <span className="text-xs flex items-center gap-1"><Mail className="w-3 h-3" />{record.member.email}</span>}
+                      <div className="flex flex-col gap-0.5">
+                        {(r.member?.phone || m?.phone) && <span className="text-xs flex items-center gap-1"><Phone className="w-3 h-3" />{r.member?.phone || m?.phone}</span>}
+                        {(r.member?.email || m?.email) && <span className="text-xs flex items-center gap-1"><Mail className="w-3 h-3" />{r.member?.email || m?.email}</span>}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">
-                      {record.consolidator?.full_name || "—"}
+                    <TableCell className="hidden sm:table-cell text-sm">
+                      {dateField ? new Date(dateField + "T12:00:00").toLocaleDateString("pt-BR") : "—"}
                     </TableCell>
-                    <TableCell><Badge className={cfg.color}>{cfg.label}</Badge></TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">
-                      {record.contact_date ? new Date(record.contact_date + "T12:00:00").toLocaleDateString("pt-BR") : "—"}
-                    </TableCell>
-                    {showActions && (
-                      <TableCell>
+                    <TableCell><Badge className={stageConfig[r.stage].color}>{stageConfig[r.stage].label}</Badge></TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1 flex-wrap">
+                        {nextActions.map(a => (
+                          <Button key={a.kind} size="sm" variant="default" className="text-xs" onClick={() => openAction(a.kind, m, r)}>
+                            {a.label}
+                          </Button>
+                        ))}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditRecord(record)}>Editar</DropdownMenuItem>
-                            {record.status === "acompanhamento" && (
-                              <DropdownMenuItem onClick={() => updateStatus(record.id, "concluido" as any)}>
-                                ✅ Marcar como Consolidado
-                              </DropdownMenuItem>
-                            )}
-                            {record.status === "contato" && (
-                              <DropdownMenuItem onClick={() => updateStatus(record.id, "acompanhamento" as any)}>
-                                Mover para Consolidação
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem onClick={() => updateStatus(record.id, "desistente" as any)}>
-                              Marcar Desistente
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={() => deleteRecord(record.id)}>
-                              Excluir
-                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openEdit(r)}>Editar tudo</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => deleteRecord(r.id)}>Excluir registro</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </TableCell>
-                    )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -314,115 +307,107 @@ export default function Consolidacao() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">Central de Consolidação</h1>
-            <p className="text-muted-foreground">Acompanhamento de visitantes e novos convertidos</p>
+            <p className="text-muted-foreground">Funil: visitante → decidido → em consolidação → consolidado → batizado</p>
           </div>
           <FinancialFilters mode={periodMode} month={filterMonth} year={filterYear} onModeChange={setPeriodMode} onMonthChange={setFilterMonth} onYearChange={setFilterYear} />
         </div>
 
-        {/* Funnel */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
-          {funnelSteps.map((step) => {
-            const Icon = step.icon;
-            return (
-              <Card key={step.label}>
-                <CardContent className="p-4 text-center">
-                  <div className={`inline-flex p-2 rounded-lg mb-2 ${step.color}`}><Icon className="w-5 h-5" /></div>
-                  <p className="text-2xl font-bold">{step.value}</p>
-                  <p className="text-xs text-muted-foreground">{step.label}</p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        {/* FUNIL DASHBOARD (filtrado por data) */}
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <h2 className="text-base font-semibold">Funil do Período</h2>
+            </div>
+            <div className="space-y-2">
+              {funnelSteps.map((step, i) => {
+                const pct = (step.value / maxFunnel) * 100;
+                return (
+                  <div key={step.label}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="font-medium">{step.label}</span>
+                      <span className="tabular-nums font-semibold">{step.value}</span>
+                    </div>
+                    <div className={`h-9 overflow-hidden rounded-xl bg-gradient-to-r ${step.gradient}`}>
+                      <div className={`flex h-full items-center justify-center rounded-xl transition-all duration-700 ${step.color}`} style={{ width: `${Math.max(pct, 8)}%` }}>
+                        <span className="text-xs font-bold text-white drop-shadow">{step.value}</span>
+                      </div>
+                    </div>
+                    {i < funnelSteps.length - 1 && (
+                      <div className="flex justify-center py-0.5"><ArrowDown className="h-3 w-3 text-muted-foreground/40" /></div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Tabs: 3 abas */}
+        {/* TABS POR STAGE */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="!grid h-auto w-full grid-cols-3">
-            <TabsTrigger value="visitantes" className="min-w-0 whitespace-normal px-2 py-2 text-[11px] leading-tight sm:text-sm">
-              Visitantes ({visitors.length})
-            </TabsTrigger>
-            <TabsTrigger value="consolidacao" className="min-w-0 whitespace-normal px-2 py-2 text-[11px] leading-tight sm:text-sm">
-              Consolidação ({emConsolidacao.length})
-            </TabsTrigger>
-            <TabsTrigger value="consolidados" className="min-w-0 whitespace-normal px-2 py-2 text-[11px] leading-tight sm:text-sm">
-              Consolidados ({consolidados.length})
-            </TabsTrigger>
+          <TabsList className="!grid h-auto w-full grid-cols-5">
+            <TabsTrigger value="visitantes"      className="min-w-0 whitespace-normal px-2 py-2 text-[10px] leading-tight sm:text-sm">Visitantes ({visitorsList.length})</TabsTrigger>
+            <TabsTrigger value="decididos"       className="min-w-0 whitespace-normal px-2 py-2 text-[10px] leading-tight sm:text-sm">Decididos ({decididosList.length})</TabsTrigger>
+            <TabsTrigger value="em_consolidacao" className="min-w-0 whitespace-normal px-2 py-2 text-[10px] leading-tight sm:text-sm">Em Consol. ({emConsolidacaoList.length})</TabsTrigger>
+            <TabsTrigger value="consolidados"    className="min-w-0 whitespace-normal px-2 py-2 text-[10px] leading-tight sm:text-sm">Consolidados ({consolidadosList.length})</TabsTrigger>
+            <TabsTrigger value="batizados"       className="min-w-0 whitespace-normal px-2 py-2 text-[10px] leading-tight sm:text-sm">Batizados ({batizadosList.length})</TabsTrigger>
           </TabsList>
 
-          {/* Tab 1: Visitantes */}
+          {/* VISITANTES (vem de members) */}
           <TabsContent value="visitantes" className="space-y-4">
             <Card>
               <CardContent className="p-0">
-                {visitors.length === 0 ? (
+                {visitorsList.length === 0 ? (
                   <div className="flex flex-col items-center justify-center p-12 text-center">
-                    <Eye className="w-12 h-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium">Nenhum visitante neste período</h3>
+                    <Eye className="w-12 h-12 text-muted-foreground mb-3" />
+                    <h3 className="text-base font-medium">Nenhum visitante</h3>
+                    <p className="text-sm text-muted-foreground">Cadastre visitantes em Secretaria → Visitantes.</p>
                   </div>
                 ) : (
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Visitante</TableHead>
                         <TableHead className="hidden md:table-cell">Contato</TableHead>
-                         <TableHead className="hidden sm:table-cell">Acompanhamento</TableHead>
-                        <TableHead>Ação</TableHead>
+                        <TableHead className="hidden sm:table-cell">Data Visita</TableHead>
+                        <TableHead className="hidden sm:table-cell">Contato feito</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {visitors.map((visitor) => {
-                        const { diffDays, hasConsolidation, contactMade, contactReason: reason } = getVisitorFollowUp(visitor);
+                      {visitorsList.map(v => {
+                        const r = recordByMember.get(v.id);
+                        const visitDate = r?.visit_date || (v as any).created_at?.split("T")[0];
                         return (
-                          <TableRow key={visitor.id}>
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <Avatar className="w-8 h-8">
-                                  <AvatarFallback className="bg-muted text-muted-foreground text-xs">
-                                    {visitor.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <span className="font-medium text-sm">{visitor.full_name}</span>
-                                  <p className="text-xs text-muted-foreground">{diffDays}d atrás</p>
-                                </div>
-                              </div>
-                            </TableCell>
+                          <TableRow key={v.id}>
+                            <TableCell>{personCell(v.full_name)}</TableCell>
                             <TableCell className="hidden md:table-cell">
                               <div className="flex flex-col gap-0.5">
-                                {visitor.phone && <span className="text-xs">{visitor.phone}</span>}
-                                {visitor.email && <span className="text-xs text-muted-foreground">{visitor.email}</span>}
+                                {v.phone && <span className="text-xs">{v.phone}</span>}
+                                {v.email && <span className="text-xs text-muted-foreground">{v.email}</span>}
                               </div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-sm">
+                              {visitDate ? new Date(visitDate + "T12:00:00").toLocaleDateString("pt-BR") : "—"}
                             </TableCell>
                             <TableCell className="hidden sm:table-cell">
-                              <div className="flex items-center gap-1 flex-wrap">
-                                <Badge variant="default" className="text-[10px] py-0 h-4">Visita</Badge>
-                                {hasConsolidation && contactMade && (
-                                  <Badge className="text-[10px] py-0 h-4 bg-success/80 text-white">✔ Contato</Badge>
-                                )}
-                                {hasConsolidation && contactMade === false && (
-                                  <Badge variant="destructive" className="text-[10px] py-0 h-4" title={reason || ""}>
-                                    ✘ Pendente
-                                  </Badge>
-                                )}
-                              </div>
+                              {r?.contact_made ? <Badge className="bg-success/20 text-success">Sim</Badge> : <Badge variant="outline">Não</Badge>}
                             </TableCell>
-                            <TableCell>
-                              <div className="flex gap-1 flex-wrap">
-                                {!hasConsolidation && (
-                                  <>
-                                    <Button size="sm" variant="outline" className="text-xs px-2" onClick={() => handleContactMade(visitor.id)}>
-                                      <Phone className="w-3 h-3 sm:mr-1" /><span className="hidden sm:inline"> Contato</span> ✔
-                                    </Button>
-                                    <Button size="sm" variant="ghost" className="text-destructive text-xs px-2" onClick={() => setContactModal({ memberId: visitor.id, type: "nao_feito" })}>
-                                      <PhoneOff className="w-3 h-3 sm:mr-1" /><span className="hidden sm:inline"> Não feito</span>
-                                    </Button>
-                                  </>
-                                )}
-                                <Button size="sm" variant="default" className="text-xs px-2" onClick={() => setEditingVisitor(visitor)}>
-                                  <Heart className="w-3 h-3 sm:mr-1" /><span className="hidden sm:inline"> Decidiu</span>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1 flex-wrap">
+                                <Button size="sm" variant="outline" className="text-xs" onClick={() => setEditVisitor({
+                                  ...v,
+                                  visit_date: r?.visit_date || "",
+                                  contact_made: r?.contact_made || false,
+                                  contact_date: r?.contact_date || "",
+                                  contact_evaluation: r?.contact_evaluation || "",
+                                })}>Editar</Button>
+                                <Button size="sm" variant="default" className="text-xs" onClick={() => openAction("decidiu", v, r)}>
+                                  <Heart className="w-3 h-3 sm:mr-1" /><span className="hidden sm:inline">Decidiu</span>
                                 </Button>
                               </div>
                             </TableCell>
@@ -431,133 +416,158 @@ export default function Consolidacao() {
                       })}
                     </TableBody>
                   </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Tab 2: Em Consolidação */}
-          <TabsContent value="consolidacao" className="space-y-4">
-            <div className="flex justify-stretch sm:justify-end">
-              <Button onClick={() => setShowAddForm(true)} className="w-full sm:w-auto">
-                <Plus className="w-4 h-4 mr-2" /> Nova Consolidação
-              </Button>
-            </div>
-
-            {showAddForm && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Nova Consolidação</CardTitle>
-                  <p className="text-xs text-muted-foreground">Adicione um novo convertido ao acompanhamento</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Pessoa *</label>
-                      <MemberAutocomplete churchId={churchId} value={selectedMemberId || undefined} onChange={setSelectedMemberId} placeholder="Selecione..." />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Consolidador</label>
-                      <MemberAutocomplete churchId={churchId} value={selectedConsolidatorId || undefined} onChange={setSelectedConsolidatorId} placeholder="Quem vai acompanhar..." />
-                    </div>
-                    <div className="flex items-end gap-2">
-                      <Button onClick={handleStartConsolidation} disabled={!selectedMemberId}><UserPlus className="w-4 h-4 mr-2" /> Iniciar</Button>
-                      <Button variant="outline" onClick={() => setShowAddForm(false)}>Cancelar</Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {renderRecordsTable(emConsolidacao)}
+          <TabsContent value="decididos" className="space-y-4">
+            {renderStageTable(decididosList, "decidido", [{ kind: "iniciar", label: "Iniciar consolidação" }])}
           </TabsContent>
 
-          {/* Tab 3: Consolidados */}
+          <TabsContent value="em_consolidacao" className="space-y-4">
+            {renderStageTable(emConsolidacaoList, "em_consolidacao", [{ kind: "finalizar", label: "Finalizar" }])}
+          </TabsContent>
+
           <TabsContent value="consolidados" className="space-y-4">
-            {renderRecordsTable(consolidados, false)}
+            {renderStageTable(consolidadosList, "consolidado", [{ kind: "batizar", label: <><Droplets className="w-3 h-3 mr-1" />Batizar</> as any }])}
+          </TabsContent>
+
+          <TabsContent value="batizados" className="space-y-4">
+            {renderStageTable(batizadosList, "batizado", [])}
           </TabsContent>
         </Tabs>
 
-        {/* Edit Record Modal */}
-        <Dialog open={!!editingRecord} onOpenChange={(open) => !open && setEditingRecord(null)}>
+        {/* ACTION MODAL (data obrigatória) */}
+        <Dialog open={!!actionModal} onOpenChange={open => !open && setActiveAction(null)}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Editar Acompanhamento</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select value={editForm.status} onValueChange={(v) => setEditForm(f => ({ ...f, status: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="contato">Contato Realizado</SelectItem>
-                    <SelectItem value="acompanhamento">Em Consolidação</SelectItem>
-                    <SelectItem value="concluido">Consolidado</SelectItem>
-                    <SelectItem value="desistente">Desistente</SelectItem>
-                  </SelectContent>
-                </Select>
+            <DialogHeader><DialogTitle>{actionModal && actionConfig[actionModal.kind].title}</DialogTitle></DialogHeader>
+            {actionModal && (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Pessoa: <strong>{actionModal.member?.full_name}</strong>
+                </p>
+                <div className="space-y-2">
+                  <Label>{actionConfig[actionModal.kind].dateLabel} *</Label>
+                  <Input type="date" value={actionModal.date} onChange={e => setActiveAction({ ...actionModal, date: e.target.value })} />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Consolidador</Label>
-                <MemberAutocomplete churchId={churchId} value={editForm.consolidator_id || undefined} onChange={(id) => setEditForm(f => ({ ...f, consolidator_id: id || "" }))} placeholder="Selecione..." />
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setActiveAction(null)}>Cancelar</Button>
+              <Button onClick={confirmAction} disabled={!actionModal?.date}>Confirmar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* VISITOR EDIT */}
+        <Dialog open={!!editVisitor} onOpenChange={open => !open && setEditVisitor(null)}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Editar Visitante</DialogTitle></DialogHeader>
+            {editVisitor && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Data da visita *</Label>
+                  <Input type="date" value={editVisitor.visit_date || ""} onChange={e => setEditVisitor({ ...editVisitor, visit_date: e.target.value })} />
+                </div>
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" id="cmade" checked={!!editVisitor.contact_made} onChange={e => setEditVisitor({ ...editVisitor, contact_made: e.target.checked })} />
+                  <Label htmlFor="cmade">Contato feito</Label>
+                </div>
+                <div className="space-y-2">
+                  <Label>Data do contato</Label>
+                  <Input type="date" value={editVisitor.contact_date || ""} onChange={e => setEditVisitor({ ...editVisitor, contact_date: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Avaliação do contato</Label>
+                  <Select value={editVisitor.contact_evaluation || ""} onValueChange={v => setEditVisitor({ ...editVisitor, contact_evaluation: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="positiva">Positiva — interessado(a)</SelectItem>
+                      <SelectItem value="neutra">Neutra</SelectItem>
+                      <SelectItem value="negativa">Negativa — sem interesse</SelectItem>
+                      <SelectItem value="sem_resposta">Sem resposta</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Data do Contato</Label>
-                <Input type="date" value={editForm.contact_date} onChange={e => setEditForm(f => ({ ...f, contact_date: e.target.value }))} />
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditVisitor(null)}>Cancelar</Button>
+              <Button onClick={saveVisitorEdit}>Salvar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* FULL EDIT MODAL */}
+        <Dialog open={!!editingRecord} onOpenChange={open => !open && setEditingRecord(null)}>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Editar Registro Completo</DialogTitle></DialogHeader>
+            {editingRecord && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Etapa</Label>
+                  <Select value={editingRecord.stage} onValueChange={(v) => setEditingRecord({ ...editingRecord, stage: v as ConsolidationStage })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(stageConfig) as ConsolidationStage[]).map(s => (
+                        <SelectItem key={s} value={s}>{stageConfig[s].label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Data Visita</Label>
+                    <Input type="date" value={editingRecord.visit_date || ""} onChange={e => setEditingRecord({ ...editingRecord, visit_date: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Data Decisão</Label>
+                    <Input type="date" value={editingRecord.decision_date || ""} onChange={e => setEditingRecord({ ...editingRecord, decision_date: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Início Consolidação</Label>
+                    <Input type="date" value={editingRecord.consolidation_start_date || ""} onChange={e => setEditingRecord({ ...editingRecord, consolidation_start_date: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Fim Consolidação</Label>
+                    <Input type="date" value={editingRecord.consolidation_end_date || ""} onChange={e => setEditingRecord({ ...editingRecord, consolidation_end_date: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Data Batismo</Label>
+                    <Input type="date" value={editingRecord.baptism_date || ""} onChange={e => setEditingRecord({ ...editingRecord, baptism_date: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Data Contato</Label>
+                    <Input type="date" value={editingRecord.contact_date || ""} onChange={e => setEditingRecord({ ...editingRecord, contact_date: e.target.value })} />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" id="ercmade" checked={!!editingRecord.contact_made} onChange={e => setEditingRecord({ ...editingRecord, contact_made: e.target.checked })} />
+                  <Label htmlFor="ercmade">Contato feito</Label>
+                </div>
+                <div className="space-y-2">
+                  <Label>Avaliação do contato</Label>
+                  <Select value={editingRecord.contact_evaluation || ""} onValueChange={v => setEditingRecord({ ...editingRecord, contact_evaluation: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="positiva">Positiva</SelectItem>
+                      <SelectItem value="neutra">Neutra</SelectItem>
+                      <SelectItem value="negativa">Negativa</SelectItem>
+                      <SelectItem value="sem_resposta">Sem resposta</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Observações</Label>
+                  <Textarea value={editingRecord.notes || ""} onChange={e => setEditingRecord({ ...editingRecord, notes: e.target.value })} rows={3} />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Observações</Label>
-                <Textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} rows={3} />
-              </div>
-            </div>
+            )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditingRecord(null)}>Cancelar</Button>
-              <Button onClick={handleSaveEdit}>Salvar</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Convert visitor to new convert */}
-        <Dialog open={!!editingVisitor} onOpenChange={(open) => !open && setEditingVisitor(null)}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Converter para Novo Convertido</DialogTitle></DialogHeader>
-            <p className="text-sm text-muted-foreground">
-              Ao confirmar, <strong>{editingVisitor?.full_name}</strong> será marcado como novo convertido e movido para a aba "Em Consolidação".
-            </p>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditingVisitor(null)}>Cancelar</Button>
-              <Button onClick={() => handleConvertToNewConvert(editingVisitor)}>
-                <Heart className="w-4 h-4 mr-2" /> Confirmar Decisão
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Contact Not Made Modal - requires reason */}
-        <Dialog open={!!contactModal} onOpenChange={(open) => { if (!open) { setContactModal(null); setContactReason(""); } }}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Contato Não Realizado</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Informe o motivo pelo qual o contato não foi realizado.
-              </p>
-              <div className="space-y-2">
-                <Label>Motivo *</Label>
-                <Select value={contactReason} onValueChange={setContactReason}>
-                  <SelectTrigger><SelectValue placeholder="Selecione o motivo..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sem_telefone">Sem telefone cadastrado</SelectItem>
-                    <SelectItem value="numero_invalido">Número inválido</SelectItem>
-                    <SelectItem value="nao_atendeu">Não atendeu</SelectItem>
-                    <SelectItem value="caixa_postal">Caixa postal</SelectItem>
-                    <SelectItem value="outro">Outro motivo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => { setContactModal(null); setContactReason(""); }}>Cancelar</Button>
-              <Button onClick={handleContactNotMade} disabled={!contactReason}>
-                Confirmar
-              </Button>
+              <Button onClick={saveEdit}>Salvar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
