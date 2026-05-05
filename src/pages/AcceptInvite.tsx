@@ -5,21 +5,33 @@ export default function AcceptInvite() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const token = searchParams.get("token");
+  const token = searchParams.get("token");
 
+  useEffect(() => {
     console.log("TOKEN CAPTURADO:", token);
 
     if (token) {
-      // salva corretamente
       sessionStorage.setItem("pending_invite_token", token);
-
-      // redireciona pro login
-      navigate("/login");
-    } else {
-      navigate("/");
     }
-  }, []);
+  }, [token]);
 
-  return <p>Processando convite...</p>;
+  if (!token) {
+    return <p>Convite inválido</p>;
+  }
+
+  return (
+    <div style={{ textAlign: "center", marginTop: 100 }}>
+      <h2>Você foi convidado 🎉</h2>
+
+      <p>Escolha como deseja continuar:</p>
+
+      <button onClick={() => navigate("/login")} style={{ margin: 10 }}>
+        Já tenho conta
+      </button>
+
+      <button onClick={() => navigate("/registro")} style={{ margin: 10 }}>
+        Criar conta
+      </button>
+    </div>
+  );
 }
