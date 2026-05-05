@@ -1,3 +1,4 @@
+import AcceptInvite from "./pages/accept-invite";
 import { lazy, Suspense, useEffect } from "react";
 import { initOneSignal } from "@/lib/onesignal";
 
@@ -155,6 +156,7 @@ const App = () => {
 
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/login" element={<Login />} />
+                  <Route path="/accept-invite" element={<AcceptInvite />} />
                   <Route path="/registro" element={<Registro />} />
                   <Route path="/convite/:token" element={<Convite />} />
                   <Route path="/accept-invite" element={<InviteGate />} />
@@ -164,7 +166,6 @@ const App = () => {
                   <Route path="/planos" element={<Planos />} />
                   <Route path="/sucesso" element={<Sucesso />} />
                   <Route path="/cancelado" element={<Cancelado />} />
-
                   <Route path="/master" element={<Master />} />
                   <Route path="/dev-admin" element={<Master />} />
 
