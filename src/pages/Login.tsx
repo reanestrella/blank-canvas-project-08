@@ -40,6 +40,7 @@ export default function Login() {
     const decoded = decodeURIComponent(rawRedirect);
     sessionStorage.setItem("post_login_redirect", decoded);
     const inviteToken = getInviteTokenFromRedirect(decoded);
+    console.log("TOKEN NO LOGIN:", inviteToken);
     if (inviteToken) {
       sessionStorage.setItem("pending_invite_token", inviteToken);
     }
