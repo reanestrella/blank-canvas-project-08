@@ -31,6 +31,7 @@ export async function fetchInvitationByToken(token: string) {
   }
 
   const invitation = (Array.isArray(data) ? data[0] : data) as InvitationData | null;
+
   if (!invitation) {
     throw new Error("Convite inválido, expirado ou já utilizado.");
   }
@@ -39,16 +40,25 @@ export async function fetchInvitationByToken(token: string) {
   return invitation;
 }
 
-export async function applyInvitationForUser(token: string, user: Pick<User, "id" | "email" | "user_metadata">) {
+export async function applyInvitationForUser(
+  token: string,
+  user: Pick<User, "id" | "email" | "user_metadata">
+) {
   if (!isValidUUID(token)) {
     throw new Error("Convite inválido.");
   }
 
   await ensureUserProfile(user);
 
-  console.log("[Invite] applying invitation", { token, userId: user.id });
+  console.log("[Invite] applying invitation", {
+    token,
+    userId: user.id,
+  });
+
+  // 🔥 CORREÇÃO PRINCIPAL AQUI
   const { data, error } = await supabase.rpc("accept_invitation" as any, {
     p_token: token,
+    p_user_id: user.id, // ✅ AGORA ENVIA O USER ID CORRETO
   } as any);
 
   if (error) {
@@ -56,12 +66,21 @@ export async function applyInvitationForUser(token: string, user: Pick<User, "id
     throw error;
   }
 
-  const result = data as { success?: boolean; error?: string; roles?: string[]; church_id?: string | null } | null;
+  console.log("[Invite] raw RPC response:", data);
+
+  const result = data as {
+    success?: boolean;
+    error?: string;
+    roles?: string[];
+    church_id?: string | null;
+  } | null;
+
   if (result?.success === false) {
     throw new Error(result.error || "Não foi possível aceitar o convite.");
   }
 
   console.log("[Invite] invitation applied:", result);
+
   return {
     churchId: result?.church_id ?? null,
     roles: Array.isArray(result?.roles) ? result.roles : [],
