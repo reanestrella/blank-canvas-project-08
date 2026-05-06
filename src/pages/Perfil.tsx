@@ -9,6 +9,7 @@ import { Loader2, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ChangePasswordCard } from "@/components/settings/ChangePasswordCard";
 
 export default function Perfil() {
   const { profile, church, user, refreshUserData } = useAuth();
@@ -115,6 +116,8 @@ export default function Perfil() {
             </Button>
           </CardContent>
         </Card>
+
+        <ChangePasswordCard />
       </div>
     </AppLayout>
   );

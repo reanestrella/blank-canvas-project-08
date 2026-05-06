@@ -5,8 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Shield, History, Users, Trash2 } from "lucide-react";
+import { Loader2, Shield, History, Users, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
 interface UserRole {
@@ -52,7 +55,33 @@ export function RolesPanel({ churchId }: { churchId: string }) {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [logsLoading, setLogsLoading] = useState(false);
+  const [promoteOpen, setPromoteOpen] = useState(false);
+  const [promoteUserId, setPromoteUserId] = useState<string>("");
+  const [promoteRole, setPromoteRole] = useState<string>("tesoureiro");
+  const [promoting, setPromoting] = useState(false);
   const { toast } = useToast();
+
+  // Unique users for promotion select
+  const uniqueUsers = Array.from(
+    new Map(userRoles.map((u) => [u.user_id, u])).values()
+  );
+
+  const handlePromote = async () => {
+    if (!promoteUserId || !promoteRole) return;
+    setPromoting(true);
+    const { error } = await supabase
+      .from("user_roles")
+      .insert({ user_id: promoteUserId, church_id: churchId, role: promoteRole as any });
+    setPromoting(false);
+    if (error && !String(error.message).toLowerCase().includes("duplicate")) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      return;
+    }
+    const u = uniqueUsers.find((x) => x.user_id === promoteUserId);
+    if (u) setUserRoles((prev) => [...prev, { ...u, role: promoteRole, church_id: churchId }]);
+    toast({ title: "Cargo adicionado!", description: "O usuário agora tem acesso ao novo módulo." });
+    setPromoteOpen(false);
+  };
 
   const handleRemoveRole = async (userId: string, role: string) => {
     if (role === "membro") {
@@ -149,6 +178,54 @@ export function RolesPanel({ churchId }: { churchId: string }) {
       </TabsList>
 
       <TabsContent value="roles" className="mt-4 space-y-4">
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => setPromoteOpen(true)} className="gap-2">
+            <Plus className="w-4 h-4" /> Adicionar cargo a usuário
+          </Button>
+        </div>
+
+        <Dialog open={promoteOpen} onOpenChange={setPromoteOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Adicionar cargo</DialogTitle>
+              <DialogDescription>Conceda um novo cargo a um usuário já existente nessa igreja.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label>Usuário</Label>
+                <Select value={promoteUserId} onValueChange={setPromoteUserId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {uniqueUsers.map((u) => (
+                      <SelectItem key={u.user_id} value={u.user_id}>
+                        {u.full_name} {u.email ? `(${u.email})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Novo cargo</Label>
+                <Select value={promoteRole} onValueChange={setPromoteRole}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(roleLabels).filter(([r]) => r !== "membro").map(([v, l]) => (
+                      <SelectItem key={v} value={v}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPromoteOpen(false)}>Cancelar</Button>
+              <Button onClick={handlePromote} disabled={promoting || !promoteUserId}>
+                {promoting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Adicionar cargo
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {Object.entries(roleLabels).map(([role, label]) => {
           const users = roleGroups[role] || [];
           return (

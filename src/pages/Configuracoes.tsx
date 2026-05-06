@@ -86,6 +86,7 @@ const roleLabels: Record<string, string> = {
 export default function Configuracoes() {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [manualUserOpen, setManualUserOpen] = useState(false);
+  const [rolesRefreshKey, setRolesRefreshKey] = useState(0);
   const [congregationModalOpen, setCongregationModalOpen] = useState(false);
   const [editingCongregation, setEditingCongregation] = useState<Congregation | undefined>();
   
@@ -438,7 +439,7 @@ export default function Configuracoes() {
                 <CardDescription>Veja quem ocupa cada cargo e acompanhe as ações realizadas no sistema</CardDescription>
               </CardHeader>
               <CardContent>
-                {churchId && <RolesPanel churchId={churchId} />}
+                {churchId && <RolesPanel key={rolesRefreshKey} churchId={churchId} />}
               </CardContent>
             </Card>
           </TabsContent>
@@ -550,6 +551,7 @@ export default function Configuracoes() {
           open={manualUserOpen}
           onOpenChange={setManualUserOpen}
           churchId={churchId}
+          onCreated={() => setRolesRefreshKey((k) => k + 1)}
         />
       )}
 

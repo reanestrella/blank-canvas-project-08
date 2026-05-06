@@ -49,12 +49,13 @@ Deno.serve(async (req) => {
     const callerId = userData.user.id;
 
     const body = await req.json().catch(() => ({}));
-    const { full_name, email, password, role, church_id } = body as {
+    const { full_name, email, password, role, church_id, hide_financial } = body as {
       full_name?: string;
       email?: string;
       password?: string;
       role?: Role;
       church_id?: string;
+      hide_financial?: boolean;
     };
 
     if (!email || !password || !role || !church_id) {
@@ -119,6 +120,7 @@ Deno.serve(async (req) => {
           full_name: full_name ?? email.split("@")[0],
           church_id,
           registration_status: "ativo",
+          hide_financial: !!hide_financial,
         },
         { onConflict: "user_id" }
       );

@@ -3246,6 +3246,7 @@ export type Database = {
           created_at: string | null
           email: string | null
           full_name: string | null
+          hide_financial: boolean
           id: string
           is_linked: boolean
           member_id: string | null
@@ -3262,6 +3263,7 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           full_name?: string | null
+          hide_financial?: boolean
           id?: string
           is_linked?: boolean
           member_id?: string | null
@@ -3278,6 +3280,7 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           full_name?: string | null
+          hide_financial?: boolean
           id?: string
           is_linked?: boolean
           member_id?: string | null
