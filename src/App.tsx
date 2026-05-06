@@ -181,7 +181,16 @@ const App = () => {
                     }
                   />
 
-                  <Route path="/app" element={<Sub><Dashboard /></Sub>} />
+                 import { RoleGuard } from "@/components/RoleGuard";
+
+<Route
+  path="/app"
+  element={
+    <RoleGuard allowedRoles={["pastor"]}>
+      <Dashboard />
+    </RoleGuard>
+  }
+/>
                   <Route path="/meu-app" element={<Sub><MeuApp /></Sub>} />
                   <Route path="/perfil" element={<Sub><Perfil /></Sub>} />
 
