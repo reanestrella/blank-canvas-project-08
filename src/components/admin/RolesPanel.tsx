@@ -178,6 +178,54 @@ export function RolesPanel({ churchId }: { churchId: string }) {
       </TabsList>
 
       <TabsContent value="roles" className="mt-4 space-y-4">
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => setPromoteOpen(true)} className="gap-2">
+            <Plus className="w-4 h-4" /> Adicionar cargo a usuário
+          </Button>
+        </div>
+
+        <Dialog open={promoteOpen} onOpenChange={setPromoteOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Adicionar cargo</DialogTitle>
+              <DialogDescription>Conceda um novo cargo a um usuário já existente nessa igreja.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label>Usuário</Label>
+                <Select value={promoteUserId} onValueChange={setPromoteUserId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {uniqueUsers.map((u) => (
+                      <SelectItem key={u.user_id} value={u.user_id}>
+                        {u.full_name} {u.email ? `(${u.email})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Novo cargo</Label>
+                <Select value={promoteRole} onValueChange={setPromoteRole}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(roleLabels).filter(([r]) => r !== "membro").map(([v, l]) => (
+                      <SelectItem key={v} value={v}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPromoteOpen(false)}>Cancelar</Button>
+              <Button onClick={handlePromote} disabled={promoting || !promoteUserId}>
+                {promoting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Adicionar cargo
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {Object.entries(roleLabels).map(([role, label]) => {
           const users = roleGroups[role] || [];
           return (
