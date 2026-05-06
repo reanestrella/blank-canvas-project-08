@@ -94,20 +94,18 @@ const getInviteToken = () => {
       await ensureUserProfile(user);
 
       // 🔥 APLICA CONVITE
-      const inviteToken =
-        const inviteToken = getInviteToken();||
-        localStorage.getItem("pending_invite_token");
+const inviteToken = getInviteToken();
 
-      console.log("TOKEN NO LOGIN:", inviteToken);
+if (inviteToken) {
+  console.log("🔥 APLICANDO CONVITE:", inviteToken);
 
-      if (inviteToken) {
-        console.log("APLICANDO CONVITE:", inviteToken);
-        await new Promise((r) => setTimeout(r, 300));
-        await applyInvitationForUser(inviteToken, user);
+  await new Promise((r) => setTimeout(r, 300));
 
-        sessionStorage.removeItem("pending_invite_token");
-        localStorage.removeItem("pending_invite_token");
-      }
+  await applyInvitationForUser(inviteToken, user);
+
+  sessionStorage.removeItem("pending_invite_token");
+  localStorage.removeItem("pending_invite_token");
+}
 
       await clearAuthBrowserCache();
 
