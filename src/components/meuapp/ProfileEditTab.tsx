@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ChangePasswordCard } from "@/components/settings/ChangePasswordCard";
 
 export function ProfileEditTab() {
   const { profile, user, church, refreshUserData } = useAuth();
@@ -184,6 +185,8 @@ export function ProfileEditTab() {
           </div>
         </CardContent>
       </Card>
+
+      <ChangePasswordCard />
     </div>
   );
 }
