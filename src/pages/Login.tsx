@@ -62,7 +62,15 @@ export default function Login() {
 
     throw new Error("Usuário não disponível após login.");
   };
+const getInviteToken = () => {
+  const token =
+    sessionStorage.getItem("pending_invite_token") ||
+    localStorage.getItem("pending_invite_token");
 
+  console.log("🔎 TOKEN LIDO:", token);
+
+  return token;
+};
   const handleSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
 
@@ -87,14 +95,14 @@ export default function Login() {
 
       // 🔥 APLICA CONVITE
       const inviteToken =
-        sessionStorage.getItem("pending_invite_token") ||
+        const inviteToken = getInviteToken();||
         localStorage.getItem("pending_invite_token");
 
       console.log("TOKEN NO LOGIN:", inviteToken);
 
       if (inviteToken) {
         console.log("APLICANDO CONVITE:", inviteToken);
-
+        await new Promise((r) => setTimeout(r, 300));
         await applyInvitationForUser(inviteToken, user);
 
         sessionStorage.removeItem("pending_invite_token");
