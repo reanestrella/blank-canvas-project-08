@@ -385,10 +385,16 @@ export default function Configuracoes() {
                 <CardDescription>Envie convites para novos usuários com funções específicas</CardDescription>
               </CardHeader>
               <CardContent>
-                <Button onClick={() => setInviteModalOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Convidar Usuário
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={() => setInviteModalOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Convidar Usuário
+                  </Button>
+                  <Button variant="outline" onClick={() => setManualUserOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Criar usuário manualmente
+                  </Button>
+                </div>
 
                 {isLoading ? (
                   <div className="flex items-center justify-center p-8">
