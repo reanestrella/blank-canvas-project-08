@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
@@ -20,6 +22,24 @@ interface AppLayoutProps {
 export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, isLoading, hasNoChurch } = useAuth();
+  const [userRole, setUserRole] = useState<string | null>(null);
+const [loadingRole, setLoadingRole] = useState(true);
+  useEffect(() => {
+  const loadRole = async () => {
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    setUserRole(data?.role || null);
+    setLoadingRole(false);
+  };
+
+  loadRole();
+}, [user]);
   const { isSuperAdmin } = useSuperAdmin();
   useChurchBranding();
 
@@ -43,7 +63,13 @@ export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-
+if (loadingRole) {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin" />
+    </div>
+  );
+}
   // Only block access for admin-level pages that actually require a church
   if (hasNoChurch && requireChurch) {
     if (isSuperAdmin) {
