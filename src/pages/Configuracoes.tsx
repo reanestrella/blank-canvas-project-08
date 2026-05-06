@@ -85,6 +85,7 @@ const roleLabels: Record<string, string> = {
 
 export default function Configuracoes() {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [manualUserOpen, setManualUserOpen] = useState(false);
   const [congregationModalOpen, setCongregationModalOpen] = useState(false);
   const [editingCongregation, setEditingCongregation] = useState<Congregation | undefined>();
   
