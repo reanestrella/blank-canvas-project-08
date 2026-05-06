@@ -34,6 +34,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { InviteUserModal } from "@/components/modals/InviteUserModal";
+import { ManualUserCreateModal } from "@/components/modals/ManualUserCreateModal";
 import { CongregationModal } from "@/components/modals/CongregationModal";
 import { RolesPanel } from "@/components/admin/RolesPanel";
 import { ChurchLogoUpload } from "@/components/settings/ChurchLogoUpload";
@@ -84,6 +85,7 @@ const roleLabels: Record<string, string> = {
 
 export default function Configuracoes() {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [manualUserOpen, setManualUserOpen] = useState(false);
   const [congregationModalOpen, setCongregationModalOpen] = useState(false);
   const [editingCongregation, setEditingCongregation] = useState<Congregation | undefined>();
   
@@ -383,10 +385,16 @@ export default function Configuracoes() {
                 <CardDescription>Envie convites para novos usuários com funções específicas</CardDescription>
               </CardHeader>
               <CardContent>
-                <Button onClick={() => setInviteModalOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Convidar Usuário
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={() => setInviteModalOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Convidar Usuário
+                  </Button>
+                  <Button variant="outline" onClick={() => setManualUserOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Criar usuário manualmente
+                  </Button>
+                </div>
 
                 {isLoading ? (
                   <div className="flex items-center justify-center p-8">
@@ -536,6 +544,14 @@ export default function Configuracoes() {
         congregations={congregations}
         churchId={churchId || undefined}
       />
+
+      {churchId && (
+        <ManualUserCreateModal
+          open={manualUserOpen}
+          onOpenChange={setManualUserOpen}
+          churchId={churchId}
+        />
+      )}
 
       {churchId && (
         <CongregationModal

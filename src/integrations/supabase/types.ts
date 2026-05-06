@@ -2469,9 +2469,11 @@ export type Database = {
           pastoral_notes: string | null
           phone: string | null
           photo_url: string | null
+          role: string | null
           spiritual_status: string | null
           state: string | null
           updated_at: string | null
+          user_id: string | null
           wedding_date: string | null
         }
         Insert: {
@@ -2499,9 +2501,11 @@ export type Database = {
           pastoral_notes?: string | null
           phone?: string | null
           photo_url?: string | null
+          role?: string | null
           spiritual_status?: string | null
           state?: string | null
           updated_at?: string | null
+          user_id?: string | null
           wedding_date?: string | null
         }
         Update: {
@@ -2529,9 +2533,11 @@ export type Database = {
           pastoral_notes?: string | null
           phone?: string | null
           photo_url?: string | null
+          role?: string | null
           spiritual_status?: string | null
           state?: string | null
           updated_at?: string | null
+          user_id?: string | null
           wedding_date?: string | null
         }
         Relationships: [
@@ -3963,7 +3969,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      accept_invitation: { Args: { p_token: string }; Returns: Json }
+      accept_invitation:
+        | { Args: { p_token: string }; Returns: Json }
+        | { Args: { p_token: string; p_user_id: string }; Returns: Json }
       aceitar_convite:
         | { Args: { p_token: string }; Returns: Json }
         | { Args: { p_token: string; p_user_id: string }; Returns: Json }
