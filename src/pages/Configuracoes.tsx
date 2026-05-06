@@ -34,6 +34,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { InviteUserModal } from "@/components/modals/InviteUserModal";
+import { ManualUserCreateModal } from "@/components/modals/ManualUserCreateModal";
 import { CongregationModal } from "@/components/modals/CongregationModal";
 import { RolesPanel } from "@/components/admin/RolesPanel";
 import { ChurchLogoUpload } from "@/components/settings/ChurchLogoUpload";
