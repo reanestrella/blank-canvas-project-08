@@ -546,6 +546,14 @@ export default function Configuracoes() {
       />
 
       {churchId && (
+        <ManualUserCreateModal
+          open={manualUserOpen}
+          onOpenChange={setManualUserOpen}
+          churchId={churchId}
+        />
+      )}
+
+      {churchId && (
         <CongregationModal
           open={congregationModalOpen}
           onOpenChange={handleCloseCongregationModal}
