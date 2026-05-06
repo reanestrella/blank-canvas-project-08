@@ -5,8 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Shield, History, Users, Trash2 } from "lucide-react";
+import { Loader2, Shield, History, Users, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
 interface UserRole {
@@ -52,7 +55,33 @@ export function RolesPanel({ churchId }: { churchId: string }) {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [logsLoading, setLogsLoading] = useState(false);
+  const [promoteOpen, setPromoteOpen] = useState(false);
+  const [promoteUserId, setPromoteUserId] = useState<string>("");
+  const [promoteRole, setPromoteRole] = useState<string>("tesoureiro");
+  const [promoting, setPromoting] = useState(false);
   const { toast } = useToast();
+
+  // Unique users for promotion select
+  const uniqueUsers = Array.from(
+    new Map(userRoles.map((u) => [u.user_id, u])).values()
+  );
+
+  const handlePromote = async () => {
+    if (!promoteUserId || !promoteRole) return;
+    setPromoting(true);
+    const { error } = await supabase
+      .from("user_roles")
+      .insert({ user_id: promoteUserId, church_id: churchId, role: promoteRole as any });
+    setPromoting(false);
+    if (error && !String(error.message).toLowerCase().includes("duplicate")) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      return;
+    }
+    const u = uniqueUsers.find((x) => x.user_id === promoteUserId);
+    if (u) setUserRoles((prev) => [...prev, { ...u, role: promoteRole, church_id: churchId }]);
+    toast({ title: "Cargo adicionado!", description: "O usuário agora tem acesso ao novo módulo." });
+    setPromoteOpen(false);
+  };
 
   const handleRemoveRole = async (userId: string, role: string) => {
     if (role === "membro") {
