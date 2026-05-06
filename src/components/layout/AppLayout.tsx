@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { cn } from "@/lib/utils";
@@ -15,62 +14,69 @@ import { TrialBanner } from "@/components/subscription/TrialBanner";
 
 interface AppLayoutProps {
   children: React.ReactNode;
-  /** If true, the layout will block access when user has no church */
   requireChurch?: boolean;
 }
 
 export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, isLoading, hasNoChurch } = useAuth();
-  const [userRole, setUserRole] = useState<string | null>(null);
-const [loadingRole, setLoadingRole] = useState(true);
-  useEffect(() => {
-  const loadRole = async () => {
-    if (!user) return;
-
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single();
-
-    setUserRole(data?.role || null);
-    setLoadingRole(false);
-  };
-
-  loadRole();
-}, [user]);
   const { isSuperAdmin } = useSuperAdmin();
+
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [loadingRole, setLoadingRole] = useState(true);
+
   useChurchBranding();
 
+  // 🔥 CARREGA ROLE
+  useEffect(() => {
+    const loadRole = async () => {
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .single();
+
+      setUserRole(data?.role || null);
+      setLoadingRole(false);
+    };
+
+    loadRole();
+  }, [user]);
+
+  // 🔄 LOADING GERAL
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background px-6 text-center">
         <div className="rounded-2xl bg-sidebar p-3 shadow-[var(--shadow-lg)]">
-          <img src={APP_BRAND_LOGO} alt={APP_BRAND_NAME} className="h-14 w-auto max-w-[220px] object-contain drop-shadow-[0_0_8px_rgba(37,99,235,0.3)]" />
+          <img
+            src={APP_BRAND_LOGO}
+            alt={APP_BRAND_NAME}
+            className="h-14 w-auto max-w-[220px] object-contain"
+          />
         </div>
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <div className="space-y-1">
-          <p className="font-medium text-foreground">Carregando seu app...</p>
-          <p className="text-xs text-muted-foreground">
-            desenvolvido por <span className="font-semibold text-primary">{APP_BRAND_NAME.toLowerCase()}</span>
-          </p>
-        </div>
+        <p>Carregando seu app...</p>
       </div>
     );
   }
 
+  // 🔐 SEM LOGIN
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-if (loadingRole) {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="h-6 w-6 animate-spin" />
-    </div>
-  );
-}
-  // Only block access for admin-level pages that actually require a church
+
+  // 🔄 AGUARDANDO ROLE
+  if (loadingRole) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
+  }
+
+  // 🚫 BLOQUEIO POR IGREJA
   if (hasNoChurch && requireChurch) {
     if (isSuperAdmin) {
       return <Navigate to="/master" replace />;
@@ -78,17 +84,26 @@ if (loadingRole) {
     return <Navigate to="/registro" replace />;
   }
 
+  // 🔥 PROTEÇÃO GLOBAL DO TESOUREIRO
+  if (userRole === "tesoureiro") {
+    const path = window.location.pathname;
+
+    if (!path.startsWith("/app/tesouraria")) {
+      return <Navigate to="/app/tesouraria" replace />;
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Desktop Sidebar */}
       <div className="hidden md:block">
-        <Sidebar />
+        <Sidebar userRole={userRole} />
       </div>
 
       {/* Mobile Sidebar */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="left" className="p-0 w-64">
-          <Sidebar />
+          <Sidebar userRole={userRole} />
         </SheetContent>
       </Sheet>
 
