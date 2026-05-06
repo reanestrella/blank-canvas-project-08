@@ -37,6 +37,7 @@ const schema = z.object({
   email: z.string().trim().email("Email inválido").max(255),
   password: z.string().min(6, "Senha deve ter ao menos 6 caracteres").max(72),
   role: z.enum(["pastor", "tesoureiro", "secretario", "lider_celula", "lider_ministerio", "consolidacao", "membro"]),
+  hide_financial: z.boolean().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -64,8 +65,9 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { full_name: "", email: "", password: "", role: "tesoureiro" },
+    defaultValues: { full_name: "", email: "", password: "", role: "tesoureiro", hide_financial: false },
   });
+  const selectedRole = form.watch("role");
 
   const handleSubmit = async (data: FormData) => {
     setSubmitting(true);
@@ -167,6 +169,30 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
               )}
             />
 
+            {selectedRole === "pastor" && (
+              <FormField
+                control={form.control}
+                name="hide_financial"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Ocultar Tesouraria</FormLabel>
+                      <FormDescription className="text-xs">
+                        Se ativado, esse pastor não verá os módulos Financeiro e Patrimônio.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={!!field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                        className="h-5 w-5"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => handleClose(false)}>Cancelar</Button>
               <Button type="submit" disabled={submitting}>
