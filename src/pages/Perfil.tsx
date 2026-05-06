@@ -116,6 +116,8 @@ export default function Perfil() {
             </Button>
           </CardContent>
         </Card>
+
+        <ChangePasswordCard />
       </div>
     </AppLayout>
   );
