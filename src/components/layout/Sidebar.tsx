@@ -58,7 +58,7 @@ export function Sidebar() {
   const { church, signOut, roles, isAdmin } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
 
-  // 🔥 LOADING DE ROLE
+  // 🔥 loading seguro
   const loadingRoles = !roles;
 
   const userRoles = useMemo(() => {
@@ -66,16 +66,14 @@ export function Sidebar() {
     return roles.map((r: any) => r.role);
   }, [roles]);
 
-  // 🔥 BLOQUEIA RENDER ATÉ TER ROLE
   if (loadingRoles) {
     return (
-      <div className="w-64 h-screen flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin" />
+      <div className="w-64 h-screen flex items-center justify-center bg-sidebar">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
   }
 
-  // 🔥 FILTRO CORRETO
   const menuItems = useMemo(() => {
     if (isAdmin()) return allMenuItems;
 
@@ -91,36 +89,48 @@ export function Sidebar() {
   };
 
   return (
-    <aside className={cn(
-      "fixed left-0 top-0 z-40 h-screen bg-sidebar flex flex-col transition-all",
-      collapsed ? "w-20" : "w-64"
-    )}>
-
+    <aside
+      className={cn(
+        "fixed left-0 top-0 z-40 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col",
+        "overflow-hidden",
+        collapsed ? "w-20" : "w-64"
+      )}
+    >
       {/* HEADER */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+      <div className="flex items-center justify-between p-4 border-b border-sidebar-border min-h-[70px]">
+        <div className={cn("flex items-center gap-3", collapsed && "justify-center w-full")}>
+          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden">
             {church?.logo_url ? (
-              <img src={church.logo_url} className="w-full h-full object-cover" />
+              <img src={church.logo_url} alt={church.name} className="w-full h-full object-cover" />
             ) : (
-              <Church />
+              <Church className="w-6 h-6 text-primary" />
             )}
           </div>
 
           {!collapsed && (
-            <span className="font-bold truncate">
-              {church?.name || "Igreja"}
-            </span>
+            <div className="flex flex-col">
+              <span className="font-bold text-sidebar-foreground truncate max-w-[140px]">
+                {church?.name || "Igreja"}
+              </span>
+              <span className="text-xs text-sidebar-foreground/60">
+                Gestão Completa
+              </span>
+            </div>
           )}
         </div>
 
-        <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)}>
-          {collapsed ? <ChevronRight /> : <ChevronLeft />}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setCollapsed(!collapsed)}
+          className="text-sidebar-foreground/60 hover:text-sidebar-foreground"
+        >
+          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </Button>
       </div>
 
-      {/* MENU */}
-      <nav className="flex-1 p-3 space-y-1">
+      {/* MENU COM SCROLL */}
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {menuItems.map((item) => {
           const isActive = location.pathname === item.path;
 
@@ -128,9 +138,14 @@ export function Sidebar() {
             <Link
               key={item.path}
               to={item.path}
-              className={cn("nav-item", isActive && "nav-item-active")}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-lg transition-all",
+                "hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                isActive && "bg-sidebar-accent text-sidebar-foreground font-medium",
+                collapsed && "justify-center"
+              )}
             >
-              <item.icon className="w-5 h-5" />
+              <item.icon className="w-5 h-5 flex-shrink-0" />
               {!collapsed && <span>{item.label}</span>}
             </Link>
           );
@@ -138,15 +153,22 @@ export function Sidebar() {
       </nav>
 
       {/* FOOTER */}
-      <div className="p-3 border-t space-y-1">
+      <div className="px-3 pb-4 pt-4 space-y-1 border-t border-sidebar-border">
         {bottomItems.map((item) => (
-          <Link key={item.path} to={item.path} className="nav-item">
+          <Link
+            key={item.path}
+            to={item.path}
+            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-accent"
+          >
             <item.icon className="w-5 h-5" />
             {!collapsed && <span>{item.label}</span>}
           </Link>
         ))}
 
-        <button onClick={handleSignOut} className="nav-item w-full text-red-500">
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg w-full text-red-500 hover:bg-red-500/10"
+        >
           <LogOut className="w-5 h-5" />
           {!collapsed && <span>Sair</span>}
         </button>
