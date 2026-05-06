@@ -109,7 +109,23 @@ if (inviteToken) {
 
       await clearAuthBrowserCache();
 
-      window.location.href = "/app";
+      // 🔥 REDIRECIONAMENTO INTELIGENTE
+const { data: rolesData } = await supabase
+  .from("user_roles")
+  .select("role")
+  .eq("user_id", user.id);
+
+const roles = (rolesData || []).map((r: any) => r.role);
+
+if (roles.includes("pastor")) {
+  window.location.href = "/app";
+} else if (roles.includes("tesoureiro")) {
+  window.location.href = "/financeiro";
+} else if (roles.includes("secretario")) {
+  window.location.href = "/secretaria";
+} else {
+  window.location.href = "/meu-app";
+}
 
     } catch (error) {
       console.error("Erro login:", error);
