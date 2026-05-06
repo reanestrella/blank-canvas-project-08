@@ -52,13 +52,16 @@ export function Sidebar() {
   const userRoles = useMemo(() => roles.map(r => r.role), [roles]);
   const isNetworkUser = userRoles.includes("network_admin" as any) || userRoles.includes("network_finance" as any);
 
+  const hideFinancial = !!(profile as any)?.hide_financial;
+  const FINANCE_PATHS = ["/financeiro", "/patrimonio"];
+
   const menuItems = useMemo(() => {
-    if (isAdmin()) return allMenuItems;
-    return allMenuItems.filter(item => {
+    const base = isAdmin() ? allMenuItems : allMenuItems.filter(item => {
       if (!item.allowedRoles) return true;
       return item.allowedRoles.some(role => userRoles.includes(role));
     });
-  }, [userRoles, isAdmin]);
+    return hideFinancial ? base.filter(i => !FINANCE_PATHS.includes(i.path)) : base;
+  }, [userRoles, isAdmin, hideFinancial]);
 
   const filteredBottomItems = useMemo(() => {
     const items = [...bottomItems];
