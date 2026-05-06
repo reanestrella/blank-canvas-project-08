@@ -181,16 +181,7 @@ const App = () => {
                     }
                   />
 
-                 import { RoleGuard } from "@/components/RoleGuard";
-
-<Route
-  path="/app"
-  element={
-    <RoleGuard allowedRoles={["pastor"]}>
-      <Dashboard />
-    </RoleGuard>
-  }
-/>
+              <Route path="/app" element={<Dashboard />} />
                   <Route path="/meu-app" element={<Sub><MeuApp /></Sub>} />
                   <Route path="/perfil" element={<Sub><Perfil /></Sub>} />
 
