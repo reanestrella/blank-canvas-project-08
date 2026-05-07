@@ -88,11 +88,16 @@ export function InviteUserModal({
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [ministries, setMinistries] = useState<{ id: string; name: string }[]>([]);
+  const [cells, setCells] = useState<{ id: string; name: string }[]>([]);
+  const [permissions, setPermissions] = useState<ModuleKey[]>(defaultPermissionsFor("membro"));
+  const [selectedCellIds, setSelectedCellIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (open && churchId) {
       supabase.from("ministries").select("id, name").eq("church_id", churchId).eq("is_active", true).order("name")
         .then(({ data }) => setMinistries((data as any[]) || []));
+      supabase.from("cells").select("id, name").eq("church_id", churchId).eq("is_active", true).order("name")
+        .then(({ data }) => setCells((data as any[]) || []));
     }
   }, [open, churchId]);
   
@@ -109,12 +114,35 @@ export function InviteUserModal({
 
   const selectedRole = form.watch("role");
   const needsMemberLink = selectedRole === "lider_celula" || selectedRole === "vice_lider_celula" || selectedRole === "lider_ministerio";
+  const needsCellSelection = selectedRole === "lider_celula" || selectedRole === "vice_lider_celula";
+
+  // Atualiza defaults quando role muda
+  useEffect(() => {
+    setPermissions(defaultPermissionsFor(selectedRole));
+    if (!["lider_celula", "vice_lider_celula"].includes(selectedRole)) {
+      setSelectedCellIds([]);
+    }
+  }, [selectedRole]);
+
+  const togglePermission = (mod: ModuleKey) => {
+    setPermissions((prev) =>
+      prev.includes(mod) ? prev.filter((m) => m !== mod) : [...prev, mod],
+    );
+  };
+
+  const toggleCell = (id: string) => {
+    setSelectedCellIds((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
+    );
+  };
 
   const handleSubmit = async (data: InviteFormData) => {
     setIsSubmitting(true);
     try {
       const submitData: CreateInvitationData = {
         role: data.role === "vice_lider_celula" ? "lider_celula" : data.role,
+        permissions,
+        cell_ids: needsCellSelection && selectedCellIds.length > 0 ? selectedCellIds : null,
       };
       
       if (data.email && data.email.trim()) {
