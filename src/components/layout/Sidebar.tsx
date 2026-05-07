@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Loader2 } from "lucide-react";
+import { MODULE_PATH, type ModuleKey } from "@/lib/permissions";
 
 type AppRole =
   | "pastor"
@@ -26,24 +27,25 @@ interface MenuItem {
   icon: any;
   label: string;
   path: string;
+  module?: ModuleKey;
   allowedRoles?: AppRole[];
 }
 
 const allMenuItems: MenuItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/app", allowedRoles: ["pastor"] },
-  { icon: Users, label: "Secretaria", path: "/secretaria", allowedRoles: ["pastor", "secretario", "consolidacao"] },
-  { icon: Heart, label: "Ministérios", path: "/ministerios", allowedRoles: ["pastor", "lider_ministerio"] },
-  { icon: Grid3X3, label: "Células", path: "/celulas", allowedRoles: ["pastor", "lider_celula", "consolidacao", "secretario"] },
-  { icon: Handshake, label: "Consolidação", path: "/consolidacao", allowedRoles: ["pastor", "consolidacao"] },
-  { icon: GraduationCap, label: "Ensino", path: "/ensino", allowedRoles: ["pastor", "secretario"] },
-  { icon: DollarSign, label: "Financeiro", path: "/financeiro", allowedRoles: ["pastor", "tesoureiro"] },
-  { icon: Calendar, label: "Eventos", path: "/eventos", allowedRoles: ["pastor", "secretario"] },
-  { icon: HeartHandshake, label: "Gestão Pastoral", path: "/gestao-pastoral", allowedRoles: ["pastor"] },
-  { icon: Bell, label: "Lembretes", path: "/lembretes", allowedRoles: ["pastor", "secretario"] },
-  { icon: Sparkles, label: "Assistente", path: "/assistente", allowedRoles: ["pastor"] },
-  { icon: Package, label: "Patrimônio", path: "/patrimonio", allowedRoles: ["pastor", "tesoureiro"] },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/app", module: "dashboard", allowedRoles: ["pastor"] },
+  { icon: Users, label: "Secretaria", path: "/secretaria", module: "secretaria", allowedRoles: ["pastor", "secretario", "consolidacao"] },
+  { icon: Heart, label: "Ministérios", path: "/ministerios", module: "ministerios", allowedRoles: ["pastor", "lider_ministerio"] },
+  { icon: Grid3X3, label: "Células", path: "/celulas", module: "celulas", allowedRoles: ["pastor", "lider_celula", "consolidacao", "secretario"] },
+  { icon: Handshake, label: "Consolidação", path: "/consolidacao", module: "consolidacao", allowedRoles: ["pastor", "consolidacao"] },
+  { icon: GraduationCap, label: "Ensino", path: "/ensino", module: "ensino", allowedRoles: ["pastor", "secretario"] },
+  { icon: DollarSign, label: "Financeiro", path: "/financeiro", module: "financeiro", allowedRoles: ["pastor", "tesoureiro"] },
+  { icon: Calendar, label: "Eventos", path: "/eventos", module: "eventos", allowedRoles: ["pastor", "secretario"] },
+  { icon: HeartHandshake, label: "Gestão Pastoral", path: "/gestao-pastoral", module: "gestao_pastoral", allowedRoles: ["pastor"] },
+  { icon: Bell, label: "Lembretes", path: "/lembretes", module: "lembretes", allowedRoles: ["pastor", "secretario"] },
+  { icon: Sparkles, label: "Assistente", path: "/assistente", module: "assistente", allowedRoles: ["pastor"] },
+  { icon: Package, label: "Patrimônio", path: "/patrimonio", module: "patrimonio", allowedRoles: ["pastor", "tesoureiro"] },
   { icon: User, label: "Meu App", path: "/meu-app" },
-  { icon: Smartphone, label: "Gestão App", path: "/gestao-app", allowedRoles: ["pastor"] },
+  { icon: Smartphone, label: "Gestão App", path: "/gestao-app", module: "gestao_app", allowedRoles: ["pastor"] },
 ];
 
 const bottomItems: MenuItem[] = [
@@ -55,7 +57,7 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { church, signOut, roles, isAdmin } = useAuth();
+  const { church, signOut, roles, isAdmin, profile } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
 
   // 🔥 loading seguro
@@ -66,6 +68,17 @@ export function Sidebar() {
     return roles.map((r: any) => r.role);
   }, [roles]);
 
+  // Permissions agregadas: união de todas as listas; se ALGUMA role tiver permissions=null, libera por role (legado)
+  const { perms, hasLegacy } = useMemo(() => {
+    const all = (roles || []) as Array<{ permissions?: string[] | null }>;
+    const legacy = all.some((r) => r.permissions == null);
+    const set = new Set<string>();
+    for (const r of all) {
+      (r.permissions || []).forEach((p) => set.add(p));
+    }
+    return { perms: set, hasLegacy: legacy };
+  }, [roles]);
+
   if (loadingRoles) {
     return (
       <div className="w-64 h-screen flex items-center justify-center bg-sidebar">
@@ -74,14 +87,30 @@ export function Sidebar() {
     );
   }
 
-  const menuItems = useMemo(() => {
-    if (isAdmin()) return allMenuItems;
+  const hideFinancial = !!(profile as any)?.hide_financial;
+  const FINANCE_MODULES: ModuleKey[] = ["financeiro", "patrimonio", "tesouraria"];
 
-    return allMenuItems.filter((item) => {
-      if (!item.allowedRoles) return true;
-      return item.allowedRoles.some((role) => userRoles.includes(role));
-    });
-  }, [userRoles, isAdmin]);
+  const menuItems = useMemo(() => {
+    let base = allMenuItems;
+
+    if (!isAdmin()) {
+      base = base.filter((item) => {
+        if (!item.allowedRoles) return true;
+        return item.allowedRoles.some((role) => userRoles.includes(role));
+      });
+    }
+
+    // Filtro por permissions granulares (apenas se não for legado)
+    if (!hasLegacy) {
+      base = base.filter((item) => !item.module || perms.has(item.module));
+    }
+
+    if (hideFinancial) {
+      base = base.filter((item) => !item.module || !FINANCE_MODULES.includes(item.module));
+    }
+
+    return base;
+  }, [userRoles, isAdmin, perms, hasLegacy, hideFinancial]);
 
   const handleSignOut = async () => {
     await signOut();
