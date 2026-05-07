@@ -26,6 +26,8 @@ export interface CreateInvitationData {
   full_name?: string;
   congregation_id?: string;
   member_id?: string;
+  permissions?: string[] | null;
+  cell_ids?: string[] | null;
 }
 
 export function useInvitations() {
