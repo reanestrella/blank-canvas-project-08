@@ -65,6 +65,9 @@ interface Props {
 
 export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated }: Props) {
   const [submitting, setSubmitting] = useState(false);
+  const [permissions, setPermissions] = useState<ModuleKey[]>(defaultPermissionsFor("tesoureiro"));
+  const [cells, setCells] = useState<{ id: string; name: string }[]>([]);
+  const [selectedCellIds, setSelectedCellIds] = useState<string[]>([]);
   const { toast } = useToast();
 
   const form = useForm<FormData>({
@@ -72,12 +75,35 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
     defaultValues: { full_name: "", email: "", password: "", role: "tesoureiro", hide_financial: false },
   });
   const selectedRole = form.watch("role");
+  const needsCellSelection = selectedRole === "lider_celula";
+
+  useEffect(() => {
+    setPermissions(defaultPermissionsFor(selectedRole));
+    if (selectedRole !== "lider_celula") setSelectedCellIds([]);
+  }, [selectedRole]);
+
+  useEffect(() => {
+    if (open && churchId) {
+      supabase.from("cells").select("id, name").eq("church_id", churchId).eq("is_active", true).order("name")
+        .then(({ data }) => setCells((data as any[]) || []));
+    }
+  }, [open, churchId]);
+
+  const togglePermission = (mod: ModuleKey) =>
+    setPermissions((prev) => prev.includes(mod) ? prev.filter(m => m !== mod) : [...prev, mod]);
+  const toggleCell = (id: string) =>
+    setSelectedCellIds((prev) => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
 
   const handleSubmit = async (data: FormData) => {
     setSubmitting(true);
     try {
       const { data: result, error } = await supabase.functions.invoke("admin-create-user", {
-        body: { ...data, church_id: churchId },
+        body: {
+          ...data,
+          church_id: churchId,
+          permissions,
+          cell_ids: needsCellSelection && selectedCellIds.length > 0 ? selectedCellIds : null,
+        },
       });
       if (error || (result && (result as any).error)) {
         const msg = (result as any)?.error || error?.message || "Erro ao criar usuário";
