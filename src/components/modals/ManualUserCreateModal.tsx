@@ -131,7 +131,7 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Criar Usuário Manualmente</DialogTitle>
           <DialogDescription>
