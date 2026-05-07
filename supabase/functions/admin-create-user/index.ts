@@ -49,13 +49,15 @@ Deno.serve(async (req) => {
     const callerId = userData.user.id;
 
     const body = await req.json().catch(() => ({}));
-    const { full_name, email, password, role, church_id, hide_financial } = body as {
+    const { full_name, email, password, role, church_id, hide_financial, permissions, cell_ids } = body as {
       full_name?: string;
       email?: string;
       password?: string;
       role?: Role;
       church_id?: string;
       hide_financial?: boolean;
+      permissions?: string[] | null;
+      cell_ids?: string[] | null;
     };
 
     if (!email || !password || !role || !church_id) {
@@ -142,20 +144,26 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Insert role (idempotent)
-    await admin
-      .from("user_roles")
-      .insert({ user_id: targetUserId, church_id, role })
-      .then(() => {})
-      .catch(() => {});
-    // upsert-style fallback: if duplicate, ignore
-    const { error: roleErr } = await admin
+    // Insert role with permissions (idempotent: insert or update)
+    const { error: roleInsErr } = await admin
       .from("user_roles")
       .upsert(
-        { user_id: targetUserId, church_id, role },
-        { onConflict: "user_id,church_id,role", ignoreDuplicates: true }
+        { user_id: targetUserId, church_id, role, permissions: permissions ?? null },
+        { onConflict: "user_id,church_id,role" }
       );
-    if (roleErr) console.error("role upsert error", roleErr);
+    if (roleInsErr) console.error("role upsert error", roleInsErr);
+
+    // Cell leader links (if provided)
+    if (Array.isArray(cell_ids) && cell_ids.length > 0) {
+      for (const cellId of cell_ids) {
+        await admin
+          .from("cell_leaders")
+          .upsert(
+            { user_id: targetUserId, cell_id: cellId, church_id },
+            { onConflict: "user_id,cell_id", ignoreDuplicates: true }
+          );
+      }
+    }
 
     return json({ success: true, user_id: targetUserId });
   } catch (e: any) {

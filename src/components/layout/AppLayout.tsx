@@ -6,11 +6,12 @@ import { cn } from "@/lib/utils";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useChurchBranding } from "@/hooks/useChurchBranding";
 import { APP_BRAND_LOGO, APP_BRAND_NAME } from "@/lib/brand";
 import { TrialBanner } from "@/components/subscription/TrialBanner";
+import { pathAllowedByPermissions } from "@/lib/permissions";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -19,7 +20,8 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, isLoading, hasNoChurch } = useAuth();
+  const { user, isLoading, hasNoChurch, roles, isAdmin } = useAuth();
+  const location = useLocation();
   const { isSuperAdmin } = useSuperAdmin();
 
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -90,6 +92,19 @@ export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
 
     if (!path.startsWith("/app/tesouraria")) {
       return <Navigate to="/app/tesouraria" replace />;
+    }
+  }
+
+  // 🔒 PROTEÇÃO POR PERMISSIONS GRANULARES (não bloqueia rotas neutras)
+  const NEUTRAL_PATHS = ["/meu-app", "/perfil", "/configuracoes", "/app/tesouraria"];
+  const isNeutral = NEUTRAL_PATHS.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"));
+  if (!isAdmin() && !isNeutral && roles && roles.length > 0) {
+    const hasLegacy = roles.some((r: any) => r.permissions == null);
+    if (!hasLegacy) {
+      const allPerms = Array.from(new Set(roles.flatMap((r: any) => r.permissions || [])));
+      if (!pathAllowedByPermissions(location.pathname, allPerms)) {
+        return <Navigate to="/meu-app" replace />;
+      }
     }
   }
 

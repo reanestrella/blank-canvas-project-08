@@ -36,6 +36,7 @@ interface Church {
 interface UserRole {
   role: string;
   church_id: string;
+  permissions?: string[] | null;
 }
 
 interface AuthContextType {
@@ -150,7 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const [profileRes, rolesRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", authUser.id).maybeSingle(),
-      supabase.from("user_roles").select("role, church_id").eq("user_id", authUser.id),
+      supabase.from("user_roles").select("role, church_id, permissions").eq("user_id", authUser.id),
     ]);
 
     let profileData = (profileRes.data as Profile | null) ?? ensuredProfile;

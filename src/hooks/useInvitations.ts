@@ -26,6 +26,8 @@ export interface CreateInvitationData {
   full_name?: string;
   congregation_id?: string;
   member_id?: string;
+  permissions?: string[] | null;
+  cell_ids?: string[] | null;
 }
 
 export function useInvitations() {
@@ -84,6 +86,17 @@ export function useInvitations() {
       }
       
       const invitation = newInvitation as unknown as Invitation;
+
+      // Aplicar permissions / cell_ids granulares (campos novos não suportados pela RPC)
+      if (invitation?.id && (data.permissions !== undefined || data.cell_ids !== undefined)) {
+        await (supabase
+          .from("invitations" as any)
+          .update({
+            permissions: data.permissions ?? null,
+            cell_ids: data.cell_ids ?? null,
+          } as any)
+          .eq("id", invitation.id) as any);
+      }
       
       await fetchInvitations();
       

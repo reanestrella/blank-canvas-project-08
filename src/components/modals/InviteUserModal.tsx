@@ -21,6 +21,7 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -30,8 +31,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Copy, Check } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { CreateInvitationData, Invitation } from "@/hooks/useInvitations";
 import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
+import {
+  MODULE_LABELS,
+  defaultPermissionsFor,
+  type ModuleKey,
+} from "@/lib/permissions";
 
 const inviteSchema = z.object({
   email: z.string().email("Email inválido").or(z.literal("")),
@@ -81,11 +89,16 @@ export function InviteUserModal({
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [ministries, setMinistries] = useState<{ id: string; name: string }[]>([]);
+  const [cells, setCells] = useState<{ id: string; name: string }[]>([]);
+  const [permissions, setPermissions] = useState<ModuleKey[]>(defaultPermissionsFor("membro"));
+  const [selectedCellIds, setSelectedCellIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (open && churchId) {
       supabase.from("ministries").select("id, name").eq("church_id", churchId).eq("is_active", true).order("name")
         .then(({ data }) => setMinistries((data as any[]) || []));
+      supabase.from("cells").select("id, name").eq("church_id", churchId).eq("is_active", true).order("name")
+        .then(({ data }) => setCells((data as any[]) || []));
     }
   }, [open, churchId]);
   
@@ -102,12 +115,35 @@ export function InviteUserModal({
 
   const selectedRole = form.watch("role");
   const needsMemberLink = selectedRole === "lider_celula" || selectedRole === "vice_lider_celula" || selectedRole === "lider_ministerio";
+  const needsCellSelection = selectedRole === "lider_celula" || selectedRole === "vice_lider_celula";
+
+  // Atualiza defaults quando role muda
+  useEffect(() => {
+    setPermissions(defaultPermissionsFor(selectedRole));
+    if (!["lider_celula", "vice_lider_celula"].includes(selectedRole)) {
+      setSelectedCellIds([]);
+    }
+  }, [selectedRole]);
+
+  const togglePermission = (mod: ModuleKey) => {
+    setPermissions((prev) =>
+      prev.includes(mod) ? prev.filter((m) => m !== mod) : [...prev, mod],
+    );
+  };
+
+  const toggleCell = (id: string) => {
+    setSelectedCellIds((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
+    );
+  };
 
   const handleSubmit = async (data: InviteFormData) => {
     setIsSubmitting(true);
     try {
       const submitData: CreateInvitationData = {
         role: data.role === "vice_lider_celula" ? "lider_celula" : data.role,
+        permissions,
+        cell_ids: needsCellSelection && selectedCellIds.length > 0 ? selectedCellIds : null,
       };
       
       if (data.email && data.email.trim()) {
@@ -151,7 +187,7 @@ export function InviteUserModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Convidar Novo Usuário</DialogTitle>
           <DialogDescription>
@@ -327,6 +363,51 @@ export function InviteUserModal({
                   )}
                 />
               )}
+
+
+              {/* Seleção de células para líder/vice */}
+              {needsCellSelection && cells.length > 0 && (
+                <div className="space-y-2 rounded-lg border p-3">
+                  <Label className="text-sm font-medium">Células que este líder vai gerenciar</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Marque uma ou mais células. O líder verá apenas as células selecionadas.
+                  </p>
+                  <ScrollArea className="max-h-40 pr-2">
+                    <div className="space-y-2">
+                      {cells.map((c) => (
+                        <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                          <Checkbox
+                            checked={selectedCellIds.includes(c.id)}
+                            onCheckedChange={() => toggleCell(c.id)}
+                          />
+                          <span>{c.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+
+              {/* Permissões granulares de módulos */}
+              <div className="space-y-2 rounded-lg border p-3">
+                <Label className="text-sm font-medium">Módulos liberados</Label>
+                <p className="text-xs text-muted-foreground">
+                  Já vem pré-selecionado pela função. Você pode marcar/desmarcar manualmente.
+                </p>
+                <ScrollArea className="max-h-48 pr-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    {(Object.keys(MODULE_LABELS) as ModuleKey[]).map((mod) => (
+                      <label key={mod} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <Checkbox
+                          checked={permissions.includes(mod)}
+                          onCheckedChange={() => togglePermission(mod)}
+                        />
+                        <span>{MODULE_LABELS[mod]}</span>
+                      </label>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
 
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => handleClose(false)}>

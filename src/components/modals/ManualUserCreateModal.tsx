@@ -1,8 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
+import { MODULE_LABELS, defaultPermissionsFor, type ModuleKey } from "@/lib/permissions";
 import {
   Dialog,
   DialogContent,
@@ -61,6 +65,9 @@ interface Props {
 
 export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated }: Props) {
   const [submitting, setSubmitting] = useState(false);
+  const [permissions, setPermissions] = useState<ModuleKey[]>(defaultPermissionsFor("tesoureiro"));
+  const [cells, setCells] = useState<{ id: string; name: string }[]>([]);
+  const [selectedCellIds, setSelectedCellIds] = useState<string[]>([]);
   const { toast } = useToast();
 
   const form = useForm<FormData>({
@@ -68,12 +75,35 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
     defaultValues: { full_name: "", email: "", password: "", role: "tesoureiro", hide_financial: false },
   });
   const selectedRole = form.watch("role");
+  const needsCellSelection = selectedRole === "lider_celula";
+
+  useEffect(() => {
+    setPermissions(defaultPermissionsFor(selectedRole));
+    if (selectedRole !== "lider_celula") setSelectedCellIds([]);
+  }, [selectedRole]);
+
+  useEffect(() => {
+    if (open && churchId) {
+      supabase.from("cells").select("id, name").eq("church_id", churchId).eq("is_active", true).order("name")
+        .then(({ data }) => setCells((data as any[]) || []));
+    }
+  }, [open, churchId]);
+
+  const togglePermission = (mod: ModuleKey) =>
+    setPermissions((prev) => prev.includes(mod) ? prev.filter(m => m !== mod) : [...prev, mod]);
+  const toggleCell = (id: string) =>
+    setSelectedCellIds((prev) => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
 
   const handleSubmit = async (data: FormData) => {
     setSubmitting(true);
     try {
       const { data: result, error } = await supabase.functions.invoke("admin-create-user", {
-        body: { ...data, church_id: churchId },
+        body: {
+          ...data,
+          church_id: churchId,
+          permissions,
+          cell_ids: needsCellSelection && selectedCellIds.length > 0 ? selectedCellIds : null,
+        },
       });
       if (error || (result && (result as any).error)) {
         const msg = (result as any)?.error || error?.message || "Erro ao criar usuário";
@@ -101,7 +131,7 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Criar Usuário Manualmente</DialogTitle>
           <DialogDescription>
@@ -193,6 +223,37 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
                 )}
               />
             )}
+            {needsCellSelection && cells.length > 0 && (
+              <div className="space-y-2 rounded-lg border p-3">
+                <Label className="text-sm font-medium">Células deste líder</Label>
+                <ScrollArea className="max-h-32 pr-2">
+                  <div className="space-y-2">
+                    {cells.map((c) => (
+                      <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <Checkbox checked={selectedCellIds.includes(c.id)} onCheckedChange={() => toggleCell(c.id)} />
+                        <span>{c.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+
+            <div className="space-y-2 rounded-lg border p-3">
+              <Label className="text-sm font-medium">Módulos liberados</Label>
+              <p className="text-xs text-muted-foreground">Pré-selecionado pela função. Edite à vontade.</p>
+              <ScrollArea className="max-h-44 pr-2">
+                <div className="grid grid-cols-2 gap-2">
+                  {(Object.keys(MODULE_LABELS) as ModuleKey[]).map((mod) => (
+                    <label key={mod} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox checked={permissions.includes(mod)} onCheckedChange={() => togglePermission(mod)} />
+                      <span>{MODULE_LABELS[mod]}</span>
+                    </label>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => handleClose(false)}>Cancelar</Button>
               <Button type="submit" disabled={submitting}>

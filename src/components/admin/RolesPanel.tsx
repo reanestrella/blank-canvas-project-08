@@ -5,12 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Shield, History, Users, Trash2, Plus } from "lucide-react";
+import { Loader2, Shield, History, Users, Trash2, Plus, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { MODULE_LABELS, defaultPermissionsFor, type ModuleKey } from "@/lib/permissions";
 
 interface UserRole {
   user_id: string;
@@ -18,6 +21,7 @@ interface UserRole {
   church_id: string;
   full_name?: string;
   email?: string;
+  permissions?: string[] | null;
 }
 
 interface AuditLog {
@@ -59,6 +63,9 @@ export function RolesPanel({ churchId }: { churchId: string }) {
   const [promoteUserId, setPromoteUserId] = useState<string>("");
   const [promoteRole, setPromoteRole] = useState<string>("tesoureiro");
   const [promoting, setPromoting] = useState(false);
+  const [editPermsFor, setEditPermsFor] = useState<UserRole | null>(null);
+  const [editPerms, setEditPerms] = useState<ModuleKey[]>([]);
+  const [savingPerms, setSavingPerms] = useState(false);
   const { toast } = useToast();
 
   // Unique users for promotion select
@@ -69,18 +76,49 @@ export function RolesPanel({ churchId }: { churchId: string }) {
   const handlePromote = async () => {
     if (!promoteUserId || !promoteRole) return;
     setPromoting(true);
+    const perms = defaultPermissionsFor(promoteRole);
     const { error } = await supabase
       .from("user_roles")
-      .insert({ user_id: promoteUserId, church_id: churchId, role: promoteRole as any });
+      .insert({ user_id: promoteUserId, church_id: churchId, role: promoteRole as any, permissions: perms } as any);
     setPromoting(false);
     if (error && !String(error.message).toLowerCase().includes("duplicate")) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
       return;
     }
     const u = uniqueUsers.find((x) => x.user_id === promoteUserId);
-    if (u) setUserRoles((prev) => [...prev, { ...u, role: promoteRole, church_id: churchId }]);
+    if (u) setUserRoles((prev) => [...prev, { ...u, role: promoteRole, church_id: churchId, permissions: perms }]);
     toast({ title: "Cargo adicionado!", description: "O usuário agora tem acesso ao novo módulo." });
     setPromoteOpen(false);
+  };
+
+  const openEditPerms = (ur: UserRole) => {
+    setEditPermsFor(ur);
+    setEditPerms((ur.permissions ?? defaultPermissionsFor(ur.role)) as ModuleKey[]);
+  };
+
+  const handleSavePerms = async () => {
+    if (!editPermsFor) return;
+    setSavingPerms(true);
+    const { error } = await supabase
+      .from("user_roles")
+      .update({ permissions: editPerms } as any)
+      .eq("user_id", editPermsFor.user_id)
+      .eq("church_id", churchId)
+      .eq("role", editPermsFor.role);
+    setSavingPerms(false);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      return;
+    }
+    setUserRoles((prev) =>
+      prev.map((r) =>
+        r.user_id === editPermsFor.user_id && r.role === editPermsFor.role
+          ? { ...r, permissions: editPerms }
+          : r,
+      ),
+    );
+    toast({ title: "Permissões atualizadas!" });
+    setEditPermsFor(null);
   };
 
   const handleRemoveRole = async (userId: string, role: string) => {
@@ -107,7 +145,7 @@ export function RolesPanel({ churchId }: { churchId: string }) {
       setLoading(true);
       const { data: roles } = await supabase
         .from("user_roles")
-        .select("user_id, role, church_id")
+        .select("user_id, role, church_id, permissions")
         .eq("church_id", churchId);
 
       if (roles && roles.length > 0) {
@@ -252,6 +290,17 @@ export function RolesPanel({ churchId }: { churchId: string }) {
                           <p className="text-xs font-medium">{u.full_name}</p>
                           {u.email && <p className="text-[10px] text-muted-foreground">{u.email}</p>}
                         </div>
+                        {role !== "pastor" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => openEditPerms(u)}
+                            title="Editar permissões"
+                          >
+                            <Settings2 className="w-3 h-3" />
+                          </Button>
+                        )}
                         {role !== "membro" && (
                           <Button
                             variant="ghost"
@@ -319,6 +368,40 @@ export function RolesPanel({ churchId }: { churchId: string }) {
           </CardContent>
         </Card>
       </TabsContent>
+      <Dialog open={!!editPermsFor} onOpenChange={(o) => !o && setEditPermsFor(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar permissões</DialogTitle>
+            <DialogDescription>
+              {editPermsFor?.full_name} · {editPermsFor && roleLabels[editPermsFor.role]}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[50vh] pr-2">
+            <div className="grid grid-cols-2 gap-2">
+              {(Object.keys(MODULE_LABELS) as ModuleKey[]).map((mod) => (
+                <label key={mod} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox
+                    checked={editPerms.includes(mod)}
+                    onCheckedChange={() =>
+                      setEditPerms((prev) =>
+                        prev.includes(mod) ? prev.filter((p) => p !== mod) : [...prev, mod],
+                      )
+                    }
+                  />
+                  <span>{MODULE_LABELS[mod]}</span>
+                </label>
+              ))}
+            </div>
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditPermsFor(null)}>Cancelar</Button>
+            <Button onClick={handleSavePerms} disabled={savingPerms}>
+              {savingPerms && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Tabs>
   );
 }
