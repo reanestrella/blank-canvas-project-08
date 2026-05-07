@@ -63,6 +63,9 @@ export function RolesPanel({ churchId }: { churchId: string }) {
   const [promoteUserId, setPromoteUserId] = useState<string>("");
   const [promoteRole, setPromoteRole] = useState<string>("tesoureiro");
   const [promoting, setPromoting] = useState(false);
+  const [editPermsFor, setEditPermsFor] = useState<UserRole | null>(null);
+  const [editPerms, setEditPerms] = useState<ModuleKey[]>([]);
+  const [savingPerms, setSavingPerms] = useState(false);
   const { toast } = useToast();
 
   // Unique users for promotion select
