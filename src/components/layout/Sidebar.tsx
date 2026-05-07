@@ -1,10 +1,28 @@
 import { useState, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, Users, Heart, GraduationCap, Grid3X3, DollarSign,
-  Calendar, User, Settings, ChevronLeft, ChevronRight, Church, LogOut,
-  Crown, Handshake, Bell, Shield, Sparkles, Package,
-  Smartphone, HeartHandshake
+  LayoutDashboard,
+  Users,
+  Heart,
+  GraduationCap,
+  Grid3X3,
+  DollarSign,
+  Calendar,
+  User,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  Church,
+  LogOut,
+  Crown,
+  Handshake,
+  Bell,
+  Shield,
+  Sparkles,
+  Package,
+  Smartphone,
+  HeartHandshake,
+  Network
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -21,7 +39,9 @@ type AppRole =
   | "lider_celula"
   | "lider_ministerio"
   | "consolidacao"
-  | "membro";
+  | "membro"
+  | "network_admin"
+  | "network_finance";
 
 interface MenuItem {
   icon: any;
@@ -60,7 +80,6 @@ export function Sidebar() {
   const { church, signOut, roles, isAdmin, profile } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
 
-  // 🔥 loading seguro
   const loadingRoles = !roles;
 
   const userRoles = useMemo(() => {
@@ -68,14 +87,25 @@ export function Sidebar() {
     return roles.map((r: any) => r.role);
   }, [roles]);
 
-  // Permissions agregadas: união de todas as listas; se ALGUMA role tiver permissions=null, libera por role (legado)
+  // ACESSO À REDE
+  const hasNetworkAccess = useMemo(() => {
+    return (
+      userRoles.includes("network_admin") ||
+      userRoles.includes("network_finance")
+    );
+  }, [userRoles]);
+
+  // Permissions agregadas
   const { perms, hasLegacy } = useMemo(() => {
     const all = (roles || []) as Array<{ permissions?: string[] | null }>;
     const legacy = all.some((r) => r.permissions == null);
+
     const set = new Set<string>();
+
     for (const r of all) {
       (r.permissions || []).forEach((p) => set.add(p));
     }
+
     return { perms: set, hasLegacy: legacy };
   }, [roles]);
 
@@ -88,7 +118,12 @@ export function Sidebar() {
   }
 
   const hideFinancial = !!(profile as any)?.hide_financial;
-  const FINANCE_MODULES: ModuleKey[] = ["financeiro", "patrimonio", "tesouraria"];
+
+  const FINANCE_MODULES: ModuleKey[] = [
+    "financeiro",
+    "patrimonio",
+    "tesouraria"
+  ];
 
   const menuItems = useMemo(() => {
     let base = allMenuItems;
@@ -96,21 +131,37 @@ export function Sidebar() {
     if (!isAdmin()) {
       base = base.filter((item) => {
         if (!item.allowedRoles) return true;
-        return item.allowedRoles.some((role) => userRoles.includes(role));
+
+        return item.allowedRoles.some((role) =>
+          userRoles.includes(role)
+        );
       });
     }
 
-    // Filtro por permissions granulares (apenas se não for legado)
+    // permissions granulares
     if (!hasLegacy) {
-      base = base.filter((item) => !item.module || perms.has(item.module));
+      base = base.filter(
+        (item) => !item.module || perms.has(item.module)
+      );
     }
 
+    // esconder financeiro
     if (hideFinancial) {
-      base = base.filter((item) => !item.module || !FINANCE_MODULES.includes(item.module));
+      base = base.filter(
+        (item) =>
+          !item.module ||
+          !FINANCE_MODULES.includes(item.module)
+      );
     }
 
     return base;
-  }, [userRoles, isAdmin, perms, hasLegacy, hideFinancial]);
+  }, [
+    userRoles,
+    isAdmin,
+    perms,
+    hasLegacy,
+    hideFinancial
+  ]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -127,10 +178,19 @@ export function Sidebar() {
     >
       {/* HEADER */}
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border min-h-[70px]">
-        <div className={cn("flex items-center gap-3", collapsed && "justify-center w-full")}>
+        <div
+          className={cn(
+            "flex items-center gap-3",
+            collapsed && "justify-center w-full"
+          )}
+        >
           <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden">
             {church?.logo_url ? (
-              <img src={church.logo_url} alt={church.name} className="w-full h-full object-cover" />
+              <img
+                src={church.logo_url}
+                alt={church.name}
+                className="w-full h-full object-cover"
+              />
             ) : (
               <Church className="w-6 h-6 text-primary" />
             )}
@@ -141,6 +201,7 @@ export function Sidebar() {
               <span className="font-bold text-sidebar-foreground truncate max-w-[140px]">
                 {church?.name || "Igreja"}
               </span>
+
               <span className="text-xs text-sidebar-foreground/60">
                 Gestão Completa
               </span>
@@ -154,12 +215,35 @@ export function Sidebar() {
           onClick={() => setCollapsed(!collapsed)}
           className="text-sidebar-foreground/60 hover:text-sidebar-foreground"
         >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          {collapsed ? (
+            <ChevronRight className="w-4 h-4" />
+          ) : (
+            <ChevronLeft className="w-4 h-4" />
+          )}
         </Button>
       </div>
 
-      {/* MENU COM SCROLL */}
+      {/* MENU */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+
+        {/* PAINEL REDE */}
+        {hasNetworkAccess && (
+          <Link
+            to="/rede"
+            className={cn(
+              "flex items-center gap-3 px-3 py-2 rounded-lg transition-all mb-2",
+              "bg-primary/10 hover:bg-primary/20 text-primary font-medium",
+              location.pathname === "/rede" &&
+                "bg-primary/20",
+              collapsed && "justify-center"
+            )}
+          >
+            <Network className="w-5 h-5 flex-shrink-0" />
+
+            {!collapsed && <span>Painel Rede</span>}
+          </Link>
+        )}
+
         {menuItems.map((item) => {
           const isActive = location.pathname === item.path;
 
@@ -170,11 +254,13 @@ export function Sidebar() {
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-lg transition-all",
                 "hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                isActive && "bg-sidebar-accent text-sidebar-foreground font-medium",
+                isActive &&
+                  "bg-sidebar-accent text-sidebar-foreground font-medium",
                 collapsed && "justify-center"
               )}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
+
               {!collapsed && <span>{item.label}</span>}
             </Link>
           );
@@ -190,6 +276,7 @@ export function Sidebar() {
             className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-accent"
           >
             <item.icon className="w-5 h-5" />
+
             {!collapsed && <span>{item.label}</span>}
           </Link>
         ))}
@@ -199,6 +286,7 @@ export function Sidebar() {
           className="flex items-center gap-3 px-3 py-2 rounded-lg w-full text-red-500 hover:bg-red-500/10"
         >
           <LogOut className="w-5 h-5" />
+
           {!collapsed && <span>Sair</span>}
         </button>
       </div>
