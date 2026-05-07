@@ -145,7 +145,7 @@ export function RolesPanel({ churchId }: { churchId: string }) {
       setLoading(true);
       const { data: roles } = await supabase
         .from("user_roles")
-        .select("user_id, role, church_id")
+        .select("user_id, role, church_id, permissions")
         .eq("church_id", churchId);
 
       if (roles && roles.length > 0) {
