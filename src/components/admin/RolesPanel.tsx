@@ -21,6 +21,7 @@ interface UserRole {
   church_id: string;
   full_name?: string;
   email?: string;
+  permissions?: string[] | null;
 }
 
 interface AuditLog {
