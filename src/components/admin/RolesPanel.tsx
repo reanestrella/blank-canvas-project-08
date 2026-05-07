@@ -290,6 +290,17 @@ export function RolesPanel({ churchId }: { churchId: string }) {
                           <p className="text-xs font-medium">{u.full_name}</p>
                           {u.email && <p className="text-[10px] text-muted-foreground">{u.email}</p>}
                         </div>
+                        {role !== "pastor" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => openEditPerms(u)}
+                            title="Editar permissões"
+                          >
+                            <Settings2 className="w-3 h-3" />
+                          </Button>
+                        )}
                         {role !== "membro" && (
                           <Button
                             variant="ghost"
