@@ -30,8 +30,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Copy, Check } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { CreateInvitationData, Invitation } from "@/hooks/useInvitations";
 import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
+import {
+  MODULE_LABELS,
+  defaultPermissionsFor,
+  type ModuleKey,
+} from "@/lib/permissions";
 
 const inviteSchema = z.object({
   email: z.string().email("Email inválido").or(z.literal("")),
