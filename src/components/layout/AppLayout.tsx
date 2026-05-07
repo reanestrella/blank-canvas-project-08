@@ -20,7 +20,8 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, isLoading, hasNoChurch } = useAuth();
+  const { user, isLoading, hasNoChurch, roles, isAdmin } = useAuth();
+  const location = useLocation();
   const { isSuperAdmin } = useSuperAdmin();
 
   const [userRole, setUserRole] = useState<string | null>(null);
