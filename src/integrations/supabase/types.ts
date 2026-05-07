@@ -2309,6 +2309,7 @@ export type Database = {
       }
       invitations: {
         Row: {
+          cell_ids: string[] | null
           church_id: string
           congregation_id: string | null
           created_at: string
@@ -2326,6 +2327,7 @@ export type Database = {
           used_at: string | null
         }
         Insert: {
+          cell_ids?: string[] | null
           church_id: string
           congregation_id?: string | null
           created_at?: string
@@ -2343,6 +2345,7 @@ export type Database = {
           used_at?: string | null
         }
         Update: {
+          cell_ids?: string[] | null
           church_id?: string
           congregation_id?: string | null
           created_at?: string
@@ -4071,6 +4074,7 @@ export type Database = {
           p_role: Database["public"]["Enums"]["app_role"]
         }
         Returns: {
+          cell_ids: string[] | null
           church_id: string
           congregation_id: string | null
           created_at: string
