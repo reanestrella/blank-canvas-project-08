@@ -223,6 +223,37 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
                 )}
               />
             )}
+            {needsCellSelection && cells.length > 0 && (
+              <div className="space-y-2 rounded-lg border p-3">
+                <Label className="text-sm font-medium">Células deste líder</Label>
+                <ScrollArea className="max-h-32 pr-2">
+                  <div className="space-y-2">
+                    {cells.map((c) => (
+                      <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <Checkbox checked={selectedCellIds.includes(c.id)} onCheckedChange={() => toggleCell(c.id)} />
+                        <span>{c.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+
+            <div className="space-y-2 rounded-lg border p-3">
+              <Label className="text-sm font-medium">Módulos liberados</Label>
+              <p className="text-xs text-muted-foreground">Pré-selecionado pela função. Edite à vontade.</p>
+              <ScrollArea className="max-h-44 pr-2">
+                <div className="grid grid-cols-2 gap-2">
+                  {(Object.keys(MODULE_LABELS) as ModuleKey[]).map((mod) => (
+                    <label key={mod} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox checked={permissions.includes(mod)} onCheckedChange={() => togglePermission(mod)} />
+                      <span>{MODULE_LABELS[mod]}</span>
+                    </label>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => handleClose(false)}>Cancelar</Button>
               <Button type="submit" disabled={submitting}>
