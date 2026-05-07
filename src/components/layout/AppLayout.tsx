@@ -95,6 +95,19 @@ export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
     }
   }
 
+  // 🔒 PROTEÇÃO POR PERMISSIONS GRANULARES (não bloqueia rotas neutras)
+  const NEUTRAL_PATHS = ["/meu-app", "/perfil", "/configuracoes", "/app/tesouraria"];
+  const isNeutral = NEUTRAL_PATHS.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"));
+  if (!isAdmin() && !isNeutral && roles && roles.length > 0) {
+    const hasLegacy = roles.some((r: any) => r.permissions == null);
+    if (!hasLegacy) {
+      const allPerms = Array.from(new Set(roles.flatMap((r: any) => r.permissions || [])));
+      if (!pathAllowedByPermissions(location.pathname, allPerms)) {
+        return <Navigate to="/meu-app" replace />;
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Desktop Sidebar */}
