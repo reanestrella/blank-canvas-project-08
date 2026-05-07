@@ -36,6 +36,7 @@ interface Church {
 interface UserRole {
   role: string;
   church_id: string;
+  permissions?: string[] | null;
 }
 
 interface AuthContextType {
