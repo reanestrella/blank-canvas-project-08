@@ -6,11 +6,12 @@ import { cn } from "@/lib/utils";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useChurchBranding } from "@/hooks/useChurchBranding";
 import { APP_BRAND_LOGO, APP_BRAND_NAME } from "@/lib/brand";
 import { TrialBanner } from "@/components/subscription/TrialBanner";
+import { pathAllowedByPermissions } from "@/lib/permissions";
 
 interface AppLayoutProps {
   children: React.ReactNode;
