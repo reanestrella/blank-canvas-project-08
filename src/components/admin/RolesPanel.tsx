@@ -76,18 +76,49 @@ export function RolesPanel({ churchId }: { churchId: string }) {
   const handlePromote = async () => {
     if (!promoteUserId || !promoteRole) return;
     setPromoting(true);
+    const perms = defaultPermissionsFor(promoteRole);
     const { error } = await supabase
       .from("user_roles")
-      .insert({ user_id: promoteUserId, church_id: churchId, role: promoteRole as any });
+      .insert({ user_id: promoteUserId, church_id: churchId, role: promoteRole as any, permissions: perms } as any);
     setPromoting(false);
     if (error && !String(error.message).toLowerCase().includes("duplicate")) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
       return;
     }
     const u = uniqueUsers.find((x) => x.user_id === promoteUserId);
-    if (u) setUserRoles((prev) => [...prev, { ...u, role: promoteRole, church_id: churchId }]);
+    if (u) setUserRoles((prev) => [...prev, { ...u, role: promoteRole, church_id: churchId, permissions: perms }]);
     toast({ title: "Cargo adicionado!", description: "O usuário agora tem acesso ao novo módulo." });
     setPromoteOpen(false);
+  };
+
+  const openEditPerms = (ur: UserRole) => {
+    setEditPermsFor(ur);
+    setEditPerms((ur.permissions ?? defaultPermissionsFor(ur.role)) as ModuleKey[]);
+  };
+
+  const handleSavePerms = async () => {
+    if (!editPermsFor) return;
+    setSavingPerms(true);
+    const { error } = await supabase
+      .from("user_roles")
+      .update({ permissions: editPerms } as any)
+      .eq("user_id", editPermsFor.user_id)
+      .eq("church_id", churchId)
+      .eq("role", editPermsFor.role);
+    setSavingPerms(false);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      return;
+    }
+    setUserRoles((prev) =>
+      prev.map((r) =>
+        r.user_id === editPermsFor.user_id && r.role === editPermsFor.role
+          ? { ...r, permissions: editPerms }
+          : r,
+      ),
+    );
+    toast({ title: "Permissões atualizadas!" });
+    setEditPermsFor(null);
   };
 
   const handleRemoveRole = async (userId: string, role: string) => {
