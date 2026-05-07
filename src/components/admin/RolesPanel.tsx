@@ -368,6 +368,40 @@ export function RolesPanel({ churchId }: { churchId: string }) {
           </CardContent>
         </Card>
       </TabsContent>
+      <Dialog open={!!editPermsFor} onOpenChange={(o) => !o && setEditPermsFor(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar permissões</DialogTitle>
+            <DialogDescription>
+              {editPermsFor?.full_name} · {editPermsFor && roleLabels[editPermsFor.role]}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[50vh] pr-2">
+            <div className="grid grid-cols-2 gap-2">
+              {(Object.keys(MODULE_LABELS) as ModuleKey[]).map((mod) => (
+                <label key={mod} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox
+                    checked={editPerms.includes(mod)}
+                    onCheckedChange={() =>
+                      setEditPerms((prev) =>
+                        prev.includes(mod) ? prev.filter((p) => p !== mod) : [...prev, mod],
+                      )
+                    }
+                  />
+                  <span>{MODULE_LABELS[mod]}</span>
+                </label>
+              ))}
+            </div>
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditPermsFor(null)}>Cancelar</Button>
+            <Button onClick={handleSavePerms} disabled={savingPerms}>
+              {savingPerms && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Tabs>
   );
 }
