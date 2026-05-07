@@ -97,13 +97,13 @@ export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
     <div className="min-h-screen bg-background">
       {/* Desktop Sidebar */}
       <div className="hidden md:block">
-        <Sidebar userRole={userRole} />
+        <Sidebar />
       </div>
 
       {/* Mobile Sidebar */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="left" className="p-0 w-64">
-          <Sidebar userRole={userRole} />
+          <Sidebar />
         </SheetContent>
       </Sheet>
 

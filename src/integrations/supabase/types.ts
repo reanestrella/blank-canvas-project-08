@@ -383,6 +383,45 @@ export type Database = {
         }
         Relationships: []
       }
+      cell_leaders: {
+        Row: {
+          cell_id: string
+          church_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          cell_id: string
+          church_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          cell_id?: string
+          church_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cell_leaders_cell_id_fkey"
+            columns: ["cell_id"]
+            isOneToOne: false
+            referencedRelation: "cells"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cell_leaders_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cell_leadership_development: {
         Row: {
           cell_id: string
@@ -2279,6 +2318,7 @@ export type Database = {
           id: string
           invited_by: string
           member_id: string | null
+          permissions: string[] | null
           role: Database["public"]["Enums"]["app_role"]
           roles: string[] | null
           status: string
@@ -2295,6 +2335,7 @@ export type Database = {
           id?: string
           invited_by: string
           member_id?: string | null
+          permissions?: string[] | null
           role: Database["public"]["Enums"]["app_role"]
           roles?: string[] | null
           status?: string
@@ -2311,6 +2352,7 @@ export type Database = {
           id?: string
           invited_by?: string
           member_id?: string | null
+          permissions?: string[] | null
           role?: Database["public"]["Enums"]["app_role"]
           roles?: string[] | null
           status?: string
@@ -3783,6 +3825,7 @@ export type Database = {
           church_id: string
           created_at: string
           id: string
+          permissions: string[] | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -3790,6 +3833,7 @@ export type Database = {
           church_id: string
           created_at?: string
           id?: string
+          permissions?: string[] | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -3797,6 +3841,7 @@ export type Database = {
           church_id?: string
           created_at?: string
           id?: string
+          permissions?: string[] | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
@@ -4035,6 +4080,7 @@ export type Database = {
           id: string
           invited_by: string
           member_id: string | null
+          permissions: string[] | null
           role: Database["public"]["Enums"]["app_role"]
           roles: string[] | null
           status: string
@@ -4057,7 +4103,9 @@ export type Database = {
         Returns: Json
       }
       user_belongs_to_church: { Args: { _church_id: string }; Returns: boolean }
+      user_has_permission: { Args: { _module: string }; Returns: boolean }
       user_is_church_admin: { Args: { _church_id: string }; Returns: boolean }
+      user_leads_cell: { Args: { _cell_id: string }; Returns: boolean }
       validate_invitation: {
         Args: { p_token: string }
         Returns: {
