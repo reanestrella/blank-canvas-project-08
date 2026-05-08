@@ -87,18 +87,23 @@ export function Sidebar() {
     return roles.map((r: any) => r.role);
   }, [roles]);
 
+  ```tsx id="q8v2nc"
   // ACESSO À REDE
-const hasNetworkAccess = true;
+  const hasNetworkAccess = true;
 
-const perms = useMemo(() => {
- 
-  // Permissions agregadas: null legado usa default da função, não libera tudo.
+  // Permissions agregadas
   const perms = useMemo(() => {
-    const all = (roles || []) as Array<{ role: string; permissions?: string[] | null }>;
+    const all = (roles || []) as Array<{
+      role: string;
+      permissions?: string[] | null;
+    }>;
+
     const set = new Set<string>();
 
     for (const r of all) {
-      (r.permissions ?? defaultPermissionsFor(r.role)).forEach((p) => set.add(p));
+      (r.permissions ?? defaultPermissionsFor(r.role)).forEach((p) =>
+        set.add(p)
+      );
     }
 
     return set;
