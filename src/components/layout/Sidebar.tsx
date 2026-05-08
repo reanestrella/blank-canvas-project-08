@@ -1,4 +1,3 @@
-```tsx id="k9x2qm"
 import { useState, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -21,14 +20,14 @@ import {
   Package,
   Smartphone,
   HeartHandshake,
-  Network
+  Network,
+  Loader2,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2 } from "lucide-react";
-import { defaultPermissionsFor, type ModuleKey } from "@/lib/permissions";
+import { type ModuleKey } from "@/lib/permissions";
 
 type AppRole =
   | "pastor"
@@ -54,98 +53,85 @@ const allMenuItems: MenuItem[] = [
     icon: LayoutDashboard,
     label: "Dashboard",
     path: "/app",
-    module: "dashboard",
-    allowedRoles: ["pastor"]
+    allowedRoles: ["pastor"],
   },
   {
     icon: Users,
     label: "Secretaria",
     path: "/secretaria",
-    module: "secretaria",
-    allowedRoles: ["pastor", "secretario", "consolidacao"]
+    allowedRoles: ["pastor", "secretario", "consolidacao"],
   },
   {
     icon: Heart,
     label: "Ministérios",
     path: "/ministerios",
-    module: "ministerios",
-    allowedRoles: ["pastor", "lider_ministerio"]
+    allowedRoles: ["pastor", "lider_ministerio"],
   },
   {
     icon: Grid3X3,
     label: "Células",
     path: "/celulas",
-    module: "celulas",
-    allowedRoles: ["pastor", "lider_celula", "consolidacao", "secretario"]
+    allowedRoles: ["pastor", "lider_celula", "consolidacao", "secretario"],
   },
   {
     icon: Handshake,
     label: "Consolidação",
     path: "/consolidacao",
-    module: "consolidacao",
-    allowedRoles: ["pastor", "consolidacao"]
+    allowedRoles: ["pastor", "consolidacao"],
   },
   {
     icon: GraduationCap,
     label: "Ensino",
     path: "/ensino",
-    module: "ensino",
-    allowedRoles: ["pastor", "secretario"]
+    allowedRoles: ["pastor", "secretario"],
   },
   {
     icon: DollarSign,
     label: "Financeiro",
     path: "/financeiro",
-    module: "financeiro",
-    allowedRoles: ["pastor", "tesoureiro"]
+    allowedRoles: ["pastor", "tesoureiro"],
   },
   {
     icon: Calendar,
     label: "Eventos",
     path: "/eventos",
-    module: "eventos",
-    allowedRoles: ["pastor", "secretario"]
+    allowedRoles: ["pastor", "secretario"],
   },
   {
     icon: HeartHandshake,
     label: "Gestão Pastoral",
     path: "/gestao-pastoral",
-    module: "gestao_pastoral",
-    allowedRoles: ["pastor"]
+    allowedRoles: ["pastor"],
   },
   {
     icon: Bell,
     label: "Lembretes",
     path: "/lembretes",
-    module: "lembretes",
-    allowedRoles: ["pastor", "secretario"]
+    allowedRoles: ["pastor", "secretario"],
   },
   {
     icon: Sparkles,
     label: "Assistente",
     path: "/assistente",
-    module: "assistente",
-    allowedRoles: ["pastor"]
+    allowedRoles: ["pastor"],
   },
   {
     icon: Package,
     label: "Patrimônio",
     path: "/patrimonio",
-    module: "patrimonio",
-    allowedRoles: ["pastor", "tesoureiro"]
+    allowedRoles: ["pastor", "tesoureiro"],
+  },
+  {
+    icon: User,
+    label: "Meu App",
+    path: "/meu-app",
   },
   {
     icon: Smartphone,
     label: "Gestão App",
     path: "/gestao-app",
-    module: "gestao_app",
-    allowedRoles: ["pastor"]
+    allowedRoles: ["pastor"],
   },
-  {
-    icon: User,
-    label: "Meu App",
-    path: "/meu-app"
-  }
 ];
 
 const bottomItems: MenuItem[] = [
@@ -153,8 +139,8 @@ const bottomItems: MenuItem[] = [
     icon: Settings,
     label: "Configurações",
     path: "/configuracoes",
-    allowedRoles: ["pastor"]
-  }
+    allowedRoles: ["pastor"],
+  },
 ];
 
 export function Sidebar() {
@@ -169,29 +155,15 @@ export function Sidebar() {
 
   const userRoles = useMemo(() => {
     if (!roles) return [];
+
     return roles.map((r: any) => r.role);
   }, [roles]);
 
-  // BOTÃO REDE
-  const hasNetworkAccess = true;
-
-  // PERMISSÕES
-  const perms = useMemo(() => {
-    const all = (roles || []) as Array<{
-      role: string;
-      permissions?: string[] | null;
-    }>;
-
-    const set = new Set<string>();
-
-    for (const r of all) {
-      (r.permissions ?? defaultPermissionsFor(r.role)).forEach((p) =>
-        set.add(p)
-      );
-    }
-
-    return set;
-  }, [roles]);
+  // MOSTRA O BOTÃO DA REDE
+  const hasNetworkAccess =
+    userRoles.includes("network_admin") ||
+    userRoles.includes("network_finance") ||
+    userRoles.includes("pastor");
 
   if (loadingRoles) {
     return (
@@ -203,41 +175,21 @@ export function Sidebar() {
 
   const hideFinancial = !!(profile as any)?.hide_financial;
 
-  const FINANCE_MODULES: ModuleKey[] = [
-    "financeiro",
-    "patrimonio",
-    "tesouraria"
-  ];
+  const menuItems = allMenuItems.filter((item) => {
+    if (!item.allowedRoles) return true;
 
-  const menuItems = useMemo(() => {
-    let base = allMenuItems;
+    return item.allowedRoles.some((role) =>
+      userRoles.includes(role)
+    );
+  });
 
-    if (!userRoles.includes("pastor")) {
-      base = base.filter((item) => {
-        if (!item.allowedRoles) return true;
-
-        return item.allowedRoles.some((role) =>
-          userRoles.includes(role)
-        );
-      });
-    }
-
-    if (!userRoles.includes("pastor")) {
-      base = base.filter(
-        (item) => !item.module || perms.has(item.module)
-      );
-    }
-
-    if (hideFinancial) {
-      base = base.filter(
+  const filteredMenuItems = hideFinancial
+    ? menuItems.filter(
         (item) =>
-          !item.module ||
-          !FINANCE_MODULES.includes(item.module)
-      );
-    }
-
-    return base;
-  }, [userRoles, perms, hideFinancial]);
+          item.path !== "/financeiro" &&
+          item.path !== "/patrimonio"
+      )
+    : menuItems;
 
   const handleSignOut = async () => {
     await signOut();
@@ -247,8 +199,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col",
-        "overflow-hidden",
+        "fixed left-0 top-0 z-40 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col overflow-hidden",
         collapsed ? "w-20" : "w-64"
       )}
     >
@@ -309,8 +260,7 @@ export function Sidebar() {
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-lg transition-all mb-2",
               "bg-primary/10 hover:bg-primary/20 text-primary font-medium",
-              location.pathname === "/rede" &&
-                "bg-primary/20",
+              location.pathname === "/rede" && "bg-primary/20",
               collapsed && "justify-center"
             )}
           >
@@ -320,7 +270,7 @@ export function Sidebar() {
           </Link>
         )}
 
-        {menuItems.map((item) => {
+        {filteredMenuItems.map((item) => {
           const isActive = location.pathname === item.path;
 
           return (
