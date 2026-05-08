@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { cn } from "@/lib/utils";
@@ -11,7 +10,7 @@ import { Loader2 } from "lucide-react";
 import { useChurchBranding } from "@/hooks/useChurchBranding";
 import { APP_BRAND_LOGO, APP_BRAND_NAME } from "@/lib/brand";
 import { TrialBanner } from "@/components/subscription/TrialBanner";
-import { pathAllowedByPermissions } from "@/lib/permissions";
+import { pathAllowedByPermissions, defaultPermissionsFor } from "@/lib/permissions";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -20,32 +19,11 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, isLoading, hasNoChurch, roles, isAdmin } = useAuth();
+  const { user, isLoading, hasNoChurch, roles } = useAuth();
   const location = useLocation();
   const { isSuperAdmin } = useSuperAdmin();
 
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [loadingRole, setLoadingRole] = useState(true);
-
   useChurchBranding();
-
-  // 🔥 CARREGA ROLE
-  useEffect(() => {
-    const loadRole = async () => {
-      if (!user) return;
-
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .single();
-
-      setUserRole(data?.role || null);
-      setLoadingRole(false);
-    };
-
-    loadRole();
-  }, [user]);
 
   // 🔄 LOADING GERAL
   if (isLoading) {
@@ -69,15 +47,6 @@ export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
     return <Navigate to="/login" replace />;
   }
 
-  // 🔄 AGUARDANDO ROLE
-  if (loadingRole) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    );
-  }
-
   // 🚫 BLOQUEIO POR IGREJA
   if (hasNoChurch && requireChurch) {
     if (isSuperAdmin) {
@@ -86,23 +55,16 @@ export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
     return <Navigate to="/registro" replace />;
   }
 
-  // 🔥 PROTEÇÃO GLOBAL DO TESOUREIRO
-  if (userRole === "tesoureiro") {
-    const path = window.location.pathname;
-
-    if (!path.startsWith("/app/tesouraria")) {
-      return <Navigate to="/app/tesouraria" replace />;
-    }
-  }
-
   // 🔒 PROTEÇÃO POR PERMISSIONS GRANULARES (não bloqueia rotas neutras)
-  const NEUTRAL_PATHS = ["/meu-app", "/perfil", "/configuracoes", "/app/tesouraria"];
+  const NEUTRAL_PATHS = ["/meu-app", "/perfil"];
   const isNeutral = NEUTRAL_PATHS.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"));
-  if (!isAdmin() && !isNeutral && roles && roles.length > 0) {
-    const hasLegacy = roles.some((r: any) => r.permissions == null);
-    if (!hasLegacy) {
-      const allPerms = Array.from(new Set(roles.flatMap((r: any) => r.permissions || [])));
-      if (!pathAllowedByPermissions(location.pathname, allPerms)) {
+  if (!isSuperAdmin && !isNeutral && roles && roles.length > 0) {
+    const hasPastor = roles.some((r: any) => r.role === "pastor");
+    if (!hasPastor) {
+      const allPerms = Array.from(new Set(roles.flatMap((r: any) => r.permissions ?? defaultPermissionsFor(r.role))));
+      const isNetworkPath = location.pathname === "/rede" || location.pathname.startsWith("/rede/");
+      const hasNetworkAccess = roles.some((r: any) => ["network_admin", "network_finance"].includes(r.role));
+      if ((!isNetworkPath || !hasNetworkAccess) && !pathAllowedByPermissions(location.pathname, allPerms)) {
         return <Navigate to="/meu-app" replace />;
       }
     }
