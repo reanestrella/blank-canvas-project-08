@@ -160,7 +160,9 @@ export function Sidebar() {
   }, [roles]);
 
   // MOSTRA O BOTÃO DA REDE
- const hasNetworkAccess = true;
+ const hasNetworkAccess =
+  userRoles.includes("network_admin") ||
+  userRoles.includes("network_finance");
 
   if (loadingRoles) {
     return (
@@ -252,14 +254,15 @@ export function Sidebar() {
 <div className="text-red-500">
   TESTE REDE
 </div>
-       <Link
-  to="/rede"
-  className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-500 text-white"
->
-  <Network className="w-5 h-5" />
-
-  <span>Painel Rede</span>
-</Link>
+      {hasNetworkAccess && (
+  <Link
+    to="/rede"
+    className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-500 text-white"
+  >
+    <Network className="w-5 h-5" />
+    <span>Painel Rede</span>
+  </Link>
+)}
 
         {filteredMenuItems.map((item) => {
           const isActive = location.pathname === item.path;
