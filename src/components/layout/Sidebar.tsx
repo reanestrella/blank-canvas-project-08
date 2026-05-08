@@ -251,9 +251,6 @@ export function Sidebar() {
 
       {/* MENU */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-<div className="text-red-500">
-  TESTE REDE
-</div>
       {hasNetworkAccess && (
   <Link
     to="/rede"
