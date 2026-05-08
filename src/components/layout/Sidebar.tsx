@@ -88,7 +88,7 @@ export function Sidebar() {
   }, [roles]);
 
   // ACESSO À REDE
-  const hasNetworkAccess = useMemo(() => {
+  const hasNetworkAccess = true; => {
     return (
       userRoles.includes("network_admin") ||
       userRoles.includes("network_finance")
