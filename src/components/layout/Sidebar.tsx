@@ -88,7 +88,6 @@ export function Sidebar() {
   }, [roles]);
 
   // ACESSO À REDE
-// ACESSO À REDE
 const hasNetworkAccess = true;
 
 const perms = useMemo(() => {
