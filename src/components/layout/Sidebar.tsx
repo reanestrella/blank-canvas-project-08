@@ -88,11 +88,7 @@ export function Sidebar() {
   }, [roles]);
 
   // ACESSO À REDE
- const userRoles = useMemo(() => {
-  if (!roles) return [];
-  return roles.map((r: any) => r.role);
-}, [roles]);
-
+// ACESSO À REDE
 const hasNetworkAccess = true;
  
   // Permissions agregadas: null legado usa default da função, não libera tudo.
