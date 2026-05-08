@@ -90,6 +90,8 @@ export function Sidebar() {
   // ACESSO À REDE
 // ACESSO À REDE
 const hasNetworkAccess = true;
+
+const perms = useMemo(() => {
  
   // Permissions agregadas: null legado usa default da função, não libera tudo.
   const perms = useMemo(() => {
