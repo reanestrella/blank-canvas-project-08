@@ -1,3 +1,4 @@
+```tsx id="k9x2qm"
 import { useState, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -14,10 +15,8 @@ import {
   ChevronRight,
   Church,
   LogOut,
-  Crown,
   Handshake,
   Bell,
-  Shield,
   Sparkles,
   Package,
   Smartphone,
@@ -28,7 +27,6 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Loader2 } from "lucide-react";
 import { defaultPermissionsFor, type ModuleKey } from "@/lib/permissions";
 
@@ -52,33 +50,120 @@ interface MenuItem {
 }
 
 const allMenuItems: MenuItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/app", module: "dashboard", allowedRoles: ["pastor"] },
-  { icon: Users, label: "Secretaria", path: "/secretaria", module: "secretaria", allowedRoles: ["pastor", "secretario", "consolidacao"] },
-  { icon: Heart, label: "Ministérios", path: "/ministerios", module: "ministerios", allowedRoles: ["pastor", "lider_ministerio"] },
-  { icon: Grid3X3, label: "Células", path: "/celulas", module: "celulas", allowedRoles: ["pastor", "lider_celula", "consolidacao", "secretario"] },
-  { icon: Handshake, label: "Consolidação", path: "/consolidacao", module: "consolidacao", allowedRoles: ["pastor", "consolidacao"] },
-  { icon: GraduationCap, label: "Ensino", path: "/ensino", module: "ensino", allowedRoles: ["pastor", "secretario"] },
-  { icon: DollarSign, label: "Financeiro", path: "/financeiro", module: "financeiro", allowedRoles: ["pastor", "tesoureiro"] },
-  { icon: Calendar, label: "Eventos", path: "/eventos", module: "eventos", allowedRoles: ["pastor", "secretario"] },
-  { icon: HeartHandshake, label: "Gestão Pastoral", path: "/gestao-pastoral", module: "gestao_pastoral", allowedRoles: ["pastor"] },
-  { icon: Bell, label: "Lembretes", path: "/lembretes", module: "lembretes", allowedRoles: ["pastor", "secretario"] },
-  { icon: Sparkles, label: "Assistente", path: "/assistente", module: "assistente", allowedRoles: ["pastor"] },
-  { icon: Package, label: "Patrimônio", path: "/patrimonio", module: "patrimonio", allowedRoles: ["pastor", "tesoureiro"] },
-  { icon: User, label: "Meu App", path: "/meu-app" },
-  { icon: Smartphone, label: "Gestão App", path: "/gestao-app", module: "gestao_app", allowedRoles: ["pastor"] },
+  {
+    icon: LayoutDashboard,
+    label: "Dashboard",
+    path: "/app",
+    module: "dashboard",
+    allowedRoles: ["pastor"]
+  },
+  {
+    icon: Users,
+    label: "Secretaria",
+    path: "/secretaria",
+    module: "secretaria",
+    allowedRoles: ["pastor", "secretario", "consolidacao"]
+  },
+  {
+    icon: Heart,
+    label: "Ministérios",
+    path: "/ministerios",
+    module: "ministerios",
+    allowedRoles: ["pastor", "lider_ministerio"]
+  },
+  {
+    icon: Grid3X3,
+    label: "Células",
+    path: "/celulas",
+    module: "celulas",
+    allowedRoles: ["pastor", "lider_celula", "consolidacao", "secretario"]
+  },
+  {
+    icon: Handshake,
+    label: "Consolidação",
+    path: "/consolidacao",
+    module: "consolidacao",
+    allowedRoles: ["pastor", "consolidacao"]
+  },
+  {
+    icon: GraduationCap,
+    label: "Ensino",
+    path: "/ensino",
+    module: "ensino",
+    allowedRoles: ["pastor", "secretario"]
+  },
+  {
+    icon: DollarSign,
+    label: "Financeiro",
+    path: "/financeiro",
+    module: "financeiro",
+    allowedRoles: ["pastor", "tesoureiro"]
+  },
+  {
+    icon: Calendar,
+    label: "Eventos",
+    path: "/eventos",
+    module: "eventos",
+    allowedRoles: ["pastor", "secretario"]
+  },
+  {
+    icon: HeartHandshake,
+    label: "Gestão Pastoral",
+    path: "/gestao-pastoral",
+    module: "gestao_pastoral",
+    allowedRoles: ["pastor"]
+  },
+  {
+    icon: Bell,
+    label: "Lembretes",
+    path: "/lembretes",
+    module: "lembretes",
+    allowedRoles: ["pastor", "secretario"]
+  },
+  {
+    icon: Sparkles,
+    label: "Assistente",
+    path: "/assistente",
+    module: "assistente",
+    allowedRoles: ["pastor"]
+  },
+  {
+    icon: Package,
+    label: "Patrimônio",
+    path: "/patrimonio",
+    module: "patrimonio",
+    allowedRoles: ["pastor", "tesoureiro"]
+  },
+  {
+    icon: Smartphone,
+    label: "Gestão App",
+    path: "/gestao-app",
+    module: "gestao_app",
+    allowedRoles: ["pastor"]
+  },
+  {
+    icon: User,
+    label: "Meu App",
+    path: "/meu-app"
+  }
 ];
 
 const bottomItems: MenuItem[] = [
-  { icon: Settings, label: "Configurações", path: "/configuracoes", allowedRoles: ["pastor"] },
+  {
+    icon: Settings,
+    label: "Configurações",
+    path: "/configuracoes",
+    allowedRoles: ["pastor"]
+  }
 ];
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+
   const location = useLocation();
   const navigate = useNavigate();
 
   const { church, signOut, roles, profile } = useAuth();
-  const { isSuperAdmin } = useSuperAdmin();
 
   const loadingRoles = !roles;
 
@@ -87,11 +172,10 @@ export function Sidebar() {
     return roles.map((r: any) => r.role);
   }, [roles]);
 
-  ```tsx id="q8v2nc"
-  // ACESSO À REDE
+  // BOTÃO REDE
   const hasNetworkAccess = true;
 
-  // Permissions agregadas
+  // PERMISSÕES
   const perms = useMemo(() => {
     const all = (roles || []) as Array<{
       role: string;
@@ -138,12 +222,12 @@ export function Sidebar() {
       });
     }
 
-    // permissions granulares / defaults por função
     if (!userRoles.includes("pastor")) {
-      base = base.filter((item) => !item.module || perms.has(item.module));
+      base = base.filter(
+        (item) => !item.module || perms.has(item.module)
+      );
     }
 
-    // esconder financeiro
     if (hideFinancial) {
       base = base.filter(
         (item) =>
@@ -153,11 +237,7 @@ export function Sidebar() {
     }
 
     return base;
-  }, [
-    userRoles,
-    perms,
-    hideFinancial
-  ]);
+  }, [userRoles, perms, hideFinancial]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -289,3 +369,4 @@ export function Sidebar() {
     </aside>
   );
 }
+```
