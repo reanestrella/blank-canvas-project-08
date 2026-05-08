@@ -1,9 +1,10 @@
-import { Navigate, Link } from "react-router-dom";
+import { Navigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, ShieldX } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { defaultPermissionsFor, pathAllowedByPermissions } from "@/lib/permissions";
 
 type AppRole = "pastor" | "tesoureiro" | "secretario" | "lider_celula" | "lider_ministerio" | "consolidacao" | "membro";
 
@@ -17,7 +18,8 @@ interface RequireAnyRoleProps {
  * Admin/pastor always passes. Shows "sem permissão" UI if unauthorized.
  */
 export function RequireAnyRole({ allowedRoles, children }: RequireAnyRoleProps) {
-  const { roles, isAdmin, isLoading, user, currentChurchId } = useAuth();
+  const { roles, isLoading, user } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -31,13 +33,16 @@ export function RequireAnyRole({ allowedRoles, children }: RequireAnyRoleProps) 
     return <Navigate to="/login" replace />;
   }
 
-  // Admin/pastor always have access
-  if (isAdmin()) {
+  // Somente pastor tem passe livre. Secretário/tesoureiro seguem permissões granulares.
+  if (roles.some((r) => r.role === "pastor")) {
     return <>{children}</>;
   }
 
   const userRoles = roles.map(r => r.role);
-  const hasAccess = allowedRoles.some(role => userRoles.includes(role));
+  const roleAllows = allowedRoles.some(role => userRoles.includes(role));
+  const allPerms = Array.from(new Set(roles.flatMap((r: any) => r.permissions ?? defaultPermissionsFor(r.role))));
+  const permissionAllows = pathAllowedByPermissions(location.pathname, allPerms);
+  const hasAccess = roleAllows && permissionAllows;
 
   console.log("[RequireAnyRole] userRoles:", userRoles, "allowedRoles:", allowedRoles, "hasAccess:", hasAccess);
 
