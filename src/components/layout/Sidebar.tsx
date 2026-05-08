@@ -252,22 +252,14 @@ export function Sidebar() {
 <div className="text-red-500">
   TESTE REDE
 </div>
-        {/* PAINEL REDE */}
-        {hasNetworkAccess && (
-          <Link
-            to="/rede"
-            className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-lg transition-all mb-2",
-              "bg-primary/10 hover:bg-primary/20 text-primary font-medium",
-              location.pathname === "/rede" && "bg-primary/20",
-              collapsed && "justify-center"
-            )}
-          >
-            <Network className="w-5 h-5 flex-shrink-0" />
+       <Link
+  to="/rede"
+  className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-500 text-white"
+>
+  <Network className="w-5 h-5" />
 
-            {!collapsed && <span>Painel Rede</span>}
-          </Link>
-        )}
+  <span>Painel Rede</span>
+</Link>
 
         {filteredMenuItems.map((item) => {
           const isActive = location.pathname === item.path;
