@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Loader2 } from "lucide-react";
-import { MODULE_PATH, type ModuleKey } from "@/lib/permissions";
+import { defaultPermissionsFor, type ModuleKey } from "@/lib/permissions";
 
 type AppRole =
   | "pastor"
@@ -77,7 +77,7 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { church, signOut, roles, isAdmin, profile } = useAuth();
+  const { church, signOut, roles, profile } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
 
   const loadingRoles = !roles;
@@ -95,18 +95,16 @@ export function Sidebar() {
     );
   }, [userRoles]);
 
-  // Permissions agregadas
-  const { perms, hasLegacy } = useMemo(() => {
-    const all = (roles || []) as Array<{ permissions?: string[] | null }>;
-    const legacy = all.some((r) => r.permissions == null);
-
+  // Permissions agregadas: null legado usa default da função, não libera tudo.
+  const perms = useMemo(() => {
+    const all = (roles || []) as Array<{ role: string; permissions?: string[] | null }>;
     const set = new Set<string>();
 
     for (const r of all) {
-      (r.permissions || []).forEach((p) => set.add(p));
+      (r.permissions ?? defaultPermissionsFor(r.role)).forEach((p) => set.add(p));
     }
 
-    return { perms: set, hasLegacy: legacy };
+    return set;
   }, [roles]);
 
   if (loadingRoles) {
@@ -128,7 +126,7 @@ export function Sidebar() {
   const menuItems = useMemo(() => {
     let base = allMenuItems;
 
-    if (!isAdmin()) {
+    if (!userRoles.includes("pastor")) {
       base = base.filter((item) => {
         if (!item.allowedRoles) return true;
 
@@ -138,11 +136,9 @@ export function Sidebar() {
       });
     }
 
-    // permissions granulares
-    if (!hasLegacy) {
-      base = base.filter(
-        (item) => !item.module || perms.has(item.module)
-      );
+    // permissions granulares / defaults por função
+    if (!userRoles.includes("pastor")) {
+      base = base.filter((item) => !item.module || perms.has(item.module));
     }
 
     // esconder financeiro
@@ -157,9 +153,7 @@ export function Sidebar() {
     return base;
   }, [
     userRoles,
-    isAdmin,
     perms,
-    hasLegacy,
     hideFinancial
   ]);
 
