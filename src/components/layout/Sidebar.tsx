@@ -1,3 +1,6 @@
+<div className="text-red-500 text-2xl">
+TESTE SIDEBAR
+</div>
 import { useState, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
