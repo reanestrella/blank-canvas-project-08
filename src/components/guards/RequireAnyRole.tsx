@@ -42,7 +42,7 @@ export function RequireAnyRole({ allowedRoles, children }: RequireAnyRoleProps) 
   const roleAllows = allowedRoles.some(role => userRoles.includes(role));
   const allPerms = Array.from(new Set(roles.flatMap((r: any) => r.permissions ?? defaultPermissionsFor(r.role))));
   const permissionAllows = pathAllowedByPermissions(location.pathname, allPerms);
-  const hasAccess = roleAllows && permissionAllows;
+  const hasAccess = permissionAllows || (roleAllows && allPerms.length === 0);
 
   console.log("[RequireAnyRole] userRoles:", userRoles, "allowedRoles:", allowedRoles, "hasAccess:", hasAccess);
 
