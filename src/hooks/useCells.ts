@@ -83,17 +83,38 @@ export function useCells(churchId?: string, leaderUserId?: string | null) {
       setIsLoading(true);
 
       if (leaderUserId) {
-        // Cell leader: filter by leader_user_id (auth uid)
-        // Also try by member_id match in case leader_user_id wasn't synced
-        const { data, error } = await supabase
-          .from("cells")
-          .select("*")
+        // Líder de célula: prioriza vínculos N:N em cell_leaders, com fallback legado.
+        const { data: linkedRows, error: linkError } = await supabase
+          .from("cell_leaders" as any)
+          .select("cell_id")
           .eq("church_id", churchId)
-          .eq("leader_user_id", leaderUserId)
-          .order("name");
-        if (error) throw error;
-        
-        let result = (data as Cell[]) || [];
+          .eq("user_id", leaderUserId);
+        if (linkError) throw linkError;
+
+        const linkedCellIds = ((linkedRows as any[]) || []).map((r) => r.cell_id).filter(Boolean);
+        let result: Cell[] = [];
+
+        if (linkedCellIds.length > 0) {
+          const { data, error } = await supabase
+            .from("cells")
+            .select("*")
+            .eq("church_id", churchId)
+            .in("id", linkedCellIds)
+            .order("name");
+          if (error) throw error;
+          result = (data as Cell[]) || [];
+        }
+
+        if (result.length === 0) {
+          const { data, error } = await supabase
+            .from("cells")
+            .select("*")
+            .eq("church_id", churchId)
+            .eq("leader_user_id", leaderUserId)
+            .order("name");
+          if (error) throw error;
+          result = (data as Cell[]) || [];
+        }
         
         // Fallback: if no cells found by leader_user_id, try via profile.member_id → cells.leader_id
         if (result.length === 0) {
@@ -169,7 +190,17 @@ export function useCells(churchId?: string, leaderUserId?: string | null) {
 
       // Cell leader: only show reports for their own cells
       if (leaderUserId) {
-        query = query.eq("cell.leader_user_id", leaderUserId);
+        const { data: linkedRows } = await supabase
+          .from("cell_leaders" as any)
+          .select("cell_id")
+          .eq("church_id", churchId)
+          .eq("user_id", leaderUserId);
+        const linkedCellIds = ((linkedRows as any[]) || []).map((r) => r.cell_id).filter(Boolean);
+        if (linkedCellIds.length > 0) {
+          query = query.in("cell_id", linkedCellIds);
+        } else {
+          query = query.eq("cell.leader_user_id", leaderUserId);
+        }
       }
       
       const { data, error } = await query;
