@@ -1,6 +1,3 @@
-<div className="text-red-500 text-2xl">
-TESTE SIDEBAR
-</div>
 import { useState, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -163,10 +160,7 @@ export function Sidebar() {
   }, [roles]);
 
   // MOSTRA O BOTÃO DA REDE
-  const hasNetworkAccess =
-    userRoles.includes("network_admin") ||
-    userRoles.includes("network_finance") ||
-    userRoles.includes("pastor");
+ const hasNetworkAccess = true;
 
   if (loadingRoles) {
     return (
@@ -255,7 +249,9 @@ export function Sidebar() {
 
       {/* MENU */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-
+<div className="text-red-500">
+  TESTE REDE
+</div>
         {/* PAINEL REDE */}
         {hasNetworkAccess && (
           <Link
