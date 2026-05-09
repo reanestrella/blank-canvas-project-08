@@ -219,7 +219,7 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="list">Escalas</TabsTrigger>
-            <TabsTrigger value="new">Nova Escala</TabsTrigger>
+            <TabsTrigger value="new">{editingScheduleId ? "Editar Escala" : "Nova Escala"}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="list" className="flex-1 overflow-hidden flex flex-col mt-4">
