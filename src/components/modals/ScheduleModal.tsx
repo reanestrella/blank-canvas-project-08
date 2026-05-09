@@ -20,7 +20,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Check, Loader2, Plus, Trash2, UserPlus, X, Music, ExternalLink } from "lucide-react";
+import { Calendar, Check, Loader2, Plus, Trash2, UserPlus, X, Music, ExternalLink, Pencil } from "lucide-react";
 import { useMinistrySchedules, useScheduleVolunteers } from "@/hooks/useMinistrySchedules";
 import { useMinistryVolunteers } from "@/hooks/useMinistryVolunteers";
 import { useMinistryRoles } from "@/hooks/useMinistryRoles";
