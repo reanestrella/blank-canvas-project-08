@@ -149,18 +149,29 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
       form.reset();
       setSelectedSchedule(null);
       setActiveTab("list");
+      setEditingScheduleId(null);
     }
   }, [open, form]);
 
+  const startEditSchedule = (s: any) => {
+    setEditingScheduleId(s.id);
+    form.reset({ event_name: s.event_name, event_date: s.event_date, notes: s.notes || "" });
+    setActiveTab("new");
+  };
+
   const handleSubmit = async (data: ScheduleFormData) => {
     setIsSubmitting(true);
-    const result = await createSchedule({
+    const payload = {
       event_name: data.event_name,
       event_date: data.event_date,
       notes: data.notes || undefined,
-    });
+    };
+    const result = editingScheduleId
+      ? await updateSchedule(editingScheduleId, payload)
+      : await createSchedule(payload);
     if (!result.error) {
       form.reset();
+      setEditingScheduleId(null);
       setActiveTab("list");
     }
     setIsSubmitting(false);
