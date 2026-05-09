@@ -20,7 +20,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Check, Loader2, Plus, Trash2, UserPlus, X, Music, ExternalLink } from "lucide-react";
+import { Calendar, Check, Loader2, Plus, Trash2, UserPlus, X, Music, ExternalLink, Pencil } from "lucide-react";
 import { useMinistrySchedules, useScheduleVolunteers } from "@/hooks/useMinistrySchedules";
 import { useMinistryVolunteers } from "@/hooks/useMinistryVolunteers";
 import { useMinistryRoles } from "@/hooks/useMinistryRoles";
@@ -59,7 +59,8 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
 
   const isWorshipMinistry = /louvor|worship|music/i.test(ministryName);
 
-  const { schedules, isLoading, createSchedule, deleteSchedule } = useMinistrySchedules(open ? ministryId : undefined);
+  const { schedules, isLoading, createSchedule, updateSchedule, deleteSchedule } = useMinistrySchedules(open ? ministryId : undefined);
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const { volunteers: ministryVolunteers } = useMinistryVolunteers(open ? ministryId : undefined);
   const { roles: ministryRoles, roleMembers } = useMinistryRoles(
     open ? ministryId : undefined,
@@ -148,18 +149,29 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
       form.reset();
       setSelectedSchedule(null);
       setActiveTab("list");
+      setEditingScheduleId(null);
     }
   }, [open, form]);
 
+  const startEditSchedule = (s: any) => {
+    setEditingScheduleId(s.id);
+    form.reset({ event_name: s.event_name, event_date: s.event_date, notes: s.notes || "" });
+    setActiveTab("new");
+  };
+
   const handleSubmit = async (data: ScheduleFormData) => {
     setIsSubmitting(true);
-    const result = await createSchedule({
+    const payload = {
       event_name: data.event_name,
       event_date: data.event_date,
       notes: data.notes || undefined,
-    });
+    };
+    const result = editingScheduleId
+      ? await updateSchedule(editingScheduleId, payload)
+      : await createSchedule(payload);
     if (!result.error) {
       form.reset();
+      setEditingScheduleId(null);
       setActiveTab("list");
     }
     setIsSubmitting(false);
@@ -207,7 +219,7 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="list">Escalas</TabsTrigger>
-            <TabsTrigger value="new">Nova Escala</TabsTrigger>
+            <TabsTrigger value="new">{editingScheduleId ? "Editar Escala" : "Nova Escala"}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="list" className="flex-1 overflow-hidden flex flex-col mt-4">
@@ -253,13 +265,24 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
                                   </p>
                                 )}
                               </div>
-                              <Button
-                                variant="ghost" size="icon"
-                                className="h-6 w-6 text-destructive hover:bg-destructive/10"
-                                onClick={(e) => { e.stopPropagation(); deleteSchedule(schedule.id); if (selectedSchedule === schedule.id) setSelectedSchedule(null); }}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost" size="icon"
+                                  className="h-6 w-6"
+                                  onClick={(e) => { e.stopPropagation(); startEditSchedule(schedule); }}
+                                  title="Editar escala"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost" size="icon"
+                                  className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                                  onClick={(e) => { e.stopPropagation(); if (confirm("Excluir esta escala?")) { deleteSchedule(schedule.id); if (selectedSchedule === schedule.id) setSelectedSchedule(null); } }}
+                                  title="Excluir escala"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
                             </div>
                             {/* Show assigned volunteers with roles */}
                             {schedule.volunteers && schedule.volunteers.length > 0 && (
@@ -519,10 +542,10 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
                   </FormItem>
                 )} />
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setActiveTab("list")}>Cancelar</Button>
+                  <Button type="button" variant="outline" onClick={() => { setEditingScheduleId(null); form.reset(); setActiveTab("list"); }}>Cancelar</Button>
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-                    Criar Escala
+                    {editingScheduleId ? "Salvar Alterações" : "Criar Escala"}
                   </Button>
                 </DialogFooter>
               </form>
