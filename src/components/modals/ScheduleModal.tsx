@@ -542,10 +542,10 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
                   </FormItem>
                 )} />
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setActiveTab("list")}>Cancelar</Button>
+                  <Button type="button" variant="outline" onClick={() => { setEditingScheduleId(null); form.reset(); setActiveTab("list"); }}>Cancelar</Button>
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-                    Criar Escala
+                    {editingScheduleId ? "Salvar Alterações" : "Criar Escala"}
                   </Button>
                 </DialogFooter>
               </form>
