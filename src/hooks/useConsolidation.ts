@@ -93,7 +93,8 @@ export function useConsolidation(churchId?: string) {
         .single();
       if (error) throw error;
       setRecords((prev) => [newRecord as ConsolidationRecord, ...prev]);
-      toast({ title: "Consolidação iniciada!" });
+      // Initial sync (in case stage was set on creation)
+      await syncMemberFromRecord(newRecord as ConsolidationRecord);
       return { data: newRecord, error: null };
     } catch (error: any) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
