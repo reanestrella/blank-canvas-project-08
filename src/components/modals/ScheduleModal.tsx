@@ -265,13 +265,24 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
                                   </p>
                                 )}
                               </div>
-                              <Button
-                                variant="ghost" size="icon"
-                                className="h-6 w-6 text-destructive hover:bg-destructive/10"
-                                onClick={(e) => { e.stopPropagation(); deleteSchedule(schedule.id); if (selectedSchedule === schedule.id) setSelectedSchedule(null); }}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost" size="icon"
+                                  className="h-6 w-6"
+                                  onClick={(e) => { e.stopPropagation(); startEditSchedule(schedule); }}
+                                  title="Editar escala"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost" size="icon"
+                                  className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                                  onClick={(e) => { e.stopPropagation(); if (confirm("Excluir esta escala?")) { deleteSchedule(schedule.id); if (selectedSchedule === schedule.id) setSelectedSchedule(null); } }}
+                                  title="Excluir escala"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
                             </div>
                             {/* Show assigned volunteers with roles */}
                             {schedule.volunteers && schedule.volunteers.length > 0 && (
