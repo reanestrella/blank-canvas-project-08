@@ -101,6 +101,33 @@ export function useConsolidation(churchId?: string) {
     }
   };
 
+  // Map consolidation stage -> member.spiritual_status (Dashboard/Secretaria sync)
+  const stageToSpiritualStatus = (stage?: ConsolidationStage | null): string | null => {
+    switch (stage) {
+      case "visitante": return "visitante";
+      case "decidido":
+      case "em_consolidacao": return "novo_convertido";
+      case "consolidado":
+      case "batizado": return "membro";
+      default: return null;
+    }
+  };
+
+  const syncMemberFromRecord = async (rec: ConsolidationRecord) => {
+    try {
+      const newStatus = stageToSpiritualStatus(rec.stage);
+      const memberUpdate: any = {};
+      if (newStatus) memberUpdate.spiritual_status = newStatus;
+      if (rec.stage === "batizado" && rec.baptism_date) memberUpdate.baptism_date = rec.baptism_date;
+      if (rec.stage === "decidido" && rec.decision_date) memberUpdate.conversion_date = rec.decision_date;
+      if (Object.keys(memberUpdate).length > 0) {
+        await supabase.from("members").update(memberUpdate).eq("id", rec.member_id);
+      }
+    } catch (e) {
+      console.warn("[Consolidation] member sync failed:", e);
+    }
+  };
+
   const updateRecord = async (id: string, data: Partial<CreateConsolidationData>) => {
     try {
       const { data: updated, error } = await supabase
@@ -115,7 +142,8 @@ export function useConsolidation(churchId?: string) {
         .single();
       if (error) throw error;
       setRecords((prev) => prev.map((r) => (r.id === id ? (updated as ConsolidationRecord) : r)));
-      toast({ title: "Consolidação atualizada!" });
+      // Silent member sync — keeps Dashboard/Secretaria aligned with stage
+      await syncMemberFromRecord(updated as ConsolidationRecord);
       return { data: updated, error: null };
     } catch (error: any) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
