@@ -59,7 +59,8 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
 
   const isWorshipMinistry = /louvor|worship|music/i.test(ministryName);
 
-  const { schedules, isLoading, createSchedule, deleteSchedule } = useMinistrySchedules(open ? ministryId : undefined);
+  const { schedules, isLoading, createSchedule, updateSchedule, deleteSchedule } = useMinistrySchedules(open ? ministryId : undefined);
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const { volunteers: ministryVolunteers } = useMinistryVolunteers(open ? ministryId : undefined);
   const { roles: ministryRoles, roleMembers } = useMinistryRoles(
     open ? ministryId : undefined,
