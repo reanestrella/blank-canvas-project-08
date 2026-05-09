@@ -165,7 +165,7 @@ export function useConsolidation(churchId?: string) {
       const { error } = await supabase.from("consolidation_records").delete().eq("id", id);
       if (error) throw error;
       setRecords((prev) => prev.filter((r) => r.id !== id));
-      toast({ title: "Registro removido!" });
+      
       return { error: null };
     } catch (error: any) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
