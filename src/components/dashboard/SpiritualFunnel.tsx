@@ -60,7 +60,7 @@ export function SpiritualFunnel() {
           .limit(5000),
       ]);
       if (cancelled) return;
-      setRecords((r.data as Row[]) || []);
+      setRecords(((r.data as any[]) || []).map(x => ({ ...x, member: Array.isArray(x.member) ? x.member[0] : x.member })) as Row[]);
       setMembers(m.data || []);
       setIsLoading(false);
     })();
