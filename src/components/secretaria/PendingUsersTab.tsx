@@ -94,6 +94,7 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
         phone: pu.phone,
         birth_date: pu.birth_date,
         spiritual_status: pu.tipo === "visitante" ? "visitante" : "membro",
+        user_id: (pu as any).user_id ?? null,
         congregation_id: pu.congregation_id || null,
         is_active: true,
       }).select().single();

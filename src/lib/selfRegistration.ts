@@ -31,7 +31,7 @@ export function getRegistrationBinding(user?: Pick<User, "email" | "user_metadat
       emailPrefix,
     phone: asNonEmptyString(metadata.phone),
     birthDate: asNonEmptyString(metadata.birth_date),
-    tipo: asNonEmptyString(metadata.tipo) ?? "visitante",
+    tipo: asNonEmptyString(metadata.tipo) ?? "membro",
   };
 }
 
@@ -57,7 +57,7 @@ export async function syncSelfRegistrationProfile(
   const fullName = options.fullName ?? binding.fullName ?? "Usuário";
   const phone = options.phone ?? binding.phone;
   const birthDate = options.birthDate ?? binding.birthDate;
-  const tipo = options.tipo ?? binding.tipo ?? "visitante";
+  const tipo = options.tipo ?? binding.tipo ?? "membro";
   const registrationStatus = existingProfile?.registration_status ?? options.registrationStatus ?? "pendente";
   const isLinked = existingProfile?.is_linked ?? false;
 

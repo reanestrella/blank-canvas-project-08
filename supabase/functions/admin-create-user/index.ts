@@ -141,6 +141,7 @@ Deno.serve(async (req) => {
         full_name: full_name ?? email.split("@")[0],
         email,
         is_active: true,
+        spiritual_status: "membro",
       });
     }
 
