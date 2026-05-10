@@ -59,6 +59,14 @@ export default {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
         },
+        chart: {
+          visitante: "hsl(var(--chart-visitante))",
+          decidido: "hsl(var(--chart-decidido))",
+          consolidacao: "hsl(var(--chart-consolidacao))",
+          discipulado: "hsl(var(--chart-discipulado))",
+          batizado: "hsl(var(--chart-batizado))",
+          membro: "hsl(var(--chart-membro))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
