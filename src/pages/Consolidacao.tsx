@@ -29,11 +29,11 @@ import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFi
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
 const stageConfig: Record<ConsolidationStage, { label: string; color: string }> = {
-  visitante:       { label: "Visitante",        color: "bg-muted text-muted-foreground" },
-  decidido:        { label: "Decidido",         color: "bg-success/20 text-success" },
-  em_consolidacao: { label: "Em Consolidação",  color: "bg-secondary/20 text-secondary" },
-  consolidado:     { label: "Consolidado",      color: "bg-primary/20 text-primary" },
-  batizado:        { label: "Batizado",         color: "bg-info/20 text-info" },
+  visitante:       { label: "Visitante",        color: "bg-chart-visitante text-white" },
+  decidido:        { label: "Decidido",         color: "bg-chart-decidido text-white" },
+  em_consolidacao: { label: "Em Consolidação",  color: "bg-chart-consolidacao text-white" },
+  consolidado:     { label: "Consolidado",      color: "bg-chart-discipulado text-white" },
+  batizado:        { label: "Batizado",         color: "bg-chart-batizado text-white" },
 };
 
 const today = () => new Date().toISOString().split("T")[0];
