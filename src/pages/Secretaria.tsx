@@ -57,11 +57,11 @@ import { AppUsersTab } from "@/components/secretaria/AppUsersTab";
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
 
 const statusConfig = {
-  visitante: { label: "Visitante", color: "bg-muted text-muted-foreground" },
-  novo_convertido: { label: "Decidido", color: "bg-success/20 text-success" },
-  membro: { label: "Membro", color: "bg-primary/20 text-primary" },
-  lider: { label: "Líder", color: "bg-secondary/20 text-secondary" },
-  discipulador: { label: "Discipulador", color: "bg-info/20 text-info" },
+  visitante: { label: "Visitante", color: "bg-chart-visitante text-white" },
+  novo_convertido: { label: "Decidido", color: "bg-chart-decidido text-white" },
+  membro: { label: "Membro", color: "bg-chart-membro text-white" },
+  lider: { label: "Líder", color: "bg-chart-discipulado text-white" },
+  discipulador: { label: "Discipulador", color: "bg-chart-consolidacao text-white" },
 };
 
 const networkConfig: Record<string, { label: string; icon: any; color: string }> = {
