@@ -26,13 +26,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useConsolidation, ConsolidationRecord, ConsolidationStage } from "@/hooks/useConsolidation";
 import { useMembers } from "@/hooks/useMembers";
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
 const stageConfig: Record<ConsolidationStage, { label: string; color: string }> = {
-  visitante:       { label: "Visitante",        color: "bg-muted text-muted-foreground" },
-  decidido:        { label: "Decidido",         color: "bg-success/20 text-success" },
-  em_consolidacao: { label: "Em Consolidação",  color: "bg-secondary/20 text-secondary" },
-  consolidado:     { label: "Consolidado",      color: "bg-primary/20 text-primary" },
-  batizado:        { label: "Batizado",         color: "bg-info/20 text-info" },
+  visitante:       { label: "Visitante",        color: "bg-chart-visitante text-white" },
+  decidido:        { label: "Decidido",         color: "bg-chart-decidido text-white" },
+  em_consolidacao: { label: "Em Consolidação",  color: "bg-chart-consolidacao text-white" },
+  consolidado:     { label: "Consolidado",      color: "bg-chart-discipulado text-white" },
+  batizado:        { label: "Batizado",         color: "bg-chart-batizado text-white" },
 };
 
 const today = () => new Date().toISOString().split("T")[0];
@@ -109,30 +110,45 @@ export default function Consolidacao() {
     return d.getFullYear() === filterYear && d.getMonth() === filterMonth;
   };
 
-  const dashCounts = useMemo(() => {
-    const visit = members.filter(m => m.spiritual_status === "visitante").reduce((acc, m) => {
+  const dashPeople = useMemo(() => {
+    const allRecs = Array.from(recordByMember.values());
+    const visitantes = members.filter(m => {
+      if (m.spiritual_status !== "visitante") return false;
       const r = recordByMember.get(m.id);
       const d = r?.visit_date || (m as any).created_at?.split("T")[0];
-      return acc + (inPeriod(d) ? 1 : 0);
-    }, 0);
-    const allRecs = Array.from(recordByMember.values());
-    return {
-      visitantes:   visit,
-      decididos:    allRecs.filter(r => inPeriod(r.decision_date)).length,
-      emConsol:     allRecs.filter(r => r.stage === "em_consolidacao" && inPeriod(r.consolidation_start_date || r.updated_at?.split("T")[0])).length,
-      consolidados: allRecs.filter(r => inPeriod(r.consolidation_end_date)).length,
-      batizados:    allRecs.filter(r => inPeriod(r.baptism_date)).length,
+      return inPeriod(d);
+    });
+    const toPerson = (r: ConsolidationRecord) => {
+      const m = memberById.get(r.member_id) as any;
+      return { id: r.member_id, full_name: r.member?.full_name || m?.full_name, phone: r.member?.phone || m?.phone, email: r.member?.email || m?.email };
     };
-  }, [members, recordByMember, periodMode, filterMonth, filterYear]);
+    return {
+      visitantes,
+      decididos:    allRecs.filter(r => inPeriod(r.decision_date)).map(toPerson),
+      emConsol:     allRecs.filter(r => r.stage === "em_consolidacao" && inPeriod(r.consolidation_start_date || r.updated_at?.split("T")[0])).map(toPerson),
+      consolidados: allRecs.filter(r => inPeriod(r.consolidation_end_date)).map(toPerson),
+      batizados:    allRecs.filter(r => inPeriod(r.baptism_date)).map(toPerson),
+    };
+  }, [members, recordByMember, memberById, periodMode, filterMonth, filterYear]);
 
-  const funnelSteps = [
-    { label: "Visitantes",     value: dashCounts.visitantes,   color: "bg-muted-foreground", gradient: "from-muted-foreground/20 to-muted-foreground/5" },
-    { label: "Decidiram",      value: dashCounts.decididos,    color: "bg-success",          gradient: "from-success/20 to-success/5" },
-    { label: "Em Consolidação",value: dashCounts.emConsol,     color: "bg-secondary",        gradient: "from-secondary/20 to-secondary/5" },
-    { label: "Consolidados",   value: dashCounts.consolidados, color: "bg-primary",          gradient: "from-primary/20 to-primary/5" },
-    { label: "Batizados",      value: dashCounts.batizados,    color: "bg-info",             gradient: "from-info/20 to-info/5" },
+  const dashCounts = {
+    visitantes: dashPeople.visitantes.length,
+    decididos: dashPeople.decididos.length,
+    emConsol: dashPeople.emConsol.length,
+    consolidados: dashPeople.consolidados.length,
+    batizados: dashPeople.batizados.length,
+  };
+
+  type FunnelKey = "visitantes" | "decididos" | "emConsol" | "consolidados" | "batizados";
+  const funnelSteps: Array<{ key: FunnelKey; label: string; value: number; color: string; gradient: string }> = [
+    { key: "visitantes",   label: "Visitantes",      value: dashCounts.visitantes,   color: "bg-chart-visitante",    gradient: "from-chart-visitante/20 to-chart-visitante/5" },
+    { key: "decididos",    label: "Decidiram",       value: dashCounts.decididos,    color: "bg-chart-decidido",     gradient: "from-chart-decidido/20 to-chart-decidido/5" },
+    { key: "emConsol",     label: "Em Consolidação", value: dashCounts.emConsol,     color: "bg-chart-consolidacao", gradient: "from-chart-consolidacao/20 to-chart-consolidacao/5" },
+    { key: "consolidados", label: "Consolidados",    value: dashCounts.consolidados, color: "bg-chart-discipulado",  gradient: "from-chart-discipulado/20 to-chart-discipulado/5" },
+    { key: "batizados",    label: "Batizados",       value: dashCounts.batizados,    color: "bg-chart-batizado",     gradient: "from-chart-batizado/20 to-chart-batizado/5" },
   ];
   const maxFunnel = Math.max(...funnelSteps.map(s => s.value), 1);
+  const [openStage, setOpenStage] = useState<FunnelKey | null>(null);
 
   // ----- ACTIONS -----
   const openAction = (kind: ActionKind, member: any, record?: ConsolidationRecord) => {
@@ -327,15 +343,22 @@ export default function Consolidacao() {
                 const pct = (step.value / maxFunnel) * 100;
                 return (
                   <div key={step.label}>
-                    <div className="mb-1 flex items-center justify-between text-sm">
-                      <span className="font-medium">{step.label}</span>
-                      <span className="tabular-nums font-semibold">{step.value}</span>
-                    </div>
-                    <div className={`h-9 overflow-hidden rounded-xl bg-gradient-to-r ${step.gradient}`}>
-                      <div className={`flex h-full items-center justify-center rounded-xl transition-all duration-700 ${step.color}`} style={{ width: `${Math.max(pct, 8)}%` }}>
-                        <span className="text-xs font-bold text-white drop-shadow">{step.value}</span>
+                    <button
+                      type="button"
+                      onClick={() => setOpenStage(step.key)}
+                      className="w-full text-left cursor-pointer transition-transform hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-ring rounded-xl"
+                      aria-label={`Ver ${step.label}`}
+                    >
+                      <div className="mb-1 flex items-center justify-between text-sm">
+                        <span className="font-medium">{step.label}</span>
+                        <span className="tabular-nums font-semibold">{step.value}</span>
                       </div>
-                    </div>
+                      <div className={`h-9 overflow-hidden rounded-xl bg-gradient-to-r ${step.gradient}`}>
+                        <div className={`flex h-full items-center justify-center rounded-xl transition-all duration-700 ${step.color}`} style={{ width: `${Math.max(pct, 8)}%` }}>
+                          <span className="text-xs font-bold text-white drop-shadow">{step.value}</span>
+                        </div>
+                      </div>
+                    </button>
                     {i < funnelSteps.length - 1 && (
                       <div className="flex justify-center py-0.5"><ArrowDown className="h-3 w-3 text-muted-foreground/40" /></div>
                     )}
@@ -343,6 +366,7 @@ export default function Consolidacao() {
                 );
               })}
             </div>
+            <p className="mt-3 text-center text-xs text-muted-foreground">Clique em uma etapa para ver as pessoas</p>
           </CardContent>
         </Card>
 
@@ -571,6 +595,51 @@ export default function Consolidacao() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Sheet open={!!openStage} onOpenChange={(o) => !o && setOpenStage(null)}>
+          <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+            {openStage && (() => {
+              const labelMap: Record<typeof openStage, string> = {
+                visitantes: "Visitantes",
+                decididos: "Decididos",
+                emConsol: "Em Consolidação",
+                consolidados: "Consolidados",
+                batizados: "Batizados",
+              } as any;
+              const list = (dashPeople as any)[openStage] as Array<any>;
+              return (
+                <>
+                  <SheetHeader>
+                    <SheetTitle>{labelMap[openStage]}</SheetTitle>
+                    <SheetDescription>{list.length} pessoa(s) no período</SheetDescription>
+                  </SheetHeader>
+                  <div className="mt-4 space-y-2">
+                    {list.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                        <Users className="w-10 h-10 mb-2 opacity-40" />
+                        <p className="text-sm">Ninguém nesta etapa</p>
+                      </div>
+                    ) : list.map((p) => (
+                      <div key={p.id} className="flex items-center gap-3 rounded-lg border p-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                            {(p.full_name || "?").split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate">{p.full_name || "—"}</p>
+                          {(p.phone || p.email) && (
+                            <p className="text-xs text-muted-foreground truncate">{p.phone || p.email}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
+          </SheetContent>
+        </Sheet>
       </div>
     </AppLayout>
   );
