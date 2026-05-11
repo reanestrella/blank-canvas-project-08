@@ -342,15 +342,22 @@ export default function Consolidacao() {
                 const pct = (step.value / maxFunnel) * 100;
                 return (
                   <div key={step.label}>
-                    <div className="mb-1 flex items-center justify-between text-sm">
-                      <span className="font-medium">{step.label}</span>
-                      <span className="tabular-nums font-semibold">{step.value}</span>
-                    </div>
-                    <div className={`h-9 overflow-hidden rounded-xl bg-gradient-to-r ${step.gradient}`}>
-                      <div className={`flex h-full items-center justify-center rounded-xl transition-all duration-700 ${step.color}`} style={{ width: `${Math.max(pct, 8)}%` }}>
-                        <span className="text-xs font-bold text-white drop-shadow">{step.value}</span>
+                    <button
+                      type="button"
+                      onClick={() => setOpenStage(step.key)}
+                      className="w-full text-left cursor-pointer transition-transform hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-ring rounded-xl"
+                      aria-label={`Ver ${step.label}`}
+                    >
+                      <div className="mb-1 flex items-center justify-between text-sm">
+                        <span className="font-medium">{step.label}</span>
+                        <span className="tabular-nums font-semibold">{step.value}</span>
                       </div>
-                    </div>
+                      <div className={`h-9 overflow-hidden rounded-xl bg-gradient-to-r ${step.gradient}`}>
+                        <div className={`flex h-full items-center justify-center rounded-xl transition-all duration-700 ${step.color}`} style={{ width: `${Math.max(pct, 8)}%` }}>
+                          <span className="text-xs font-bold text-white drop-shadow">{step.value}</span>
+                        </div>
+                      </div>
+                    </button>
                     {i < funnelSteps.length - 1 && (
                       <div className="flex justify-center py-0.5"><ArrowDown className="h-3 w-3 text-muted-foreground/40" /></div>
                     )}
@@ -358,6 +365,7 @@ export default function Consolidacao() {
                 );
               })}
             </div>
+            <p className="mt-3 text-center text-xs text-muted-foreground">Clique em uma etapa para ver as pessoas</p>
           </CardContent>
         </Card>
 
