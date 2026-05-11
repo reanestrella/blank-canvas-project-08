@@ -26,6 +26,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useConsolidation, ConsolidationRecord, ConsolidationStage } from "@/hooks/useConsolidation";
 import { useMembers } from "@/hooks/useMembers";
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
 const stageConfig: Record<ConsolidationStage, { label: string; color: string }> = {
   visitante:       { label: "Visitante",        color: "bg-muted text-muted-foreground" },
