@@ -55,6 +55,7 @@ import { RegistrationQrCode } from "@/components/shared/RegistrationQrCode";
 import { PendingUsersTab } from "@/components/secretaria/PendingUsersTab";
 import { AppUsersTab } from "@/components/secretaria/AppUsersTab";
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
+import { usePeopleStats } from "@/hooks/usePeopleStats";
 
 const statusConfig = {
   visitante: { label: "Visitante", color: "bg-chart-visitante text-white" },
@@ -167,44 +168,8 @@ export default function Secretaria() {
     });
   }, [members, searchTerm, activeTab, networkFilter, selectedCongregation, periodMode, filterMonth, filterYear]);
 
-  // Stats by type
-  const stats = useMemo(() => {
-    const activeMembers = members.filter(m => m.is_active);
-    
-    // Build dynamic network counts - kids count ALL active, others count membros only
-    const membrosForNetwork = activeMembers.filter(m =>
-      m.spiritual_status === "membro" || 
-      m.spiritual_status === "lider" || 
-      m.spiritual_status === "discipulador"
-    );
-    const networkCounts: Record<string, number> = {};
-    // Count kids from ALL active members (regardless of spiritual_status)
-    const kidsCount = activeMembers.filter(m => m.network === "kids").length;
-    if (kidsCount > 0) networkCounts["kids"] = kidsCount;
-    // Count other networks from membros only
-    membrosForNetwork.forEach(m => {
-      if (m.network && m.network !== "kids") {
-        networkCounts[m.network] = (networkCounts[m.network] || 0) + 1;
-      }
-    });
-    // Also count members without a network
-    const withoutNetwork = membrosForNetwork.filter(m => !m.network).length;
-    
-    return {
-      total: activeMembers.length,
-      membros: activeMembers.filter(m => 
-        m.spiritual_status === "membro" || 
-        m.spiritual_status === "lider" || 
-        m.spiritual_status === "discipulador"
-      ).length,
-      decididos: activeMembers.filter(m => m.spiritual_status === "novo_convertido").length,
-      visitantes: activeMembers.filter(m => m.spiritual_status === "visitante").length,
-      batizados: activeMembers.filter(m => (m as any).is_baptized === true || m.baptism_date !== null).length,
-      inativos: members.filter(m => !m.is_active).length,
-      networks: networkCounts,
-      withoutNetwork,
-    };
-  }, [members]);
+  // Stats by type — unified hook (single source of truth)
+  const stats = usePeopleStats(members as any, { congregationId: selectedCongregation });
 
   const handleCreateMember = async (data: CreateMemberData) => {
     if (!churchId) return { data: null, error: new Error("Igreja não identificada") };

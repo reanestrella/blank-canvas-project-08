@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePeopleStats } from "./usePeopleStats";
 
 interface DashboardStats {
   totalMembers: number;
@@ -137,37 +138,21 @@ export function useDashboardStats(congregationId?: string | null) {
     return () => { cancelled = true; };
   }, [congregationId, currentChurchId]);
 
+  // Unified people stats (single source of truth shared with Secretaria)
+  const peopleStats = usePeopleStats(members as any);
+
   const stats = useMemo<DashboardStats>(() => {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentDate = now.getDate();
     const currentDay = now.getDay();
-    
+
     const weekStart = new Date(now);
     weekStart.setDate(currentDate - currentDay);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
 
     const activeMembers = members.filter(m => m.is_active);
-
-    const totalMembers = activeMembers.filter(m => 
-      m.spiritual_status === "membro" || m.spiritual_status === "lider" || 
-      m.spiritual_status === "discipulador"
-    ).length;
-    const totalDecididos = activeMembers.filter(m => m.spiritual_status === "novo_convertido").length;
-    const totalVisitantes = activeMembers.filter(m => m.spiritual_status === "visitante").length;
-    const totalBaptized = activeMembers.filter(m => m.baptism_date !== null).length;
-
-    const membrosForNetwork = activeMembers.filter(m =>
-      m.spiritual_status === "membro" || m.spiritual_status === "lider" || m.spiritual_status === "discipulador"
-    );
-    // Kids count ALL active members with network="kids" regardless of spiritual_status
-    const networkStats = {
-      homens: membrosForNetwork.filter(m => m.network === "homens").length,
-      mulheres: membrosForNetwork.filter(m => m.network === "mulheres").length,
-      jovens: membrosForNetwork.filter(m => m.network === "jovens").length,
-      kids: activeMembers.filter(m => m.network === "kids").length,
-    };
 
     const birthdaysThisMonth = activeMembers.filter(m => {
       if (!m.birth_date) return false;
@@ -204,21 +189,21 @@ export function useDashboardStats(congregationId?: string | null) {
     });
 
     return {
-      totalMembers,
-      totalDecididos,
-      totalVisitantes,
-      totalBaptized,
+      totalMembers: peopleStats.membros,
+      totalDecididos: peopleStats.decididos,
+      totalVisitantes: peopleStats.visitantes,
+      totalBaptized: peopleStats.batizados,
       totalConsolidacao: consolidationCount,
       totalConsolidados: consolidadosCount,
       totalDesistentes: desistentesCount,
-      networkStats,
+      networkStats: peopleStats.networkStats,
       birthdaysThisMonth,
       birthdaysThisWeek,
       weddingAnniversariesThisMonth,
       weddingAnniversariesThisWeek,
       recentAlerts: alerts,
     };
-  }, [members, alerts, consolidationCount, consolidadosCount, desistentesCount]);
+  }, [members, alerts, consolidationCount, consolidadosCount, desistentesCount, peopleStats]);
 
   return {
     stats,

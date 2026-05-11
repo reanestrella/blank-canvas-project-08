@@ -27,6 +27,7 @@ import { useConsolidation, ConsolidationRecord, ConsolidationStage } from "@/hoo
 import { useMembers } from "@/hooks/useMembers";
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { VisitorContactDashboard } from "@/components/consolidation/VisitorContactDashboard";
 
 const stageConfig: Record<ConsolidationStage, { label: string; color: string }> = {
   visitante:       { label: "Visitante",        color: "bg-chart-visitante text-white" },
@@ -369,6 +370,14 @@ export default function Consolidacao() {
             <p className="mt-3 text-center text-xs text-muted-foreground">Clique em uma etapa para ver as pessoas</p>
           </CardContent>
         </Card>
+
+        {/* DASHBOARD DE AVALIAÇÃO DE CONTATO DOS VISITANTES */}
+        <VisitorContactDashboard
+          records={records}
+          membersById={memberById as any}
+          visitors={members.filter(m => m.is_active && m.spiritual_status === "visitante") as any}
+          inPeriod={inPeriod}
+        />
 
         {/* TABS POR STAGE */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
