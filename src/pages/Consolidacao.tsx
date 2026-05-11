@@ -109,30 +109,45 @@ export default function Consolidacao() {
     return d.getFullYear() === filterYear && d.getMonth() === filterMonth;
   };
 
-  const dashCounts = useMemo(() => {
-    const visit = members.filter(m => m.spiritual_status === "visitante").reduce((acc, m) => {
+  const dashPeople = useMemo(() => {
+    const allRecs = Array.from(recordByMember.values());
+    const visitantes = members.filter(m => {
+      if (m.spiritual_status !== "visitante") return false;
       const r = recordByMember.get(m.id);
       const d = r?.visit_date || (m as any).created_at?.split("T")[0];
-      return acc + (inPeriod(d) ? 1 : 0);
-    }, 0);
-    const allRecs = Array.from(recordByMember.values());
-    return {
-      visitantes:   visit,
-      decididos:    allRecs.filter(r => inPeriod(r.decision_date)).length,
-      emConsol:     allRecs.filter(r => r.stage === "em_consolidacao" && inPeriod(r.consolidation_start_date || r.updated_at?.split("T")[0])).length,
-      consolidados: allRecs.filter(r => inPeriod(r.consolidation_end_date)).length,
-      batizados:    allRecs.filter(r => inPeriod(r.baptism_date)).length,
+      return inPeriod(d);
+    });
+    const toPerson = (r: ConsolidationRecord) => {
+      const m = memberById.get(r.member_id) as any;
+      return { id: r.member_id, full_name: r.member?.full_name || m?.full_name, phone: r.member?.phone || m?.phone, email: r.member?.email || m?.email };
     };
-  }, [members, recordByMember, periodMode, filterMonth, filterYear]);
+    return {
+      visitantes,
+      decididos:    allRecs.filter(r => inPeriod(r.decision_date)).map(toPerson),
+      emConsol:     allRecs.filter(r => r.stage === "em_consolidacao" && inPeriod(r.consolidation_start_date || r.updated_at?.split("T")[0])).map(toPerson),
+      consolidados: allRecs.filter(r => inPeriod(r.consolidation_end_date)).map(toPerson),
+      batizados:    allRecs.filter(r => inPeriod(r.baptism_date)).map(toPerson),
+    };
+  }, [members, recordByMember, memberById, periodMode, filterMonth, filterYear]);
 
-  const funnelSteps = [
-    { label: "Visitantes",     value: dashCounts.visitantes,   color: "bg-muted-foreground", gradient: "from-muted-foreground/20 to-muted-foreground/5" },
-    { label: "Decidiram",      value: dashCounts.decididos,    color: "bg-success",          gradient: "from-success/20 to-success/5" },
-    { label: "Em Consolidação",value: dashCounts.emConsol,     color: "bg-secondary",        gradient: "from-secondary/20 to-secondary/5" },
-    { label: "Consolidados",   value: dashCounts.consolidados, color: "bg-primary",          gradient: "from-primary/20 to-primary/5" },
-    { label: "Batizados",      value: dashCounts.batizados,    color: "bg-info",             gradient: "from-info/20 to-info/5" },
+  const dashCounts = {
+    visitantes: dashPeople.visitantes.length,
+    decididos: dashPeople.decididos.length,
+    emConsol: dashPeople.emConsol.length,
+    consolidados: dashPeople.consolidados.length,
+    batizados: dashPeople.batizados.length,
+  };
+
+  type FunnelKey = "visitantes" | "decididos" | "emConsol" | "consolidados" | "batizados";
+  const funnelSteps: Array<{ key: FunnelKey; label: string; value: number; color: string; gradient: string }> = [
+    { key: "visitantes",   label: "Visitantes",      value: dashCounts.visitantes,   color: "bg-chart-visitante",    gradient: "from-chart-visitante/20 to-chart-visitante/5" },
+    { key: "decididos",    label: "Decidiram",       value: dashCounts.decididos,    color: "bg-chart-decidido",     gradient: "from-chart-decidido/20 to-chart-decidido/5" },
+    { key: "emConsol",     label: "Em Consolidação", value: dashCounts.emConsol,     color: "bg-chart-consolidacao", gradient: "from-chart-consolidacao/20 to-chart-consolidacao/5" },
+    { key: "consolidados", label: "Consolidados",    value: dashCounts.consolidados, color: "bg-chart-discipulado",  gradient: "from-chart-discipulado/20 to-chart-discipulado/5" },
+    { key: "batizados",    label: "Batizados",       value: dashCounts.batizados,    color: "bg-chart-batizado",     gradient: "from-chart-batizado/20 to-chart-batizado/5" },
   ];
   const maxFunnel = Math.max(...funnelSteps.map(s => s.value), 1);
+  const [openStage, setOpenStage] = useState<FunnelKey | null>(null);
 
   // ----- ACTIONS -----
   const openAction = (kind: ActionKind, member: any, record?: ConsolidationRecord) => {
