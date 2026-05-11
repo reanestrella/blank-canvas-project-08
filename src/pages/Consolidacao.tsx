@@ -595,6 +595,51 @@ export default function Consolidacao() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Sheet open={!!openStage} onOpenChange={(o) => !o && setOpenStage(null)}>
+          <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+            {openStage && (() => {
+              const labelMap: Record<typeof openStage, string> = {
+                visitantes: "Visitantes",
+                decididos: "Decididos",
+                emConsol: "Em Consolidação",
+                consolidados: "Consolidados",
+                batizados: "Batizados",
+              } as any;
+              const list = (dashPeople as any)[openStage] as Array<any>;
+              return (
+                <>
+                  <SheetHeader>
+                    <SheetTitle>{labelMap[openStage]}</SheetTitle>
+                    <SheetDescription>{list.length} pessoa(s) no período</SheetDescription>
+                  </SheetHeader>
+                  <div className="mt-4 space-y-2">
+                    {list.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                        <Users className="w-10 h-10 mb-2 opacity-40" />
+                        <p className="text-sm">Ninguém nesta etapa</p>
+                      </div>
+                    ) : list.map((p) => (
+                      <div key={p.id} className="flex items-center gap-3 rounded-lg border p-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                            {(p.full_name || "?").split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate">{p.full_name || "—"}</p>
+                          {(p.phone || p.email) && (
+                            <p className="text-xs text-muted-foreground truncate">{p.phone || p.email}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
+          </SheetContent>
+        </Sheet>
       </div>
     </AppLayout>
   );
