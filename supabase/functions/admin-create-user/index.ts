@@ -128,22 +128,31 @@ Deno.serve(async (req) => {
         { onConflict: "user_id" }
       );
 
-    // Insert member if not exists for this church
-    const { data: existingMember } = await admin
-      .from("members")
-      .select("id")
-      .eq("church_id", church_id)
-      .eq("user_id", targetUserId)
-      .maybeSingle();
-    if (!existingMember) {
-      await admin.from("members").insert({
-        church_id,
-        user_id: targetUserId,
-        full_name: full_name ?? email.split("@")[0],
-        email,
-        is_active: true,
-        spiritual_status: "membro",
-      });
+    // Vincular a membro existente OU inserir novo membro (sem duplicar)
+    if (link_member_id) {
+      // Vincula o user_id ao membro escolhido (não cria novo registro)
+      await admin
+        .from("members")
+        .update({ user_id: targetUserId, email: email })
+        .eq("id", link_member_id)
+        .eq("church_id", church_id);
+    } else {
+      const { data: existingMember } = await admin
+        .from("members")
+        .select("id")
+        .eq("church_id", church_id)
+        .eq("user_id", targetUserId)
+        .maybeSingle();
+      if (!existingMember) {
+        await admin.from("members").insert({
+          church_id,
+          user_id: targetUserId,
+          full_name: full_name ?? email.split("@")[0],
+          email,
+          is_active: true,
+          spiritual_status: "membro",
+        });
+      }
     }
 
     // Insert role with permissions (idempotent: insert or update)
