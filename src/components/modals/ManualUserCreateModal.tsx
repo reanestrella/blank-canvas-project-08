@@ -69,6 +69,9 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
   const [cells, setCells] = useState<{ id: string; name: string }[]>([]);
   const [selectedCellIds, setSelectedCellIds] = useState<string[]>([]);
   const [cellSearch, setCellSearch] = useState("");
+  const [members, setMembers] = useState<{ id: string; full_name: string; email: string | null }[]>([]);
+  const [linkMemberId, setLinkMemberId] = useState<string>("");
+  const [memberSearch, setMemberSearch] = useState("");
   const { toast } = useToast();
 
   const form = useForm<FormData>({
@@ -87,8 +90,20 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
     if (open && churchId) {
       supabase.from("cells").select("id, name").eq("church_id", churchId).eq("is_active", true).order("name")
         .then(({ data }) => setCells((data as any[]) || []));
+      supabase.from("members").select("id, full_name, email").eq("church_id", churchId).eq("is_active", true).is("user_id", null).order("full_name").limit(2000)
+        .then(({ data }) => setMembers((data as any[]) || []));
     }
   }, [open, churchId]);
+
+  // Quando seleciona membro existente, pré-popula nome/email
+  useEffect(() => {
+    if (!linkMemberId) return;
+    const m = members.find((x) => x.id === linkMemberId);
+    if (m) {
+      form.setValue("full_name", m.full_name);
+      if (m.email) form.setValue("email", m.email);
+    }
+  }, [linkMemberId, members]);
 
   const togglePermission = (mod: ModuleKey) =>
     setPermissions((prev) => prev.includes(mod) ? prev.filter(m => m !== mod) : [...prev, mod]);
