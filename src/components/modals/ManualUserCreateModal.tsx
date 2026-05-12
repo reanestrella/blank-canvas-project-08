@@ -119,6 +119,7 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
           church_id: churchId,
           permissions,
           cell_ids: needsCellSelection && selectedCellIds.length > 0 ? selectedCellIds : null,
+          link_member_id: linkMemberId || null,
         },
       });
       if (error || (result && (result as any).error)) {
