@@ -167,6 +167,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
         wedding_date: member?.wedding_date || "",
         pastoral_notes: member?.pastoral_notes || "",
         congregation_id: member?.congregation_id || selectedCongregationId || "",
+        consolidator_id: "",
         is_active: member?.is_active ?? true,
       });
     }
@@ -199,7 +200,36 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
       };
       
       const result = await onSubmit(cleanedData);
-      if (!result.error) {
+
+      // Persiste consolidador responsável (separado do membro — tabela consolidation_records)
+      if (!result.error && churchId) {
+        const memberId = result.data?.id || member?.id;
+        const consolidatorId = data.consolidator_id || null;
+        if (memberId) {
+          try {
+            if (existingRecordId) {
+              await supabase
+                .from("consolidation_records")
+                .update({ consolidator_id: consolidatorId })
+                .eq("id", existingRecordId);
+            } else if (consolidatorId) {
+              // Cria registro de consolidação somente se um consolidador foi escolhido
+              await supabase.from("consolidation_records").insert({
+                church_id: churchId,
+                member_id: memberId,
+                consolidator_id: consolidatorId,
+                stage: cleanedData.spiritual_status === "visitante" ? "visitante" : "decidido",
+                status: "acompanhamento",
+                contact_date: new Date().toISOString().split("T")[0],
+              } as any);
+            }
+          } catch (e) {
+            console.warn("Falha ao salvar consolidador:", e);
+          }
+        }
+        form.reset();
+        onOpenChange(false);
+      } else if (!result.error) {
         form.reset();
         onOpenChange(false);
       }
