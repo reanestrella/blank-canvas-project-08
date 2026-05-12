@@ -83,20 +83,46 @@ export function SpiritualFunnel() {
       if (!prev) recordByMember.set(r.member_id, r);
     }
 
-    // Visitante: members com status visitante cujo visit_date/created_at ∈ período
-    const visitantes = members.filter(m => {
-      if (!m.is_active || m.spiritual_status !== "visitante") return false;
-      const r = recordByMember.get(m.id);
-      const d = r?.visit_date || (m.created_at ? m.created_at.split("T")[0] : null);
-      return inPeriod(d);
-    });
+    // Dedupe helper: pega 1 record por member com data válida no período
+    const dedupByMember = (rs: Row[]) => {
+      const seen = new Set<string>();
+      const out: Row[] = [];
+      for (const r of rs) {
+        if (seen.has(r.member_id)) continue;
+        seen.add(r.member_id);
+        out.push(r);
+      }
+      return out;
+    };
 
-    const decididos = records
-      .filter(r => inPeriod(r.decision_date))
+    // Visitante CUMULATIVO: qualquer pessoa que visitou no período,
+    // independentemente do estágio atual (decidido, consolidado, etc.)
+    // Fonte: consolidation_records.visit_date OU member.created_at quando há record/visitante.
+    const visitorMemberIds = new Set<string>();
+    const visitantes: any[] = [];
+    for (const r of records) {
+      if (visitorMemberIds.has(r.member_id)) continue;
+      if (inPeriod(r.visit_date)) {
+        visitorMemberIds.add(r.member_id);
+        const m = memberById.get(r.member_id);
+        visitantes.push(m || { id: r.member_id, full_name: r.member?.full_name, phone: r.member?.phone, email: r.member?.email });
+      }
+    }
+    // Inclui visitantes sem record ainda (status='visitante' + created_at no período)
+    for (const m of members) {
+      if (visitorMemberIds.has(m.id)) continue;
+      if (!m.is_active || m.spiritual_status !== "visitante") continue;
+      const d = m.created_at ? m.created_at.split("T")[0] : null;
+      if (inPeriod(d)) {
+        visitorMemberIds.add(m.id);
+        visitantes.push(m);
+      }
+    }
+
+    const decididos = dedupByMember(records.filter(r => inPeriod(r.decision_date)))
       .map(r => memberById.get(r.member_id) || { id: r.member_id, full_name: r.member?.full_name, phone: r.member?.phone, email: r.member?.email });
 
-    const consolidacao = records
-      .filter(r => inPeriod(r.consolidation_start_date))
+    const consolidacao = dedupByMember(records.filter(r => inPeriod(r.consolidation_start_date)))
       .map(r => memberById.get(r.member_id) || { id: r.member_id, full_name: r.member?.full_name, phone: r.member?.phone, email: r.member?.email });
 
     const batizadosFromRec = records.filter(r => inPeriod(r.baptism_date));
@@ -133,16 +159,6 @@ export function SpiritualFunnel() {
   }
 
   const total = steps.reduce((s, k) => s + stagePeople[k].length, 0);
-  if (total === 0) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="py-10 text-center">
-          <p className="text-sm text-muted-foreground">Sem dados no período selecionado.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   const maxVal = Math.max(...steps.map(k => stagePeople[k].length), 1);
 
   return (
