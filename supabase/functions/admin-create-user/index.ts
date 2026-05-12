@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     const callerId = userData.user.id;
 
     const body = await req.json().catch(() => ({}));
-    const { full_name, email, password, role, church_id, hide_financial, permissions, cell_ids } = body as {
+    const { full_name, email, password, role, church_id, hide_financial, permissions, cell_ids, link_member_id } = body as {
       full_name?: string;
       email?: string;
       password?: string;
@@ -58,6 +58,7 @@ Deno.serve(async (req) => {
       hide_financial?: boolean;
       permissions?: string[] | null;
       cell_ids?: string[] | null;
+      link_member_id?: string | null;
     };
 
     if (!email || !password || !role || !church_id) {
