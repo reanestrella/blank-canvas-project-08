@@ -68,6 +68,7 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
   const [permissions, setPermissions] = useState<ModuleKey[]>(defaultPermissionsFor("tesoureiro"));
   const [cells, setCells] = useState<{ id: string; name: string }[]>([]);
   const [selectedCellIds, setSelectedCellIds] = useState<string[]>([]);
+  const [cellSearch, setCellSearch] = useState("");
   const { toast } = useToast();
 
   const form = useForm<FormData>({
@@ -225,15 +226,36 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
             )}
             {needsCellSelection && cells.length > 0 && (
               <div className="space-y-2 rounded-lg border p-3">
-                <Label className="text-sm font-medium">Células deste líder</Label>
-                <ScrollArea className="max-h-32 pr-2">
-                  <div className="space-y-2">
-                    {cells.map((c) => (
-                      <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                        <Checkbox checked={selectedCellIds.includes(c.id)} onCheckedChange={() => toggleCell(c.id)} />
-                        <span>{c.name}</span>
-                      </label>
-                    ))}
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-sm font-medium">Células deste líder</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedCellIds.length}/{cells.length} selecionada(s)
+                  </span>
+                </div>
+                <Input
+                  placeholder="Buscar célula por nome..."
+                  value={cellSearch}
+                  onChange={(e) => setCellSearch(e.target.value)}
+                  className="h-9"
+                />
+                <ScrollArea className="h-64 max-h-[50vh] rounded-md border bg-muted/20 p-2">
+                  <div className="space-y-1">
+                    {cells
+                      .filter((c) => c.name.toLowerCase().includes(cellSearch.toLowerCase()))
+                      .map((c) => (
+                        <label
+                          key={c.id}
+                          className="flex items-center gap-2 text-sm cursor-pointer rounded p-1.5 hover:bg-accent/40"
+                        >
+                          <Checkbox checked={selectedCellIds.includes(c.id)} onCheckedChange={() => toggleCell(c.id)} />
+                          <span className="truncate">{c.name}</span>
+                        </label>
+                      ))}
+                    {cells.filter((c) => c.name.toLowerCase().includes(cellSearch.toLowerCase())).length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-4">
+                        Nenhuma célula encontrada.
+                      </p>
+                    )}
                   </div>
                 </ScrollArea>
               </div>
