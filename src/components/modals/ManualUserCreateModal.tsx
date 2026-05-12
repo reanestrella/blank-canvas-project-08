@@ -132,6 +132,8 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
         description: "Ele já pode acessar o sistema.",
       });
       form.reset();
+      setLinkMemberId("");
+      setMemberSearch("");
       onCreated?.();
       onOpenChange(false);
     } catch (e: any) {
