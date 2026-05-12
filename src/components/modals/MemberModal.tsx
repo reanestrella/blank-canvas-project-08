@@ -78,8 +78,34 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
   const [potentialConsolidators, setPotentialConsolidators] = useState<{ id: string; full_name: string }[]>([]);
   const [existingRecordId, setExistingRecordId] = useState<string | null>(null);
 
-  // Carrega lista de potenciais consolidadores (líderes/discipuladores/pastores) e
-  // o consolidator_id atual da pessoa (se houver registro de consolidação)
+  const form = useForm<MemberFormData>({
+    resolver: zodResolver(memberSchema),
+    defaultValues: {
+      full_name: "",
+      email: "",
+      phone: "",
+      birth_date: "",
+      address: "",
+      city: "",
+      state: "",
+      gender: undefined,
+      marital_status: "",
+      spiritual_status: "membro",
+      baptism_date: "",
+      baptism_location: "",
+      conversion_date: "",
+      notes: "",
+      network: "",
+      age_group: "",
+      wedding_date: "",
+      pastoral_notes: "",
+      congregation_id: "",
+      consolidator_id: "",
+      is_active: true,
+    },
+  });
+
+  // Carrega lista de potenciais consolidadores e o consolidator_id atual da pessoa
   useEffect(() => {
     if (!open || !churchId) return;
     let cancelled = false;
@@ -111,36 +137,12 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
           setExistingRecordId(null);
           form.setValue("consolidator_id", "");
         }
+      } else {
+        setExistingRecordId(null);
       }
     })();
     return () => { cancelled = true; };
   }, [open, churchId, member?.id]);
-  
-  const form = useForm<MemberFormData>({
-    resolver: zodResolver(memberSchema),
-    defaultValues: {
-      full_name: "",
-      email: "",
-      phone: "",
-      birth_date: "",
-      address: "",
-      city: "",
-      state: "",
-      gender: undefined,
-      marital_status: "",
-      spiritual_status: "membro",
-      baptism_date: "",
-      baptism_location: "",
-      conversion_date: "",
-      notes: "",
-      network: "",
-      age_group: "",
-      wedding_date: "",
-      pastoral_notes: "",
-      congregation_id: "",
-      is_active: true,
-    },
-  });
 
   // Reset form when member changes
   useEffect(() => {
