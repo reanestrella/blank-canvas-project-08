@@ -528,6 +528,40 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
 
                   <FormField
                     control={form.control}
+                    name="consolidator_id"
+                    render={({ field }) => (
+                      <FormItem className="col-span-full">
+                        <FormLabel>Consolidador Responsável</FormLabel>
+                        <Select
+                          onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                          value={field.value || "none"}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sem consolidador definido" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="max-h-72">
+                            <SelectItem value="none">Sem consolidador</SelectItem>
+                            {potentialConsolidators
+                              .filter((c) => c.id !== member?.id)
+                              .map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.full_name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Líder, discipulador ou pastor responsável pelo acompanhamento.
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name="conversion_date"
                     render={({ field }) => (
                       <FormItem>
