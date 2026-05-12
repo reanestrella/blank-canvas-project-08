@@ -160,6 +160,39 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            {/* Vincular a membro existente — evita duplicidade no funil */}
+            <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
+              <Label className="text-sm font-medium">Vincular a membro existente (opcional)</Label>
+              <p className="text-xs text-muted-foreground">
+                Se este usuário já está cadastrado como membro, vincule aqui em vez de criar duplicado.
+              </p>
+              <Input
+                placeholder="Buscar membro pelo nome..."
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                className="h-9"
+              />
+              <Select
+                value={linkMemberId || "none"}
+                onValueChange={(v) => setLinkMemberId(v === "none" ? "" : v)}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Nenhum (criar novo membro)" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="none">Nenhum (criar novo membro)</SelectItem>
+                  {members
+                    .filter((m) => m.full_name.toLowerCase().includes(memberSearch.toLowerCase()))
+                    .slice(0, 100)
+                    .map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.full_name} {m.email ? `— ${m.email}` : ""}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <FormField
               control={form.control}
               name="full_name"
