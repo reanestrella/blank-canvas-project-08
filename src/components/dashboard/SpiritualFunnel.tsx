@@ -213,9 +213,15 @@ export function SpiritualFunnel() {
               );
             })}
           </div>
-          <p className="mt-4 text-center text-xs text-muted-foreground">
-            Clique em uma etapa para ver as pessoas
-          </p>
+          {total === 0 ? (
+            <p className="mt-4 text-center text-xs text-muted-foreground">
+              Nenhum resultado encontrado para o período selecionado.
+            </p>
+          ) : (
+            <p className="mt-4 text-center text-xs text-muted-foreground">
+              Clique em uma etapa para ver as pessoas
+            </p>
+          )}
         </CardContent>
       </Card>
 
