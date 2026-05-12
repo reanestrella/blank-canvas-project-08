@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     const callerId = userData.user.id;
 
     const body = await req.json().catch(() => ({}));
-    const { full_name, email, password, role, church_id, hide_financial, permissions, cell_ids } = body as {
+    const { full_name, email, password, role, church_id, hide_financial, permissions, cell_ids, link_member_id } = body as {
       full_name?: string;
       email?: string;
       password?: string;
@@ -58,6 +58,7 @@ Deno.serve(async (req) => {
       hide_financial?: boolean;
       permissions?: string[] | null;
       cell_ids?: string[] | null;
+      link_member_id?: string | null;
     };
 
     if (!email || !password || !role || !church_id) {
@@ -127,22 +128,31 @@ Deno.serve(async (req) => {
         { onConflict: "user_id" }
       );
 
-    // Insert member if not exists for this church
-    const { data: existingMember } = await admin
-      .from("members")
-      .select("id")
-      .eq("church_id", church_id)
-      .eq("user_id", targetUserId)
-      .maybeSingle();
-    if (!existingMember) {
-      await admin.from("members").insert({
-        church_id,
-        user_id: targetUserId,
-        full_name: full_name ?? email.split("@")[0],
-        email,
-        is_active: true,
-        spiritual_status: "membro",
-      });
+    // Vincular a membro existente OU inserir novo membro (sem duplicar)
+    if (link_member_id) {
+      // Vincula o user_id ao membro escolhido (não cria novo registro)
+      await admin
+        .from("members")
+        .update({ user_id: targetUserId, email: email })
+        .eq("id", link_member_id)
+        .eq("church_id", church_id);
+    } else {
+      const { data: existingMember } = await admin
+        .from("members")
+        .select("id")
+        .eq("church_id", church_id)
+        .eq("user_id", targetUserId)
+        .maybeSingle();
+      if (!existingMember) {
+        await admin.from("members").insert({
+          church_id,
+          user_id: targetUserId,
+          full_name: full_name ?? email.split("@")[0],
+          email,
+          is_active: true,
+          spiritual_status: "membro",
+        });
+      }
     }
 
     // Insert role with permissions (idempotent: insert or update)

@@ -69,6 +69,9 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
   const [cells, setCells] = useState<{ id: string; name: string }[]>([]);
   const [selectedCellIds, setSelectedCellIds] = useState<string[]>([]);
   const [cellSearch, setCellSearch] = useState("");
+  const [members, setMembers] = useState<{ id: string; full_name: string; email: string | null }[]>([]);
+  const [linkMemberId, setLinkMemberId] = useState<string>("");
+  const [memberSearch, setMemberSearch] = useState("");
   const { toast } = useToast();
 
   const form = useForm<FormData>({
@@ -87,8 +90,20 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
     if (open && churchId) {
       supabase.from("cells").select("id, name").eq("church_id", churchId).eq("is_active", true).order("name")
         .then(({ data }) => setCells((data as any[]) || []));
+      supabase.from("members").select("id, full_name, email").eq("church_id", churchId).eq("is_active", true).is("user_id", null).order("full_name").limit(2000)
+        .then(({ data }) => setMembers((data as any[]) || []));
     }
   }, [open, churchId]);
+
+  // Quando seleciona membro existente, pré-popula nome/email
+  useEffect(() => {
+    if (!linkMemberId) return;
+    const m = members.find((x) => x.id === linkMemberId);
+    if (m) {
+      form.setValue("full_name", m.full_name);
+      if (m.email) form.setValue("email", m.email);
+    }
+  }, [linkMemberId, members]);
 
   const togglePermission = (mod: ModuleKey) =>
     setPermissions((prev) => prev.includes(mod) ? prev.filter(m => m !== mod) : [...prev, mod]);
@@ -104,6 +119,7 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
           church_id: churchId,
           permissions,
           cell_ids: needsCellSelection && selectedCellIds.length > 0 ? selectedCellIds : null,
+          link_member_id: linkMemberId || null,
         },
       });
       if (error || (result && (result as any).error)) {
@@ -116,6 +132,8 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
         description: "Ele já pode acessar o sistema.",
       });
       form.reset();
+      setLinkMemberId("");
+      setMemberSearch("");
       onCreated?.();
       onOpenChange(false);
     } catch (e: any) {
@@ -142,6 +160,39 @@ export function ManualUserCreateModal({ open, onOpenChange, churchId, onCreated 
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            {/* Vincular a membro existente — evita duplicidade no funil */}
+            <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
+              <Label className="text-sm font-medium">Vincular a membro existente (opcional)</Label>
+              <p className="text-xs text-muted-foreground">
+                Se este usuário já está cadastrado como membro, vincule aqui em vez de criar duplicado.
+              </p>
+              <Input
+                placeholder="Buscar membro pelo nome..."
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                className="h-9"
+              />
+              <Select
+                value={linkMemberId || "none"}
+                onValueChange={(v) => setLinkMemberId(v === "none" ? "" : v)}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Nenhum (criar novo membro)" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="none">Nenhum (criar novo membro)</SelectItem>
+                  {members
+                    .filter((m) => m.full_name.toLowerCase().includes(memberSearch.toLowerCase()))
+                    .slice(0, 100)
+                    .map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.full_name} {m.email ? `— ${m.email}` : ""}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <FormField
               control={form.control}
               name="full_name"
