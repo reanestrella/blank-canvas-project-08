@@ -100,14 +100,18 @@ export function useMembers(churchId?: string) {
       
       setMembers((prev) => [...prev, newMember as Member]);
 
-      // Auto-create consolidation record for visitantes and novo_convertido
-      const status = data.spiritual_status || "visitante";
-      if (status === "visitante" || status === "novo_convertido") {
+      // Auto-create consolidation record APENAS para visitante novo (não para novo_convertido,
+      // pois a pessoa pode já estar sendo cadastrada como decidido sem nunca ter sido visitante).
+      // Cadastros manuais de membro/líder/discipulador NÃO entram no funil.
+      const status = data.spiritual_status || "membro";
+      if (status === "visitante") {
         try {
           await supabase.from("consolidation_records").insert([{
             church_id: data.church_id,
             member_id: (newMember as Member).id,
             status: "contato",
+            stage: "visitante",
+            visit_date: new Date().toISOString().split("T")[0],
             contact_date: new Date().toISOString().split("T")[0],
           }]);
         } catch (e) {
