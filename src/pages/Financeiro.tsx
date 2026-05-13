@@ -496,6 +496,7 @@ export default function Financeiro() {
               allTransactions={transactions}
               categories={categories}
               accounts={accounts}
+              members={members}
               year={filterYear}
               month={filterMonth}
               mode={periodMode}
