@@ -18,6 +18,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFinancial, CreateTransactionData } from "@/hooks/useFinancial";
 import { useFinancialAccounts } from "@/hooks/useFinancialAccounts";
+import { useMembers } from "@/hooks/useMembers";
 import { useTithers } from "@/hooks/useTithers";
 import { TransactionModal } from "@/components/modals/TransactionModal";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
@@ -68,6 +69,7 @@ export default function Financeiro() {
   } = useFinancial(churchId || undefined);
 
   const { accounts } = useFinancialAccounts(churchId || undefined);
+  const { members } = useMembers(churchId || undefined);
 
   const {
     tithers: allTithers, rawData: titherRawData, months, monthlyTotals: allMonthlyTotals,
@@ -494,6 +496,7 @@ export default function Financeiro() {
               allTransactions={transactions}
               categories={categories}
               accounts={accounts}
+              members={members}
               year={filterYear}
               month={filterMonth}
               mode={periodMode}
