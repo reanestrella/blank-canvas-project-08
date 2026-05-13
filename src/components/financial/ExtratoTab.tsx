@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -12,8 +13,9 @@ import {
   ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, Wallet,
   PiggyBank, Search, User, CreditCard, Tag, FileText, Calendar,
   Heart, Gift, Megaphone, Wrench, Zap, Users as UsersIcon, Package,
-  Receipt, ArrowRightLeft,
+  Receipt, ArrowRightLeft, Download,
 } from "lucide-react";
+import { exportToPdf, formatBRL } from "@/lib/pdfExport";
 import type { FinancialTransaction, FinancialCategory } from "@/hooks/useFinancial";
 import type { FinancialAccount } from "@/hooks/useFinancialAccounts";
 import type { Member } from "@/hooks/useMembers";
@@ -27,6 +29,7 @@ interface ExtratoTabProps {
   year: number;
   month: number;
   mode: "month" | "year" | "all";
+  churchName?: string;
 }
 
 const fmt = (v: number) =>
@@ -77,6 +80,7 @@ export function ExtratoTab({
   year,
   month,
   mode,
+  churchName,
 }: ExtratoTabProps) {
   const [typeFilter, setTypeFilter] = useState<"all" | "receita" | "despesa">("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -159,6 +163,40 @@ export function ExtratoTab({
       .reduce((s, t) => s + (t.type === "receita" ? Number(t.amount) : -Number(t.amount)), 0);
   }, [allTransactions, year, month, mode]);
 
+  const periodLabel = mode === "month"
+    ? `${["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"][month]}/${year}`
+    : mode === "year" ? String(year) : "Total";
+
+  const handleExportPdf = () => {
+    exportToPdf({
+      title: "Extrato Financeiro Detalhado",
+      churchName,
+      period: periodLabel,
+      columns: [
+        { header: "Data", dataKey: "date" },
+        { header: "Descrição", dataKey: "desc" },
+        { header: "Categoria", dataKey: "cat" },
+        { header: "Conta", dataKey: "acc" },
+        { header: "Forma", dataKey: "pay" },
+        { header: "Valor", dataKey: "amount", align: "right" },
+      ],
+      rows: filtered.map((tx) => ({
+        date: new Date(tx.transaction_date + (tx.transaction_date.length === 10 ? "T12:00:00" : "")).toLocaleDateString("pt-BR"),
+        desc: buildLabel(tx),
+        cat: tx.category_id ? categoryMap[tx.category_id]?.name || "—" : "—",
+        acc: tx.account_id ? accountMap[tx.account_id] || "—" : "—",
+        pay: tx.payment_method ? (PAYMENT_LABELS[tx.payment_method] || tx.payment_method) : "—",
+        amount: `${tx.type === "receita" ? "+" : "-"} R$ ${formatBRL(Number(tx.amount))}`,
+      })),
+      totals: [
+        { label: "Entradas", value: `R$ ${formatBRL(periodIncome)}` },
+        { label: "Saídas", value: `R$ ${formatBRL(periodExpense)}` },
+        { label: "Saldo do Período", value: `R$ ${formatBRL(periodBalance)}` },
+      ],
+      filename: `extrato-${mode}-${new Date().toISOString().slice(0, 10)}.pdf`,
+    });
+  };
+
   const cards = [
     { label: "Entradas", value: periodIncome, icon: ArrowUpRight, cls: "text-success", bg: "bg-success/5 border-success/20" },
     { label: "Saídas", value: periodExpense, icon: ArrowDownRight, cls: "text-destructive", bg: "bg-destructive/5 border-destructive/20" },
@@ -233,12 +271,16 @@ export function ExtratoTab({
 
       {/* Statement table */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
             <Wallet className="w-5 h-5" />
             Extrato Detalhado
             <Badge variant="secondary" className="ml-2">{filtered.length}</Badge>
           </CardTitle>
+          <Button variant="outline" size="sm" onClick={handleExportPdf}>
+            <Download className="w-4 h-4 mr-2" />
+            Baixar PDF
+          </Button>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (

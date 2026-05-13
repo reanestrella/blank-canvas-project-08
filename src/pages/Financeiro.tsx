@@ -55,7 +55,7 @@ export default function Financeiro() {
   const [filterYear, setFilterYear] = useState(now.getFullYear());
   const [accountFilter, setAccountFilter] = useState("all");
 
-  const { profile } = useAuth();
+  const { profile, church } = useAuth();
   const churchId = profile?.church_id;
 
   const {
@@ -500,6 +500,7 @@ export default function Financeiro() {
               year={filterYear}
               month={filterMonth}
               mode={periodMode}
+              churchName={church?.name}
             />
           </TabsContent>
 
