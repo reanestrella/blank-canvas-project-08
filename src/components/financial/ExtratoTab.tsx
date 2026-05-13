@@ -80,6 +80,7 @@ export function ExtratoTab({
   year,
   month,
   mode,
+  churchName,
 }: ExtratoTabProps) {
   const [typeFilter, setTypeFilter] = useState<"all" | "receita" | "despesa">("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -161,6 +162,40 @@ export function ExtratoTab({
       .filter((t) => new Date(t.transaction_date) <= prevDate)
       .reduce((s, t) => s + (t.type === "receita" ? Number(t.amount) : -Number(t.amount)), 0);
   }, [allTransactions, year, month, mode]);
+
+  const periodLabel = mode === "month"
+    ? `${["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"][month]}/${year}`
+    : mode === "year" ? String(year) : "Total";
+
+  const handleExportPdf = () => {
+    exportToPdf({
+      title: "Extrato Financeiro Detalhado",
+      churchName,
+      period: periodLabel,
+      columns: [
+        { header: "Data", dataKey: "date" },
+        { header: "Descrição", dataKey: "desc" },
+        { header: "Categoria", dataKey: "cat" },
+        { header: "Conta", dataKey: "acc" },
+        { header: "Forma", dataKey: "pay" },
+        { header: "Valor", dataKey: "amount", align: "right" },
+      ],
+      rows: filtered.map((tx) => ({
+        date: new Date(tx.transaction_date + (tx.transaction_date.length === 10 ? "T12:00:00" : "")).toLocaleDateString("pt-BR"),
+        desc: buildLabel(tx),
+        cat: tx.category_id ? categoryMap[tx.category_id]?.name || "—" : "—",
+        acc: tx.account_id ? accountMap[tx.account_id] || "—" : "—",
+        pay: tx.payment_method ? (PAYMENT_LABELS[tx.payment_method] || tx.payment_method) : "—",
+        amount: `${tx.type === "receita" ? "+" : "-"} R$ ${formatBRL(Number(tx.amount))}`,
+      })),
+      totals: [
+        { label: "Entradas", value: `R$ ${formatBRL(periodIncome)}` },
+        { label: "Saídas", value: `R$ ${formatBRL(periodExpense)}` },
+        { label: "Saldo do Período", value: `R$ ${formatBRL(periodBalance)}` },
+      ],
+      filename: `extrato-${mode}-${new Date().toISOString().slice(0, 10)}.pdf`,
+    });
+  };
 
   const cards = [
     { label: "Entradas", value: periodIncome, icon: ArrowUpRight, cls: "text-success", bg: "bg-success/5 border-success/20" },
