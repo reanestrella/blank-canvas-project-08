@@ -69,6 +69,7 @@ export default function Financeiro() {
   } = useFinancial(churchId || undefined);
 
   const { accounts } = useFinancialAccounts(churchId || undefined);
+  const { members } = useMembers(churchId || undefined);
 
   const {
     tithers: allTithers, rawData: titherRawData, months, monthlyTotals: allMonthlyTotals,
