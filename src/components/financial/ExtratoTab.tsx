@@ -271,12 +271,16 @@ export function ExtratoTab({
 
       {/* Statement table */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
             <Wallet className="w-5 h-5" />
             Extrato Detalhado
             <Badge variant="secondary" className="ml-2">{filtered.length}</Badge>
           </CardTitle>
+          <Button variant="outline" size="sm" onClick={handleExportPdf}>
+            <Download className="w-4 h-4 mr-2" />
+            Baixar PDF
+          </Button>
         </CardHeader>
         <CardContent>
           {filtered.length === 0 ? (
