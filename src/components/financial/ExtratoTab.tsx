@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -12,8 +13,9 @@ import {
   ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, Wallet,
   PiggyBank, Search, User, CreditCard, Tag, FileText, Calendar,
   Heart, Gift, Megaphone, Wrench, Zap, Users as UsersIcon, Package,
-  Receipt, ArrowRightLeft,
+  Receipt, ArrowRightLeft, Download,
 } from "lucide-react";
+import { exportToPdf, formatBRL } from "@/lib/pdfExport";
 import type { FinancialTransaction, FinancialCategory } from "@/hooks/useFinancial";
 import type { FinancialAccount } from "@/hooks/useFinancialAccounts";
 import type { Member } from "@/hooks/useMembers";
@@ -27,6 +29,7 @@ interface ExtratoTabProps {
   year: number;
   month: number;
   mode: "month" | "year" | "all";
+  churchName?: string;
 }
 
 const fmt = (v: number) =>
