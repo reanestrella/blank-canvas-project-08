@@ -34,7 +34,7 @@ import { Loader2 } from "lucide-react";
 import type { Member, CreateMemberData } from "@/hooks/useMembers";
 import { useCongregations, Congregation } from "@/hooks/useCongregations";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+
 
 const memberSchema = z.object({
   full_name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
@@ -75,8 +75,6 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
   const churchId = profile?.church_id;
   const { congregations } = useCongregations(churchId || undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [potentialConsolidators, setPotentialConsolidators] = useState<{ id: string; full_name: string }[]>([]);
-  const [existingRecordId, setExistingRecordId] = useState<string | null>(null);
 
   const form = useForm<MemberFormData>({
     resolver: zodResolver(memberSchema),
@@ -104,45 +102,6 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
       is_active: true,
     },
   });
-
-  // Carrega lista de potenciais consolidadores e o consolidator_id atual da pessoa
-  useEffect(() => {
-    if (!open || !churchId) return;
-    let cancelled = false;
-    (async () => {
-      const { data: consolidators } = await supabase
-        .from("members")
-        .select("id, full_name, spiritual_status")
-        .eq("church_id", churchId)
-        .eq("is_active", true)
-        .in("spiritual_status", ["lider", "discipulador", "membro"])
-        .order("full_name");
-      if (cancelled) return;
-      setPotentialConsolidators((consolidators as any[]) || []);
-
-      if (member?.id) {
-        const { data: rec } = await supabase
-          .from("consolidation_records")
-          .select("id, consolidator_id")
-          .eq("member_id", member.id)
-          .eq("church_id", churchId)
-          .order("updated_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (cancelled) return;
-        if (rec) {
-          setExistingRecordId(rec.id);
-          form.setValue("consolidator_id", rec.consolidator_id || "");
-        } else {
-          setExistingRecordId(null);
-          form.setValue("consolidator_id", "");
-        }
-      } else {
-        setExistingRecordId(null);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [open, churchId, member?.id]);
 
   // Reset form when member changes
   useEffect(() => {
@@ -186,7 +145,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
         state: data.state || undefined,
         gender: data.gender,
         marital_status: data.marital_status || undefined,
-        spiritual_status: data.network === "kids" ? (data.spiritual_status || "membro") : (data.spiritual_status || "membro"),
+        spiritual_status: data.spiritual_status || "membro",
         baptism_date: data.baptism_date || undefined,
         baptism_location: data.baptism_location || undefined,
         conversion_date: data.conversion_date || undefined,
@@ -198,38 +157,10 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
         congregation_id: data.congregation_id || undefined,
         is_active: data.is_active,
       };
-      
+
       const result = await onSubmit(cleanedData);
 
-      // Persiste consolidador responsável (separado do membro — tabela consolidation_records)
-      if (!result.error && churchId) {
-        const memberId = result.data?.id || member?.id;
-        const consolidatorId = data.consolidator_id || null;
-        if (memberId) {
-          try {
-            if (existingRecordId) {
-              await supabase
-                .from("consolidation_records")
-                .update({ consolidator_id: consolidatorId })
-                .eq("id", existingRecordId);
-            } else if (consolidatorId) {
-              // Cria registro de consolidação somente se um consolidador foi escolhido
-              await supabase.from("consolidation_records").insert({
-                church_id: churchId,
-                member_id: memberId,
-                consolidator_id: consolidatorId,
-                stage: cleanedData.spiritual_status === "visitante" ? "visitante" : "decidido",
-                status: "acompanhamento",
-                contact_date: new Date().toISOString().split("T")[0],
-              } as any);
-            }
-          } catch (e) {
-            console.warn("Falha ao salvar consolidador:", e);
-          }
-        }
-        form.reset();
-        onOpenChange(false);
-      } else if (!result.error) {
+      if (!result.error) {
         form.reset();
         onOpenChange(false);
       }
@@ -526,39 +457,9 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="consolidator_id"
-                    render={({ field }) => (
-                      <FormItem className="col-span-full">
-                        <FormLabel>Consolidador Responsável</FormLabel>
-                        <Select
-                          onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
-                          value={field.value || "none"}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sem consolidador definido" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="max-h-72">
-                            <SelectItem value="none">Sem consolidador</SelectItem>
-                            {potentialConsolidators
-                              .filter((c) => c.id !== member?.id)
-                              .map((c) => (
-                                <SelectItem key={c.id} value={c.id}>
-                                  {c.full_name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Líder, discipulador ou pastor responsável pelo acompanhamento.
-                        </p>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {/* Campo "Consolidador Responsável" foi movido para o módulo
+                      de Consolidação — agora suporta múltiplos consolidadores
+                      e é gerenciado em /consolidacao. */}
 
                   <FormField
                     control={form.control}

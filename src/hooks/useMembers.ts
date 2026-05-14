@@ -100,23 +100,35 @@ export function useMembers(churchId?: string) {
       
       setMembers((prev) => [...prev, newMember as Member]);
 
-      // Auto-create consolidation record APENAS para visitante novo (não para novo_convertido,
-      // pois a pessoa pode já estar sendo cadastrada como decidido sem nunca ter sido visitante).
-      // Cadastros manuais de membro/líder/discipulador NÃO entram no funil.
+      // Auto-create consolidation record para visitante OU novo convertido.
+      // Cadastros como membro/líder/discipulador NÃO entram no funil.
       const status = data.spiritual_status || "membro";
-      if (status === "visitante") {
-        try {
+      const today = new Date().toISOString().split("T")[0];
+      try {
+        if (status === "visitante") {
           await supabase.from("consolidation_records").insert([{
             church_id: data.church_id,
             member_id: (newMember as Member).id,
             status: "contato",
             stage: "visitante",
-            visit_date: new Date().toISOString().split("T")[0],
-            contact_date: new Date().toISOString().split("T")[0],
+            visit_date: today,
+            contact_date: today,
           }]);
-        } catch (e) {
-          console.warn("Auto-consolidation failed:", e);
+        } else if (status === "novo_convertido") {
+          // Respeita conversion_date informada (pode ser antiga).
+          const decisionDate = data.conversion_date || today;
+          await supabase.from("consolidation_records").insert([{
+            church_id: data.church_id,
+            member_id: (newMember as Member).id,
+            status: "acompanhamento",
+            stage: "decidido",
+            visit_date: decisionDate,
+            decision_date: decisionDate,
+            contact_date: today,
+          }]);
         }
+      } catch (e) {
+        console.warn("Auto-consolidation failed:", e);
       }
 
       toast({
@@ -167,21 +179,29 @@ export function useMembers(churchId?: string) {
 
   const deleteMember = async (id: string) => {
     try {
-      const { error } = await supabase.from("members").delete().eq("id", id);
-      
-      if (error) throw error;
-      
+      // Exclusão segura: remove todos os vínculos (células, consolidação,
+      // ministérios, eventos, etc.) e desvincula o usuário do app e o
+      // histórico financeiro antes de excluir o membro.
+      const { safeDeleteMember } = await import("@/lib/safeDeleteMember");
+      const result = await safeDeleteMember(id);
+
+      if (!result.success) {
+        throw new Error(result.error || "Não foi possível remover o membro.");
+      }
+
       setMembers((prev) => prev.filter((m) => m.id !== id));
       toast({
         title: "Sucesso",
-        description: "Membro removido com sucesso!",
+        description: "Pessoa removida e vínculos desfeitos com sucesso!",
       });
       return { error: null };
     } catch (error: any) {
       console.error("Error deleting member:", error);
       toast({
-        title: "Erro",
-        description: error.message || "Não foi possível remover o membro.",
+        title: "Erro ao excluir",
+        description:
+          error.message ||
+          "Não foi possível remover. Verifique vínculos no console.",
         variant: "destructive",
       });
       return { error };

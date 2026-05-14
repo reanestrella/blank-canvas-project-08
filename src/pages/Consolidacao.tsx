@@ -150,9 +150,28 @@ export default function Consolidacao() {
       });
     };
 
+    // DECIDIDOS: respeita decision_date do record OU conversion_date do member
+    // (cobre cadastro novo com data de conversão antiga).
+    const decididoIds = new Set<string>();
+    const decididos: any[] = [];
+    for (const r of records) {
+      if (decididoIds.has(r.member_id)) continue;
+      if (inPeriod(r.decision_date)) {
+        decididoIds.add(r.member_id);
+        decididos.push(toPerson(r));
+      }
+    }
+    for (const m of members as any[]) {
+      if (decididoIds.has(m.id)) continue;
+      if (m.conversion_date && inPeriod(m.conversion_date)) {
+        decididoIds.add(m.id);
+        decididos.push({ id: m.id, full_name: m.full_name, phone: m.phone, email: m.email });
+      }
+    }
+
     return {
       visitantes,
-      decididos:    dedupe(records.filter(r => inPeriod(r.decision_date))).map(toPerson),
+      decididos,
       emConsol:     dedupe(records.filter(r => inPeriod(r.consolidation_start_date))).map(toPerson),
       consolidados: dedupe(records.filter(r => inPeriod(r.consolidation_end_date))).map(toPerson),
       batizados:    dedupe(records.filter(r => inPeriod(r.baptism_date))).map(toPerson),

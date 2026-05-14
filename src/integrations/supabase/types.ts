@@ -4102,6 +4102,7 @@ export type Database = {
         Args: { p_church_id: string; p_module: string }
         Returns: Json
       }
+      safe_delete_member: { Args: { p_member_id: string }; Returns: Json }
       setup_new_church: {
         Args: { _church_name: string; _email: string; _full_name: string }
         Returns: Json

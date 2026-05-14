@@ -55,7 +55,7 @@ export function SpiritualFunnel() {
           .limit(5000),
         supabase
           .from("members")
-          .select("id, full_name, spiritual_status, baptism_date, is_active, created_at, phone, email")
+          .select("id, full_name, spiritual_status, baptism_date, conversion_date, is_active, created_at, phone, email")
           .eq("church_id", currentChurchId)
           .limit(5000),
       ]);
@@ -119,8 +119,24 @@ export function SpiritualFunnel() {
       }
     }
 
-    const decididos = dedupByMember(records.filter(r => inPeriod(r.decision_date)))
-      .map(r => memberById.get(r.member_id) || { id: r.member_id, full_name: r.member?.full_name, phone: r.member?.phone, email: r.member?.email });
+    // DECIDIDOS: usa decision_date do record OU conversion_date do member.
+    // Garante que pessoa cadastrada hoje com conversão antiga conte no período correto.
+    const decididoIds = new Set<string>();
+    const decididos: any[] = [];
+    for (const r of records) {
+      if (decididoIds.has(r.member_id)) continue;
+      if (inPeriod(r.decision_date)) {
+        decididoIds.add(r.member_id);
+        decididos.push(memberById.get(r.member_id) || { id: r.member_id, full_name: r.member?.full_name, phone: r.member?.phone, email: r.member?.email });
+      }
+    }
+    for (const m of members) {
+      if (decididoIds.has(m.id)) continue;
+      if (m.conversion_date && inPeriod(m.conversion_date)) {
+        decididoIds.add(m.id);
+        decididos.push(m);
+      }
+    }
 
     const consolidacao = dedupByMember(records.filter(r => inPeriod(r.consolidation_start_date)))
       .map(r => memberById.get(r.member_id) || { id: r.member_id, full_name: r.member?.full_name, phone: r.member?.phone, email: r.member?.email });
