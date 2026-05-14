@@ -167,21 +167,29 @@ export function useMembers(churchId?: string) {
 
   const deleteMember = async (id: string) => {
     try {
-      const { error } = await supabase.from("members").delete().eq("id", id);
-      
-      if (error) throw error;
-      
+      // Exclusão segura: remove todos os vínculos (células, consolidação,
+      // ministérios, eventos, etc.) e desvincula o usuário do app e o
+      // histórico financeiro antes de excluir o membro.
+      const { safeDeleteMember } = await import("@/lib/safeDeleteMember");
+      const result = await safeDeleteMember(id);
+
+      if (!result.success) {
+        throw new Error(result.error || "Não foi possível remover o membro.");
+      }
+
       setMembers((prev) => prev.filter((m) => m.id !== id));
       toast({
         title: "Sucesso",
-        description: "Membro removido com sucesso!",
+        description: "Pessoa removida e vínculos desfeitos com sucesso!",
       });
       return { error: null };
     } catch (error: any) {
       console.error("Error deleting member:", error);
       toast({
-        title: "Erro",
-        description: error.message || "Não foi possível remover o membro.",
+        title: "Erro ao excluir",
+        description:
+          error.message ||
+          "Não foi possível remover. Verifique vínculos no console.",
         variant: "destructive",
       });
       return { error };
