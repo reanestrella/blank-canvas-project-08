@@ -186,7 +186,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
         state: data.state || undefined,
         gender: data.gender,
         marital_status: data.marital_status || undefined,
-        spiritual_status: data.network === "kids" ? (data.spiritual_status || "membro") : (data.spiritual_status || "membro"),
+        spiritual_status: data.spiritual_status || "membro",
         baptism_date: data.baptism_date || undefined,
         baptism_location: data.baptism_location || undefined,
         conversion_date: data.conversion_date || undefined,
@@ -198,38 +198,10 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
         congregation_id: data.congregation_id || undefined,
         is_active: data.is_active,
       };
-      
+
       const result = await onSubmit(cleanedData);
 
-      // Persiste consolidador responsável (separado do membro — tabela consolidation_records)
-      if (!result.error && churchId) {
-        const memberId = result.data?.id || member?.id;
-        const consolidatorId = data.consolidator_id || null;
-        if (memberId) {
-          try {
-            if (existingRecordId) {
-              await supabase
-                .from("consolidation_records")
-                .update({ consolidator_id: consolidatorId })
-                .eq("id", existingRecordId);
-            } else if (consolidatorId) {
-              // Cria registro de consolidação somente se um consolidador foi escolhido
-              await supabase.from("consolidation_records").insert({
-                church_id: churchId,
-                member_id: memberId,
-                consolidator_id: consolidatorId,
-                stage: cleanedData.spiritual_status === "visitante" ? "visitante" : "decidido",
-                status: "acompanhamento",
-                contact_date: new Date().toISOString().split("T")[0],
-              } as any);
-            }
-          } catch (e) {
-            console.warn("Falha ao salvar consolidador:", e);
-          }
-        }
-        form.reset();
-        onOpenChange(false);
-      } else if (!result.error) {
+      if (!result.error) {
         form.reset();
         onOpenChange(false);
       }
