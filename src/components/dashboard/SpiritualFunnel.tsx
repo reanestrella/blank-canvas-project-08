@@ -55,7 +55,7 @@ export function SpiritualFunnel() {
           .limit(5000),
         supabase
           .from("members")
-          .select("id, full_name, spiritual_status, baptism_date, is_active, created_at, phone, email")
+          .select("id, full_name, spiritual_status, baptism_date, conversion_date, is_active, created_at, phone, email")
           .eq("church_id", currentChurchId)
           .limit(5000),
       ]);
