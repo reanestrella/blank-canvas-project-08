@@ -1,52 +1,71 @@
-## Próximos Itens — Unificação de Estatísticas + Dashboard de Avaliação de Contato
+# Plano: Consolidação, Dashboard, Auditoria e Exclusão Segura
 
-### 1. Hook `usePeopleStats` unificado
+Vou entregar em 4 lotes para manter qualidade e revisão. Confirmação a cada lote.
 
-**Problema**: Hoje `Secretaria.tsx` e `useDashboardStats.ts` calculam estatísticas de pessoas com lógica similar mas separada, o que gera risco de divergência.
+---
 
-**Solução**: Criar `src/hooks/usePeopleStats.ts` que centraliza:
-- Contagem por `spiritual_status` (membros, decididos, visitantes, batizados, inativos)
-- Contagem por `network` (homens, mulheres, jovens, kids, sem rede)
-- Filtro por congregação e período (reutilizando a lógica existente)
-- Retorno tipado e memoizado
+## Lote 1 — Coerência de datas (Decididos / Funil) e Secretaria
 
-**Refatoração**:
-- `Secretaria.tsx`: substituir o `stats` useMemo por `usePeopleStats(members)`
-- `useDashboardStats.ts`: usar `usePeopleStats` como base para as contagens, mantendo apenas os dados exclusivos do dashboard (aniversários, alertas, consolidação)
+**Objetivo:** os números do Dashboard, Funil Espiritual, Consolidação e Relatórios precisam bater usando sempre `conversion_date` (decididos), `created_at`/`visit_date` (visitantes) e `baptism_date` (batizados).
 
-### 2. Dashboard de Avaliação de Contato dos Visitantes
+- `usePeopleStats`: aceitar critério por data temática:
+  - Decididos: `conversion_date` cai no período (com fallback para `created_at` se nulo).
+  - Visitantes: `created_at` ou `visit_date` no período.
+  - Batizados: `baptism_date` no período.
+- `SpiritualFunnel`: usar a mesma fonte/critério do Dashboard.
+- `Consolidacao` (estatísticas/funil): mesma fonte.
+- `MemberModal` (Secretaria): remover campo "Consolidador Responsável" (movido para Consolidação).
+- Regra: cadastrar como `novo_convertido` com `conversion_date` antiga → conta no período correto.
 
-**Contexto**: `consolidation_records` já armazena `contact_made` (boolean) e `contact_evaluation` (positiva / neutra / negativa / sem_resposta). Não existe visualização dessas métricas.
+## Lote 2 — Consolidadores múltiplos + métricas
 
-**Entregáveis**:
+**Schema (migration):**
+- Nova tabela `consolidation_assignees(id, consolidation_id, consolidator_member_id, assigned_at, assigned_by)` com RLS por igreja.
+- Manter `consolidator_id` legado (compat) mas UI passa a usar a nova tabela; backfill do legado.
 
-A) **Novo componente** `src/components/consolidation/VisitorContactDashboard.tsx`:
-- Card com métricas do período (usando o filtro de data já existente na Consolidação):
-  - Total de visitantes no período
-  - Taxa de contato feito (%)
-  - Distribuição das avaliações: positiva, neutra, negativa, sem resposta
-  - Visitantes pendentes de contato (lista rápida)
-- Gráfico de barras simples (usando as cores semânticas do funil)
-- Cada métrica clicável abrindo Sheet com a lista de pessoas
+**UI:**
+- Em `ConsolidacaoDetail`/lista: multiselect de consolidadores (qualquer membro ativo), adicionar/remover/editar.
+- Lista "Em Consolidação": mostrar avatares/iniciais e nomes dos consolidadores.
+- Painel "Métricas por Consolidador": cards clicáveis com filtro mês/ano; clique abre lista das pessoas atribuídas.
 
-B) **Integração em `Consolidacao.tsx`**:
-- Inserir o `VisitorContactDashboard` logo abaixo do funil espiritual, antes das tabs
-- Reutilizar o `periodMode/filterMonth/filterYear` já existente para filtrar os dados
+## Lote 3 — Auditoria (logs + painel)
 
-C) **Hook de dados** (reutilizar `useConsolidation` ou criar `useVisitorContactStats`):
-- Buscar `consolidation_records` com `stage='visitante'` e campos de contato
-- Calcular métricas no frontend via `useMemo`
+**Schema (migration):**
+- `audit_logs(id, church_id, user_id, action, module, entity_type, entity_id, metadata jsonb, ip, user_agent, created_at)`.
+- RLS: somente `pastor`/`secretario` da própria igreja podem ler; insert via SECURITY DEFINER `log_audit(...)`.
+- Helper `src/lib/audit.ts` com `logAudit({ action, module, entity, metadata })` chamado nos pontos chave: visualização de ficha, edit/delete de membro, export PDF (extrato), troca de consolidador, remoção de visitante.
 
-### Detalhes Técnicos
+**UI:**
+- Página `/auditoria` (guard pastor): tabela com filtros (usuário, módulo, ação, período, tipo), busca, paginação, exportação CSV.
 
-- **Sem migração de banco**: os campos `contact_made` e `contact_evaluation` já existem
-- **Cores**: usar os tokens semânticos `chart-*` já criados (`--chart-visitante`, etc.)
-- **UX**: hover, cursor-pointer, skeleton loading e empty states conforme padrão enterprise já estabelecido
-- **Performance**: memoizar listas e contagens, evitar re-render desnecessário
+## Lote 4 — Exclusão segura de pessoas (`safeDeleteMember`)
 
-### Arquivos esperados
-- Novo: `src/hooks/usePeopleStats.ts`
-- Novo: `src/components/consolidation/VisitorContactDashboard.tsx`
-- Editado: `src/pages/Secretaria.tsx` (substituir stats local)
-- Editado: `src/hooks/useDashboardStats.ts` (usar usePeopleStats)
-- Editado: `src/pages/Consolidacao.tsx` (inserir dashboard de contato)
+**Schema (migration) — RPC `safe_delete_member(p_member_id uuid)`:**
+Em transação, na ordem:
+1. `UPDATE profiles SET member_id = NULL WHERE member_id = p_member_id` (mantém usuário do app).
+2. `UPDATE cells SET leader_id/supervisor_id/vice_leader_1_id/vice_leader_2_id = NULL` onde apontarem para o membro.
+3. `DELETE FROM cell_members`, `cell_report_attendance`, `cell_visitors (invited_by → NULL)`.
+4. `DELETE FROM consolidation_records WHERE member_id = ... OR consolidator_id = ...` (e nova `consolidation_assignees`).
+5. `DELETE FROM discipleships` onde participar.
+6. `UPDATE financial_transactions SET member_id = NULL` (preserva histórico).
+7. `DELETE FROM ministry_volunteers / ministry_role_members / schedule_volunteers / event_registrations / course_students`.
+8. `DELETE FROM members WHERE id = p_member_id`.
+- Retorna `json` com vínculos removidos, para feedback.
+
+**Frontend:**
+- `src/lib/safeDeleteMember.ts` chamando o RPC; usado por `useMembers.deleteMember`, lista de visitantes, etc.
+- Modal de confirmação listando vínculos detectados (preview via SELECT antes do delete).
+- Toast amigável; logs no console com FK bloqueante caso falhe.
+
+**RLS:** revisar políticas das tabelas tocadas para permitir delete a `user_is_church_admin`.
+
+---
+
+## Ordem proposta
+
+1. Lote 1 (datas + remover campo Secretaria) — rápido, alto impacto.
+2. Lote 4 (exclusão segura) — desbloqueia operação imediata.
+3. Lote 2 (consolidadores múltiplos).
+4. Lote 3 (auditoria completa).
+
+Posso começar pelos **Lotes 1 + 4 juntos** (não conflitam) e depois seguir para 2 e 3. Confirmar para iniciar?
