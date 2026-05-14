@@ -75,8 +75,6 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
   const churchId = profile?.church_id;
   const { congregations } = useCongregations(churchId || undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [potentialConsolidators, setPotentialConsolidators] = useState<{ id: string; full_name: string }[]>([]);
-  const [existingRecordId, setExistingRecordId] = useState<string | null>(null);
 
   const form = useForm<MemberFormData>({
     resolver: zodResolver(memberSchema),
@@ -104,45 +102,6 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
       is_active: true,
     },
   });
-
-  // Carrega lista de potenciais consolidadores e o consolidator_id atual da pessoa
-  useEffect(() => {
-    if (!open || !churchId) return;
-    let cancelled = false;
-    (async () => {
-      const { data: consolidators } = await supabase
-        .from("members")
-        .select("id, full_name, spiritual_status")
-        .eq("church_id", churchId)
-        .eq("is_active", true)
-        .in("spiritual_status", ["lider", "discipulador", "membro"])
-        .order("full_name");
-      if (cancelled) return;
-      setPotentialConsolidators((consolidators as any[]) || []);
-
-      if (member?.id) {
-        const { data: rec } = await supabase
-          .from("consolidation_records")
-          .select("id, consolidator_id")
-          .eq("member_id", member.id)
-          .eq("church_id", churchId)
-          .order("updated_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (cancelled) return;
-        if (rec) {
-          setExistingRecordId(rec.id);
-          form.setValue("consolidator_id", rec.consolidator_id || "");
-        } else {
-          setExistingRecordId(null);
-          form.setValue("consolidator_id", "");
-        }
-      } else {
-        setExistingRecordId(null);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [open, churchId, member?.id]);
 
   // Reset form when member changes
   useEffect(() => {
