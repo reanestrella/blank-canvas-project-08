@@ -100,23 +100,35 @@ export function useMembers(churchId?: string) {
       
       setMembers((prev) => [...prev, newMember as Member]);
 
-      // Auto-create consolidation record APENAS para visitante novo (não para novo_convertido,
-      // pois a pessoa pode já estar sendo cadastrada como decidido sem nunca ter sido visitante).
-      // Cadastros manuais de membro/líder/discipulador NÃO entram no funil.
+      // Auto-create consolidation record para visitante OU novo convertido.
+      // Cadastros como membro/líder/discipulador NÃO entram no funil.
       const status = data.spiritual_status || "membro";
-      if (status === "visitante") {
-        try {
+      const today = new Date().toISOString().split("T")[0];
+      try {
+        if (status === "visitante") {
           await supabase.from("consolidation_records").insert([{
             church_id: data.church_id,
             member_id: (newMember as Member).id,
             status: "contato",
             stage: "visitante",
-            visit_date: new Date().toISOString().split("T")[0],
-            contact_date: new Date().toISOString().split("T")[0],
+            visit_date: today,
+            contact_date: today,
           }]);
-        } catch (e) {
-          console.warn("Auto-consolidation failed:", e);
+        } else if (status === "novo_convertido") {
+          // Respeita conversion_date informada (pode ser antiga).
+          const decisionDate = data.conversion_date || today;
+          await supabase.from("consolidation_records").insert([{
+            church_id: data.church_id,
+            member_id: (newMember as Member).id,
+            status: "acompanhamento",
+            stage: "decidido",
+            visit_date: decisionDate,
+            decision_date: decisionDate,
+            contact_date: today,
+          }]);
         }
+      } catch (e) {
+        console.warn("Auto-consolidation failed:", e);
       }
 
       toast({
