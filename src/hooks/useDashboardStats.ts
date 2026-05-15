@@ -54,12 +54,10 @@ interface Alert {
 export function useDashboardStats(congregationId?: string | null) {
   const [members, setMembers] = useState<Member[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [consolidationCount, setConsolidationCount] = useState(0);
-  const [consolidadosCount, setConsolidadosCount] = useState(0);
-  const [desistentesCount, setDesistentesCount] = useState(0);
+  const [consolidationRecords, setConsolidationRecords] = useState<ConsolidationRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasFetched, setHasFetched] = useState(false);
-  
+
   const { currentChurchId } = useAuth();
 
   useEffect(() => {
@@ -68,9 +66,7 @@ export function useDashboardStats(congregationId?: string | null) {
       if (hasFetched) {
         setMembers([]);
         setAlerts([]);
-        setConsolidationCount(0);
-        setConsolidadosCount(0);
-        setDesistentesCount(0);
+        setConsolidationRecords([]);
         setHasFetched(false);
       }
       return;
@@ -83,16 +79,16 @@ export function useDashboardStats(congregationId?: string | null) {
       try {
         let membersQuery = supabase
           .from("members")
-          .select("id, full_name, birth_date, wedding_date, spiritual_status, network, gender, congregation_id, photo_url, baptism_date, is_active")
+          .select("id, full_name, birth_date, wedding_date, spiritual_status, network, gender, congregation_id, photo_url, baptism_date, conversion_date, first_visit_date, is_active, created_at")
           .eq("church_id", currentChurchId)
           .order("full_name")
           .limit(5000);
-        
+
         if (congregationId) {
           membersQuery = membersQuery.or(`congregation_id.eq.${congregationId},congregation_id.is.null`);
         }
-        
-        const [membersRes, alertsRes, consolRes, consolidadosRes, desistentesRes] = await Promise.all([
+
+        const [membersRes, alertsRes, recordsRes] = await Promise.all([
           membersQuery,
           supabase
             .from("member_alerts")
@@ -103,19 +99,9 @@ export function useDashboardStats(congregationId?: string | null) {
             .limit(10),
           supabase
             .from("consolidation_records")
-            .select("id", { count: "exact", head: true })
+            .select("id, member_id, stage, status, visit_date, decision_date, consolidation_start_date, consolidation_end_date, baptism_date, updated_at, created_at")
             .eq("church_id", currentChurchId)
-            .eq("status", "acompanhamento"),
-          supabase
-            .from("consolidation_records")
-            .select("id", { count: "exact", head: true })
-            .eq("church_id", currentChurchId)
-            .eq("status", "concluido"),
-          supabase
-            .from("consolidation_records")
-            .select("id", { count: "exact", head: true })
-            .eq("church_id", currentChurchId)
-            .eq("status", "desistente"),
+            .limit(5000),
         ]);
 
         if (cancelled) return;
@@ -126,9 +112,7 @@ export function useDashboardStats(congregationId?: string | null) {
 
         setMembers((membersRes.data as Member[]) || []);
         setAlerts((alertsRes.data as Alert[]) || []);
-        setConsolidationCount(consolRes.count || 0);
-        setConsolidadosCount(consolidadosRes.count || 0);
-        setDesistentesCount(desistentesRes.count || 0);
+        setConsolidationRecords((recordsRes.data as ConsolidationRow[]) || []);
         setHasFetched(true);
 
       } catch (error) {
