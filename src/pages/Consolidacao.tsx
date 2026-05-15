@@ -31,6 +31,7 @@ import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFi
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { VisitorContactDashboard } from "@/components/consolidation/VisitorContactDashboard";
 import { getConsolidationMetrics } from "@/lib/consolidationMetrics";
+import { useMetricsSettings } from "@/hooks/useMetricsSettings";
 
 const stageConfig: Record<ConsolidationStage, { label: string; color: string }> = {
   visitante:       { label: "Visitante",        color: "bg-chart-visitante text-white" },
