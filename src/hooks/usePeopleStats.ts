@@ -9,6 +9,8 @@ export interface PeopleStatsInput {
   congregation_id?: string | null;
   created_at?: string;
   is_baptized?: boolean;
+  first_visit_date?: string | null;
+  conversion_date?: string | null;
 }
 
 export interface PeopleStats {
