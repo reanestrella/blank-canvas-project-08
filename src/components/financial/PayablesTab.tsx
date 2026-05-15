@@ -40,6 +40,7 @@ const empty: CreatePayableData = {
   account_id: null,
   recurrence: "nenhuma",
   notes: "",
+  installments: 1,
 };
 
 export function PayablesTab({ churchId, accounts, categories, churchName }: PayablesTabProps) {
