@@ -295,19 +295,28 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Recorrência</Label>
-              <Select value={form.recurrence || "nenhuma"} onValueChange={(v: PayableRecurrence) => setForm({ ...form, recurrence: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="nenhuma">Sem recorrência</SelectItem>
-                  <SelectItem value="semanal">Semanal</SelectItem>
-                  <SelectItem value="mensal">Mensal</SelectItem>
-                  <SelectItem value="anual">Anual</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">Ao marcar como pago, a próxima ocorrência será gerada automaticamente.</p>
-            </div>
+            {!editing && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Parcelas</Label>
+                  <Input type="number" min="1" max="60" value={form.installments || 1}
+                    onChange={(e) => setForm({ ...form, installments: Math.max(1, parseInt(e.target.value || "1")) })} />
+                  <p className="text-xs text-muted-foreground">Use 1 para conta única. Mais de 1 gera parcelas mensais com mesmo valor.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Recorrência</Label>
+                  <Select value={form.recurrence || "nenhuma"} onValueChange={(v: PayableRecurrence) => setForm({ ...form, recurrence: v })} disabled={(form.installments || 1) > 1}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="nenhuma">Sem recorrência</SelectItem>
+                      <SelectItem value="semanal">Semanal</SelectItem>
+                      <SelectItem value="mensal">Mensal</SelectItem>
+                      <SelectItem value="anual">Anual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Observações</Label>
               <Textarea value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="resize-none" />
