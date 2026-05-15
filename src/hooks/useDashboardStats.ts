@@ -128,17 +128,29 @@ export function useDashboardStats(congregationId?: string | null) {
     return () => { cancelled = true; };
   }, [congregationId, currentChurchId]);
 
+  const { ignoreImported } = useMetricsSettings();
+
   // Unified people stats (single source of truth shared with Secretaria)
-  const peopleStats = usePeopleStats(members as any);
+  const peopleStats = usePeopleStats(members as any, { ignoreImported });
 
   // Métrica única de consolidação — alinhada com a página /consolidacao
   const consolMetrics = useMemo(
-    () =>
-      getConsolidationMetrics(consolidationRecords, members as any, {
+    () => {
+      const m = getConsolidationMetrics(consolidationRecords, members as any, {
         congregationId,
         periodMode: "all",
-      }),
-    [consolidationRecords, members, congregationId],
+        ignoreImported,
+      });
+      console.debug("[Metrics] dashboard.consolidation", {
+        ignoreImported,
+        visitantes: m.visitantes,
+        decididos: m.decididos,
+        emConsolidacao: m.emConsolidacao,
+        consolidados: m.consolidados,
+      });
+      return m;
+    },
+    [consolidationRecords, members, congregationId, ignoreImported],
   );
 
   const stats = useMemo<DashboardStats>(() => {
