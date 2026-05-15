@@ -1017,6 +1017,7 @@ export type Database = {
           church_id: string
           created_at: string
           id: string
+          ignore_imported_in_metrics: boolean
           pix_holder_name: string | null
           pix_key: string | null
           pix_key_type: string | null
@@ -1031,6 +1032,7 @@ export type Database = {
           church_id: string
           created_at?: string
           id?: string
+          ignore_imported_in_metrics?: boolean
           pix_holder_name?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
@@ -1045,6 +1047,7 @@ export type Database = {
           church_id?: string
           created_at?: string
           id?: string
+          ignore_imported_in_metrics?: boolean
           pix_holder_name?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
@@ -2570,6 +2573,7 @@ export type Database = {
           marital_status: string | null
           network: string | null
           notes: string | null
+          origin_type: string
           pastoral_notes: string | null
           phone: string | null
           photo_url: string | null
@@ -2603,6 +2607,7 @@ export type Database = {
           marital_status?: string | null
           network?: string | null
           notes?: string | null
+          origin_type?: string
           pastoral_notes?: string | null
           phone?: string | null
           photo_url?: string | null
@@ -2636,6 +2641,7 @@ export type Database = {
           marital_status?: string | null
           network?: string | null
           notes?: string | null
+          origin_type?: string
           pastoral_notes?: string | null
           phone?: string | null
           photo_url?: string | null

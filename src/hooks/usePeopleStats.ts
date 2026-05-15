@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { isRealVisitor } from "@/lib/originType";
 
 export interface PeopleStatsInput {
   id: string;
@@ -11,6 +12,7 @@ export interface PeopleStatsInput {
   is_baptized?: boolean;
   first_visit_date?: string | null;
   conversion_date?: string | null;
+  origin_type?: string | null;
 }
 
 export interface PeopleStats {
@@ -86,8 +88,9 @@ export function usePeopleStats<T extends PeopleStatsInput>(
 
     // VISITANTES (histórico): conta toda pessoa cuja first_visit_date cai no período,
     // independentemente do status atual (mesmo que tenha virado decidido/membro).
-    const visitantes = byCongregation.filter((m) =>
-      dateInPeriod(m.first_visit_date || m.created_at),
+    // Exclui membros importados/migrados (origin_type não-real) para não inflar métricas.
+    const visitantes = byCongregation.filter(
+      (m) => isRealVisitor(m) && dateInPeriod(m.first_visit_date || m.created_at),
     ).length;
 
     // DECIDIDOS: pessoas com data de conversão no período.

@@ -28,6 +28,8 @@ export interface Member {
   pastoral_notes: string | null;
   last_attendance_date: string | null;
   inactivity_reason: string | null;
+  first_visit_date?: string | null;
+  origin_type?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -53,6 +55,7 @@ export interface CreateMemberData {
   wedding_date?: string;
   pastoral_notes?: string;
   is_active?: boolean;
+  origin_type?: string;
 }
 
 export function useMembers(churchId?: string) {

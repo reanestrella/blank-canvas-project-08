@@ -29,7 +29,9 @@ export interface ConsolidationRow {
   created_at?: string;
 }
 
-export interface MemberLite {
+import { isRealVisitor, type OriginAware } from "./originType";
+
+export interface MemberLite extends OriginAware {
   id: string;
   spiritual_status?: string | null;
   conversion_date?: string | null;
@@ -45,6 +47,8 @@ export interface MetricsFilters {
   periodMode?: "all" | "year" | "month";
   filterMonth?: number; // 0-11
   filterYear?: number;
+  /** Default true — exclude imported/migrated members from visitor counts. */
+  ignoreImported?: boolean;
 }
 
 export interface ConsolidationMetrics {
@@ -103,16 +107,20 @@ export function getConsolidationMetrics(
   }
 
   const congregationId = filters.congregationId;
+  const ignoreImported = filters.ignoreImported !== false; // default true
 
-  // Visitantes (cumulativo): record.visit_date no período OU member.first_visit_date no período
+  // Visitantes (cumulativo): record.visit_date no período OU member.first_visit_date no período.
+  // Filtro: por padrão exclui membros importados/migrados (origin_type não-real).
   const visitanteIds = new Set<string>();
   for (const r of records) {
     const m = memberById.get(r.member_id);
     if (!passesCongregation(m, congregationId)) continue;
+    if (ignoreImported && !isRealVisitor(m)) continue;
     if (inPeriod(r.visit_date, filters)) visitanteIds.add(r.member_id);
   }
   for (const m of members) {
     if (!passesCongregation(m, congregationId)) continue;
+    if (ignoreImported && !isRealVisitor(m)) continue;
     if (visitanteIds.has(m.id)) continue;
     if (inPeriod(m.first_visit_date, filters)) visitanteIds.add(m.id);
   }
