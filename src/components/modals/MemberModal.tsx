@@ -136,6 +136,9 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
     }
   }, [open, member, form]);
 
+  // Persistência apenas em modo de criação
+  useRhfFormPersistence(PERSIST_KEY, form, { enabled: open && !member });
+
   const handleSubmit = async (data: MemberFormData) => {
     setIsSubmitting(true);
     try {
