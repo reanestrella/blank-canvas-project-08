@@ -145,6 +145,8 @@ export function MemberImportModal({
         email: r.email || null,
         phone: r.phone || r.mobile || null,
         notes: r.title ? `Título: ${r.title}` : null,
+        // Importação em massa: NÃO conta como visitante real nas métricas históricas.
+        origin_type: "spreadsheet_import",
       }));
 
       const { data, error } = await supabase.from("members").insert(insertData).select("id");
