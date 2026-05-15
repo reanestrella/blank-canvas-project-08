@@ -22,6 +22,7 @@ import {
   HeartHandshake,
   Network,
   Loader2,
+  ShieldCheck,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -135,6 +136,12 @@ const allMenuItems: MenuItem[] = [
 ];
 
 const bottomItems: MenuItem[] = [
+  {
+    icon: ShieldCheck,
+    label: "Auditoria",
+    path: "/auditoria",
+    allowedRoles: ["pastor"],
+  },
   {
     icon: Settings,
     label: "Configurações",
