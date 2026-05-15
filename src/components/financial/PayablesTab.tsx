@@ -27,7 +27,7 @@ interface PayablesTabProps {
 
 type StatusFilter = "all" | "pendente" | "vencida" | "pago";
 type PeriodMode = "month" | "year" | "all";
-type CreationMode = "single" | "recurring";
+type CreationMode = "single" | "recurring_open" | "recurring_finite";
 
 const recurrenceLabel: Record<PayableRecurrence, string> = {
   nenhuma: "Sem recorrência",
@@ -157,7 +157,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
     setEditing(p);
     setEditScope("single");
     setForm({
-      mode: p.recurrence === "nenhuma" ? "single" : "recurring",
+      mode: p.recurrence === "nenhuma" ? "single" : (p.installment_group_id ? "recurring_finite" : "recurring_open"),
       description: p.description.replace(/\s*\(\d+\/\d+\)\s*$/, ""),
       amount: Number(p.amount), due_date: p.due_date,
       category_id: p.category_id, account_id: p.account_id, recurrence: p.recurrence,
@@ -184,6 +184,8 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
         ? await updateGroupFuture(editing, payload)
         : await updatePayable(editing.id, payload);
     } else {
+      const isRec = form.mode !== "single";
+      const isFinite = form.mode === "recurring_finite";
       const payload: CreatePayableData = {
         description: form.description,
         amount: form.amount,
@@ -191,11 +193,11 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
         category_id: form.category_id,
         account_id: form.account_id,
         notes: form.notes,
-        recurrence: form.mode === "recurring" ? (form.recurrence || "mensal") : "nenhuma",
-        recurrence_interval_days: form.mode === "recurring" && form.recurrence === "personalizada"
+        recurrence: isRec ? (form.recurrence || "mensal") : "nenhuma",
+        recurrence_interval_days: isRec && form.recurrence === "personalizada"
           ? Math.max(1, form.recurrence_interval_days || 30)
           : null,
-        recurrence_end_date: form.mode === "recurring" ? (form.recurrence_end_date || null) : null,
+        recurrence_end_date: isFinite ? (form.recurrence_end_date || null) : null,
       };
       res = await createPayable(payload);
     }
@@ -439,14 +441,20 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
           <div className="space-y-4">
             {!editing && (
               <div className="space-y-2">
-                <Label>Tipo</Label>
-                <Select value={form.mode} onValueChange={(v: CreationMode) => setForm({ ...form, mode: v })}>
+                <Label>Tipo de lançamento</Label>
+                <Select value={form.mode} onValueChange={(v: CreationMode) => setForm({ ...form, mode: v, recurrence_end_date: v === "recurring_finite" ? form.recurrence_end_date : null })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="single">Conta única</SelectItem>
-                    <SelectItem value="recurring">Recorrente</SelectItem>
+                    <SelectItem value="recurring_open">Recorrente sem fim (água, luz, aluguel...)</SelectItem>
+                    <SelectItem value="recurring_finite">Recorrente com início e fim (parcelado)</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  {form.mode === "single" && "Pagamento único / avulso."}
+                  {form.mode === "recurring_open" && "Próxima ocorrência é gerada automaticamente ao pagar."}
+                  {form.mode === "recurring_finite" && "Todas as parcelas são pré-geradas (1/N, 2/N...) entre o início e o fim."}
+                </p>
               </div>
             )}
 
@@ -474,7 +482,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
                   onChange={(e) => setForm({ ...form, amount: parseFloat(e.target.value || "0") })} />
               </div>
               <div className="space-y-2">
-                <Label>{form.mode === "recurring" && !editing ? "Data inicial *" : "Vencimento *"}</Label>
+                <Label>{form.mode !== "single" && !editing ? "Data inicial *" : "Vencimento *"}</Label>
                 <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} disabled={editScope === "future"} />
               </div>
             </div>
@@ -501,7 +509,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
               </div>
             </div>
 
-            {!editing && form.mode === "recurring" && (
+            {!editing && form.mode !== "single" && (
               <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
@@ -523,16 +531,18 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
                         onChange={(e) => setForm({ ...form, recurrence_interval_days: Math.max(1, parseInt(e.target.value || "30")) })} />
                     </div>
                   )}
-                  <div className="space-y-2">
-                    <Label>Data final (opcional)</Label>
-                    <Input type="date" value={form.recurrence_end_date || ""}
-                      onChange={(e) => setForm({ ...form, recurrence_end_date: e.target.value || null })} />
-                  </div>
+                  {form.mode === "recurring_finite" && (
+                    <div className="space-y-2">
+                      <Label>Data final *</Label>
+                      <Input type="date" value={form.recurrence_end_date || ""}
+                        onChange={(e) => setForm({ ...form, recurrence_end_date: e.target.value || null })} />
+                    </div>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {form.recurrence_end_date
-                    ? "Todas as ocorrências entre a data inicial e a final serão geradas (ex: 1/12, 2/12...)."
-                    : "Recorrência contínua: ao pagar cada conta, a próxima é gerada automaticamente. Ideal para aluguel, internet, água, energia."}
+                  {form.mode === "recurring_finite"
+                    ? "Todas as parcelas serão geradas automaticamente entre as datas (1/N, 2/N...)."
+                    : "Recorrência contínua: ao pagar, a próxima ocorrência é criada automaticamente."}
                 </p>
               </div>
             )}
@@ -544,7 +554,11 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={submitting || !form.description || !form.amount || (!editing && form.mode === "recurring" && form.recurrence === "personalizada" && !(form.recurrence_interval_days && form.recurrence_interval_days > 0))}>
+            <Button onClick={handleSave} disabled={
+              submitting || !form.description || !form.amount ||
+              (!editing && form.mode !== "single" && form.recurrence === "personalizada" && !(form.recurrence_interval_days && form.recurrence_interval_days > 0)) ||
+              (!editing && form.mode === "recurring_finite" && !form.recurrence_end_date)
+            }>
               {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {editing ? "Salvar" : "Criar"}
             </Button>
