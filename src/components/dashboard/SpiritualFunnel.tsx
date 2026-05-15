@@ -115,7 +115,7 @@ export function SpiritualFunnel() {
         return inPeriodCheck(r?.consolidation_end_date) || inPeriodCheck(m.baptism_date);
       }),
     };
-  }, [records, members, periodMode, filterMonth, filterYear]);
+  }, [records, members, periodMode, filterMonth, filterYear, ignoreImported]);
 
   const steps: StageKey[] = ["visitante", "decidido", "consolidacao", "batizado", "membro"];
 
