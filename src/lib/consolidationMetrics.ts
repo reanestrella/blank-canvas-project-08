@@ -107,16 +107,20 @@ export function getConsolidationMetrics(
   }
 
   const congregationId = filters.congregationId;
+  const ignoreImported = filters.ignoreImported !== false; // default true
 
-  // Visitantes (cumulativo): record.visit_date no período OU member.first_visit_date no período
+  // Visitantes (cumulativo): record.visit_date no período OU member.first_visit_date no período.
+  // Filtro: por padrão exclui membros importados/migrados (origin_type não-real).
   const visitanteIds = new Set<string>();
   for (const r of records) {
     const m = memberById.get(r.member_id);
     if (!passesCongregation(m, congregationId)) continue;
+    if (ignoreImported && !isRealVisitor(m)) continue;
     if (inPeriod(r.visit_date, filters)) visitanteIds.add(r.member_id);
   }
   for (const m of members) {
     if (!passesCongregation(m, congregationId)) continue;
+    if (ignoreImported && !isRealVisitor(m)) continue;
     if (visitanteIds.has(m.id)) continue;
     if (inPeriod(m.first_visit_date, filters)) visitanteIds.add(m.id);
   }
