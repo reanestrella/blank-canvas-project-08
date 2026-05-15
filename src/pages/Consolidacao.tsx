@@ -31,6 +31,7 @@ import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFi
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { VisitorContactDashboard } from "@/components/consolidation/VisitorContactDashboard";
 import { getConsolidationMetrics } from "@/lib/consolidationMetrics";
+import { useMetricsSettings } from "@/hooks/useMetricsSettings";
 
 const stageConfig: Record<ConsolidationStage, { label: string; color: string }> = {
   visitante:       { label: "Visitante",        color: "bg-chart-visitante text-white" },
@@ -72,6 +73,7 @@ export default function Consolidacao() {
 
   const { profile } = useAuth();
   const churchId = profile?.church_id;
+  const { ignoreImported } = useMetricsSettings();
   const { records, isLoading, createRecord, updateRecord, deleteRecord } = useConsolidation(churchId || undefined);
   const { members, updateMember } = useMembers(churchId || undefined);
   const { byRecord: assigneesByRecord, setAssignees } = useConsolidationAssignees(churchId || undefined);
@@ -122,6 +124,15 @@ export default function Consolidacao() {
       periodMode,
       filterMonth,
       filterYear,
+      ignoreImported,
+    });
+    console.debug("[Metrics] consolidacao.page", {
+      ignoreImported,
+      periodMode, filterMonth, filterYear,
+      visitantes: metrics.visitantes,
+      decididos: metrics.decididos,
+      emConsolidacao: metrics.emConsolidacao,
+      consolidados: metrics.consolidados,
     });
     const toPerson = (memberId: string) => {
       const m = memberById.get(memberId) as any;
@@ -140,7 +151,7 @@ export default function Consolidacao() {
       consolidados: Array.from(metrics.consolidadoIds).map(toPerson),
       batizados: Array.from(metrics.batizadoIds).map(toPerson),
     };
-  }, [members, records, memberById, periodMode, filterMonth, filterYear]);
+  }, [members, records, memberById, periodMode, filterMonth, filterYear, ignoreImported]);
 
   const dashCounts = {
     visitantes: dashPeople.visitantes.length,

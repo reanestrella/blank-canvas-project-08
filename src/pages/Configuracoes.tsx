@@ -40,6 +40,7 @@ import { RolesPanel } from "@/components/admin/RolesPanel";
 import { ChurchLogoUpload } from "@/components/settings/ChurchLogoUpload";
 import { ResetDataSection } from "@/components/settings/ResetDataSection";
 import { ChangePasswordCard } from "@/components/settings/ChangePasswordCard";
+import { useMetricsSettings } from "@/hooks/useMetricsSettings";
 import type { Congregation, CreateCongregationData } from "@/hooks/useCongregations";
 
 const PLANS = [
@@ -103,6 +104,7 @@ export default function Configuracoes() {
   const { invitations, isLoading, createInvitation, deleteInvitation, getInviteLink } = useInvitations();
   const { congregations, isLoading: loadingCongregations, createCongregation, updateCongregation } = useCongregations(churchId || undefined);
   const { church, isLoading: loadingChurch, isSaving, updateChurch, fetchChurch } = useChurchSettings();
+  const metricsSettings = useMetricsSettings();
   const { isActive: isPremium } = useSubscription();
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
@@ -315,6 +317,36 @@ export default function Configuracoes() {
                 }}
               />
             )}
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Métricas e relatórios</CardTitle>
+                <CardDescription>
+                  Como visitantes, decididos e consolidados são contabilizados.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="ignore-imported" className="text-sm font-medium">
+                      Ignorar membros importados/migrados
+                    </Label>
+                    <p className="text-xs text-muted-foreground max-w-prose">
+                      Quando ativado, membros importados via planilha ou migrados do sistema antigo
+                      <strong> não entram</strong> na contagem de visitantes do Dashboard, Funil
+                      Espiritual e Consolidação. Apenas visitantes reais (cadastrados como visitante
+                      ou via decisão) são contabilizados. Recomendado.
+                    </p>
+                  </div>
+                  <Switch
+                    id="ignore-imported"
+                    checked={metricsSettings.ignoreImported}
+                    disabled={metricsSettings.isLoading || metricsSettings.isSaving}
+                    onCheckedChange={(v) => metricsSettings.update(v)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="filiais" className="space-y-6 mt-6">

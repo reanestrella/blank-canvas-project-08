@@ -32,6 +32,8 @@ export interface PeopleStatsOptions {
   periodMode?: "all" | "year" | "month";
   filterMonth?: number;
   filterYear?: number;
+  /** Default true — exclude imported/migrated members from visitor counts. */
+  ignoreImported?: boolean;
 }
 
 const isMembro = (s: string) =>
@@ -46,6 +48,7 @@ export function usePeopleStats<T extends PeopleStatsInput>(
   options: PeopleStatsOptions = {}
 ): PeopleStats {
   const { congregationId, periodMode = "all", filterMonth, filterYear } = options;
+  const ignoreImported = options.ignoreImported !== false;
 
   return useMemo(() => {
     // Helper: verifica se uma data (string ISO ou date) cai no período filtrado
@@ -90,7 +93,7 @@ export function usePeopleStats<T extends PeopleStatsInput>(
     // independentemente do status atual (mesmo que tenha virado decidido/membro).
     // Exclui membros importados/migrados (origin_type não-real) para não inflar métricas.
     const visitantes = byCongregation.filter(
-      (m) => isRealVisitor(m) && dateInPeriod(m.first_visit_date || m.created_at),
+      (m) => (!ignoreImported || isRealVisitor(m)) && dateInPeriod(m.first_visit_date || m.created_at),
     ).length;
 
     // DECIDIDOS: pessoas com data de conversão no período.
@@ -114,5 +117,5 @@ export function usePeopleStats<T extends PeopleStatsInput>(
         kids: kidsCount,
       },
     };
-  }, [members, congregationId, periodMode, filterMonth, filterYear]);
+  }, [members, congregationId, periodMode, filterMonth, filterYear, ignoreImported]);
 }

@@ -8,6 +8,7 @@ import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFi
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getConsolidationMetrics } from "@/lib/consolidationMetrics";
+import { useMetricsSettings } from "@/hooks/useMetricsSettings";
 
 type StageKey = "visitante" | "decidido" | "consolidacao" | "batizado" | "membro";
 
@@ -33,6 +34,7 @@ const stageMeta: Record<StageKey, { label: string; barClass: string; gradient: s
 
 export function SpiritualFunnel() {
   const { currentChurchId } = useAuth();
+  const { ignoreImported } = useMetricsSettings();
   const now = new Date();
   const [periodMode, setPeriodMode] = useState<PeriodMode>("month");
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
@@ -84,6 +86,7 @@ export function SpiritualFunnel() {
       periodMode,
       filterMonth,
       filterYear,
+      ignoreImported,
     });
 
     const personFor = (memberId: string) => {
@@ -112,7 +115,7 @@ export function SpiritualFunnel() {
         return inPeriodCheck(r?.consolidation_end_date) || inPeriodCheck(m.baptism_date);
       }),
     };
-  }, [records, members, periodMode, filterMonth, filterYear]);
+  }, [records, members, periodMode, filterMonth, filterYear, ignoreImported]);
 
   const steps: StageKey[] = ["visitante", "decidido", "consolidacao", "batizado", "membro"];
 
