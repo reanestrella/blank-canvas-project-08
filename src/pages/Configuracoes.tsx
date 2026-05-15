@@ -40,6 +40,7 @@ import { RolesPanel } from "@/components/admin/RolesPanel";
 import { ChurchLogoUpload } from "@/components/settings/ChurchLogoUpload";
 import { ResetDataSection } from "@/components/settings/ResetDataSection";
 import { ChangePasswordCard } from "@/components/settings/ChangePasswordCard";
+import { useMetricsSettings } from "@/hooks/useMetricsSettings";
 import type { Congregation, CreateCongregationData } from "@/hooks/useCongregations";
 
 const PLANS = [
