@@ -34,6 +34,7 @@ const stageMeta: Record<StageKey, { label: string; barClass: string; gradient: s
 
 export function SpiritualFunnel() {
   const { currentChurchId } = useAuth();
+  const { ignoreImported } = useMetricsSettings();
   const now = new Date();
   const [periodMode, setPeriodMode] = useState<PeriodMode>("month");
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
