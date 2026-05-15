@@ -119,6 +119,9 @@ export function TransactionModal({
     }
   }, [open, transaction, defaultType]);
 
+  // Persistência só para criação (não interferir em edição)
+  useRhfFormPersistence(PERSIST_KEY, form, { enabled: open && !transaction });
+
   const selectedType = form.watch("type");
   const filteredCategories = categories.filter((c) => c.type === selectedType);
 
