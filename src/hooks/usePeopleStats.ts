@@ -32,6 +32,8 @@ export interface PeopleStatsOptions {
   periodMode?: "all" | "year" | "month";
   filterMonth?: number;
   filterYear?: number;
+  /** Default true — exclude imported/migrated members from visitor counts. */
+  ignoreImported?: boolean;
 }
 
 const isMembro = (s: string) =>
@@ -46,6 +48,7 @@ export function usePeopleStats<T extends PeopleStatsInput>(
   options: PeopleStatsOptions = {}
 ): PeopleStats {
   const { congregationId, periodMode = "all", filterMonth, filterYear } = options;
+  const ignoreImported = options.ignoreImported !== false;
 
   return useMemo(() => {
     // Helper: verifica se uma data (string ISO ou date) cai no período filtrado
