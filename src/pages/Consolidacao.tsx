@@ -124,6 +124,15 @@ export default function Consolidacao() {
       periodMode,
       filterMonth,
       filterYear,
+      ignoreImported,
+    });
+    console.debug("[Metrics] consolidacao.page", {
+      ignoreImported,
+      periodMode, filterMonth, filterYear,
+      visitantes: metrics.visitantes,
+      decididos: metrics.decididos,
+      emConsolidacao: metrics.emConsolidacao,
+      consolidados: metrics.consolidados,
     });
     const toPerson = (memberId: string) => {
       const m = memberById.get(memberId) as any;
@@ -142,7 +151,7 @@ export default function Consolidacao() {
       consolidados: Array.from(metrics.consolidadoIds).map(toPerson),
       batizados: Array.from(metrics.batizadoIds).map(toPerson),
     };
-  }, [members, records, memberById, periodMode, filterMonth, filterYear]);
+  }, [members, records, memberById, periodMode, filterMonth, filterYear, ignoreImported]);
 
   const dashCounts = {
     visitantes: dashPeople.visitantes.length,
