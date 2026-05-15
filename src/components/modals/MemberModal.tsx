@@ -157,6 +157,8 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
         pastoral_notes: data.pastoral_notes || undefined,
         congregation_id: data.congregation_id || undefined,
         is_active: data.is_active,
+        // Marca a origem do cadastro APENAS na criação (preserva valor existente em edição).
+        ...(member ? {} : { origin_type: defaultOriginForStatus(data.spiritual_status) }),
       };
 
       const result = await onSubmit(cleanedData);
