@@ -29,7 +29,9 @@ export interface ConsolidationRow {
   created_at?: string;
 }
 
-export interface MemberLite {
+import { isRealVisitor, type OriginAware } from "./originType";
+
+export interface MemberLite extends OriginAware {
   id: string;
   spiritual_status?: string | null;
   conversion_date?: string | null;
@@ -45,6 +47,8 @@ export interface MetricsFilters {
   periodMode?: "all" | "year" | "month";
   filterMonth?: number; // 0-11
   filterYear?: number;
+  /** Default true — exclude imported/migrated members from visitor counts. */
+  ignoreImported?: boolean;
 }
 
 export interface ConsolidationMetrics {
