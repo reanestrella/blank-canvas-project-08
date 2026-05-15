@@ -12,6 +12,7 @@ export interface PeopleStatsInput {
   is_baptized?: boolean;
   first_visit_date?: string | null;
   conversion_date?: string | null;
+  origin_type?: string | null;
 }
 
 export interface PeopleStats {
