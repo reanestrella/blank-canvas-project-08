@@ -73,6 +73,7 @@ export default function Consolidacao() {
 
   const { profile } = useAuth();
   const churchId = profile?.church_id;
+  const { ignoreImported } = useMetricsSettings();
   const { records, isLoading, createRecord, updateRecord, deleteRecord } = useConsolidation(churchId || undefined);
   const { members, updateMember } = useMembers(churchId || undefined);
   const { byRecord: assigneesByRecord, setAssignees } = useConsolidationAssignees(churchId || undefined);
