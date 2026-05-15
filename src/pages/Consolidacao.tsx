@@ -383,7 +383,13 @@ export default function Consolidacao() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => openEdit(r)}>Editar tudo</DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={() => deleteRecord(r.id)}>Excluir registro</DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={async () => {
+                                await deleteRecord(r.id);
+                                logAudit({ action: "delete", entity_type: "consolidation_record", entity_id: r.id });
+                              }}
+                            >Excluir registro</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
