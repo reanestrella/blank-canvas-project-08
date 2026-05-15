@@ -8,6 +8,7 @@ import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFi
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getConsolidationMetrics } from "@/lib/consolidationMetrics";
+import { useMetricsSettings } from "@/hooks/useMetricsSettings";
 
 type StageKey = "visitante" | "decidido" | "consolidacao" | "batizado" | "membro";
 
