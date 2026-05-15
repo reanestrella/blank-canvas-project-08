@@ -76,6 +76,8 @@ export function CellReportModal({
     },
   });
 
+  useRhfFormPersistence(PERSIST_KEY, form, { enabled: open });
+
   const handleSubmit = async (data: ReportFormData) => {
     setIsSubmitting(true);
     try {
