@@ -104,6 +104,7 @@ export default function Configuracoes() {
   const { invitations, isLoading, createInvitation, deleteInvitation, getInviteLink } = useInvitations();
   const { congregations, isLoading: loadingCongregations, createCongregation, updateCongregation } = useCongregations(churchId || undefined);
   const { church, isLoading: loadingChurch, isSaving, updateChurch, fetchChurch } = useChurchSettings();
+  const metricsSettings = useMetricsSettings();
   const { isActive: isPremium } = useSubscription();
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
