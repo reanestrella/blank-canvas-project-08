@@ -32,6 +32,9 @@ import { Loader2 } from "lucide-react";
 import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
 import type { FinancialTransaction, FinancialCategory, CreateTransactionData } from "@/hooks/useFinancial";
 import type { FinancialAccount } from "@/hooks/useFinancialAccounts";
+import { useRhfFormPersistence, clearRhfFormPersistence } from "@/hooks/useRhfFormPersistence";
+
+const PERSIST_KEY = "transaction-modal";
 
 const transactionSchema = z.object({
   type: z.enum(["receita", "despesa"]),
