@@ -23,6 +23,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
+import { useRhfFormPersistence, clearRhfFormPersistence } from "@/hooks/useRhfFormPersistence";
+
+const PERSIST_KEY = "event-modal";
 
 const eventSchema = z.object({
   title: z.string().min(2, "Título deve ter pelo menos 2 caracteres"),
@@ -84,6 +87,8 @@ export function EventModal({ open, onOpenChange, event, onSubmit }: EventModalPr
     }
   }, [open, event, form]);
 
+  useRhfFormPersistence(PERSIST_KEY, form, { enabled: open && !event });
+
   const handleSubmit = async (data: EventFormData) => {
     setIsSubmitting(true);
     try {
@@ -99,6 +104,7 @@ export function EventModal({ open, onOpenChange, event, onSubmit }: EventModalPr
       
       const result = await onSubmit(cleanedData);
       if (!result.error) {
+        clearRhfFormPersistence(PERSIST_KEY);
         form.reset();
         onOpenChange(false);
       }

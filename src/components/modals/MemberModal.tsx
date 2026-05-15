@@ -33,6 +33,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import type { Member, CreateMemberData } from "@/hooks/useMembers";
 import { defaultOriginForStatus } from "@/lib/originType";
+import { useRhfFormPersistence, clearRhfFormPersistence } from "@/hooks/useRhfFormPersistence";
+
+const PERSIST_KEY = "member-modal";
 import { useCongregations, Congregation } from "@/hooks/useCongregations";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -133,6 +136,9 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
     }
   }, [open, member, form]);
 
+  // Persistência apenas em modo de criação
+  useRhfFormPersistence(PERSIST_KEY, form, { enabled: open && !member });
+
   const handleSubmit = async (data: MemberFormData) => {
     setIsSubmitting(true);
     try {
@@ -164,6 +170,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
       const result = await onSubmit(cleanedData);
 
       if (!result.error) {
+        clearRhfFormPersistence(PERSIST_KEY);
         form.reset();
         onOpenChange(false);
       }

@@ -30,6 +30,9 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import type { Cell, CellReport, CreateCellReportData } from "@/hooks/useCells";
+import { useRhfFormPersistence, clearRhfFormPersistence } from "@/hooks/useRhfFormPersistence";
+
+const PERSIST_KEY = "cell-report-modal";
 
 const reportSchema = z.object({
   cell_id: z.string().min(1, "Selecione uma célula"),
@@ -73,6 +76,8 @@ export function CellReportModal({
     },
   });
 
+  useRhfFormPersistence(PERSIST_KEY, form, { enabled: open });
+
   const handleSubmit = async (data: ReportFormData) => {
     setIsSubmitting(true);
     try {
@@ -88,6 +93,7 @@ export function CellReportModal({
       
       const result = await onSubmit(cleanedData);
       if (!result.error) {
+        clearRhfFormPersistence(PERSIST_KEY);
         form.reset();
         onOpenChange(false);
       }

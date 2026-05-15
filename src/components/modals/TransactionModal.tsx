@@ -32,6 +32,9 @@ import { Loader2 } from "lucide-react";
 import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
 import type { FinancialTransaction, FinancialCategory, CreateTransactionData } from "@/hooks/useFinancial";
 import type { FinancialAccount } from "@/hooks/useFinancialAccounts";
+import { useRhfFormPersistence, clearRhfFormPersistence } from "@/hooks/useRhfFormPersistence";
+
+const PERSIST_KEY = "transaction-modal";
 
 const transactionSchema = z.object({
   type: z.enum(["receita", "despesa"]),
@@ -116,6 +119,9 @@ export function TransactionModal({
     }
   }, [open, transaction, defaultType]);
 
+  // Persistência só para criação (não interferir em edição)
+  useRhfFormPersistence(PERSIST_KEY, form, { enabled: open && !transaction });
+
   const selectedType = form.watch("type");
   const filteredCategories = categories.filter((c) => c.type === selectedType);
 
@@ -141,6 +147,7 @@ export function TransactionModal({
       
       const result = await onSubmit(cleanedData);
       if (!result.error) {
+        clearRhfFormPersistence(PERSIST_KEY);
         form.reset();
         onOpenChange(false);
       }
