@@ -93,7 +93,7 @@ export function usePeopleStats<T extends PeopleStatsInput>(
     // independentemente do status atual (mesmo que tenha virado decidido/membro).
     // Exclui membros importados/migrados (origin_type não-real) para não inflar métricas.
     const visitantes = byCongregation.filter(
-      (m) => isRealVisitor(m) && dateInPeriod(m.first_visit_date || m.created_at),
+      (m) => (!ignoreImported || isRealVisitor(m)) && dateInPeriod(m.first_visit_date || m.created_at),
     ).length;
 
     // DECIDIDOS: pessoas com data de conversão no período.
