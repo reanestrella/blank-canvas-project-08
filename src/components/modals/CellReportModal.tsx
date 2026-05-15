@@ -93,6 +93,7 @@ export function CellReportModal({
       
       const result = await onSubmit(cleanedData);
       if (!result.error) {
+        clearRhfFormPersistence(PERSIST_KEY);
         form.reset();
         onOpenChange(false);
       }
