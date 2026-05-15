@@ -85,6 +85,7 @@ export function SpiritualFunnel() {
       periodMode,
       filterMonth,
       filterYear,
+      ignoreImported,
     });
 
     const personFor = (memberId: string) => {
