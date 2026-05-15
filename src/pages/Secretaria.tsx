@@ -79,6 +79,7 @@ export default function Secretaria() {
   const [editingMember, setEditingMember] = useState<Member | undefined>();
   const [deletingMember, setDeletingMember] = useState<Member | null>(null);
   const [activeTab, setActiveTab] = useState("todos");
+  useOpenPersistence("member-modal-new", memberModalOpen, setMemberModalOpen, { enabled: !editingMember });
   const [networkFilter, setNetworkFilter] = useState<string>("all");
   
   const now = new Date();
