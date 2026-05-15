@@ -33,6 +33,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import type { Member, CreateMemberData } from "@/hooks/useMembers";
 import { defaultOriginForStatus } from "@/lib/originType";
+import { useRhfFormPersistence, clearRhfFormPersistence } from "@/hooks/useRhfFormPersistence";
+
+const PERSIST_KEY = "member-modal";
 import { useCongregations, Congregation } from "@/hooks/useCongregations";
 import { useAuth } from "@/contexts/AuthContext";
 
