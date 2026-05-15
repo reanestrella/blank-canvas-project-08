@@ -104,6 +104,7 @@ export function EventModal({ open, onOpenChange, event, onSubmit }: EventModalPr
       
       const result = await onSubmit(cleanedData);
       if (!result.error) {
+        clearRhfFormPersistence(PERSIST_KEY);
         form.reset();
         onOpenChange(false);
       }
