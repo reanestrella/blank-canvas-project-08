@@ -184,6 +184,8 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
         ? await updateGroupFuture(editing, payload)
         : await updatePayable(editing.id, payload);
     } else {
+      const isRec = form.mode !== "single";
+      const isFinite = form.mode === "recurring_finite";
       const payload: CreatePayableData = {
         description: form.description,
         amount: form.amount,
@@ -191,11 +193,11 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
         category_id: form.category_id,
         account_id: form.account_id,
         notes: form.notes,
-        recurrence: form.mode === "recurring" ? (form.recurrence || "mensal") : "nenhuma",
-        recurrence_interval_days: form.mode === "recurring" && form.recurrence === "personalizada"
+        recurrence: isRec ? (form.recurrence || "mensal") : "nenhuma",
+        recurrence_interval_days: isRec && form.recurrence === "personalizada"
           ? Math.max(1, form.recurrence_interval_days || 30)
           : null,
-        recurrence_end_date: form.mode === "recurring" ? (form.recurrence_end_date || null) : null,
+        recurrence_end_date: isFinite ? (form.recurrence_end_date || null) : null,
       };
       res = await createPayable(payload);
     }
