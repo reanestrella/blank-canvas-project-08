@@ -1191,6 +1191,55 @@ export type Database = {
           },
         ]
       }
+      consolidation_assignees: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          church_id: string
+          consolidation_id: string
+          consolidator_member_id: string
+          id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          church_id: string
+          consolidation_id: string
+          consolidator_member_id: string
+          id?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          church_id?: string
+          consolidation_id?: string
+          consolidator_member_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consolidation_assignees_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consolidation_assignees_consolidation_id_fkey"
+            columns: ["consolidation_id"]
+            isOneToOne: false
+            referencedRelation: "consolidation_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consolidation_assignees_consolidator_member_id_fkey"
+            columns: ["consolidator_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consolidation_records: {
         Row: {
           baptism_date: string | null
