@@ -107,6 +107,15 @@ export default function Consolidacao() {
   const consolidadosList = useMemo(() => recordsByStage("consolidado"), [recordByMember]);
   const batizadosList = useMemo(() => recordsByStage("batizado"), [recordByMember]);
 
+  // Helper local — usado pelo VisitorContactDashboard
+  const inPeriod = (dateStr?: string | null) => {
+    if (!dateStr) return false;
+    if (periodMode === "all") return true;
+    const d = new Date(dateStr + "T12:00:00");
+    if (periodMode === "year") return d.getFullYear() === filterYear;
+    return d.getFullYear() === filterYear && d.getMonth() === filterMonth;
+  };
+
   // ----- DASHBOARD: filter by DATE — usa fonte única -----
   const dashPeople = useMemo(() => {
     const metrics = getConsolidationMetrics(records as any, members as any, {
