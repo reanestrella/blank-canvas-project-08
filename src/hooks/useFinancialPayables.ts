@@ -20,6 +20,9 @@ export interface FinancialPayable {
   parent_payable_id: string | null;
   notes: string | null;
   created_at: string;
+  installment_number: number | null;
+  installment_total: number | null;
+  installment_group_id: string | null;
 }
 
 export interface CreatePayableData {
@@ -31,6 +34,8 @@ export interface CreatePayableData {
   recurrence?: PayableRecurrence;
   notes?: string | null;
   status?: PayableStatus;
+  /** Quando informado (>1), gera N parcelas mensais com mesmo grupo. */
+  installments?: number;
 }
 
 function addToDate(dateIso: string, recurrence: PayableRecurrence): string {
