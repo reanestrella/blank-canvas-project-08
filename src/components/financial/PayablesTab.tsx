@@ -433,7 +433,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
             <DialogDescription>
               {editing
                 ? "Edite esta parcela ou aplique a todas as futuras pendentes do compromisso."
-                : "Crie uma conta única, parcelada ou recorrente com data inicial e final."}
+                : "Crie uma conta única ou recorrente. Recorrência sem data fim gera próximas parcelas automaticamente."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -444,8 +444,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="single">Conta única</SelectItem>
-                    <SelectItem value="installments">Parcelada</SelectItem>
-                    <SelectItem value="recurring">Recorrente (com data fim)</SelectItem>
+                    <SelectItem value="recurring">Recorrente</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -470,7 +469,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{form.mode === "installments" && !editing ? "Valor total (R$) *" : "Valor (R$) *"}</Label>
+                <Label>Valor (R$) *</Label>
                 <Input type="number" step="0.01" min="0" value={form.amount || ""}
                   onChange={(e) => setForm({ ...form, amount: parseFloat(e.target.value || "0") })} />
               </div>
@@ -502,37 +501,38 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
               </div>
             </div>
 
-            {!editing && form.mode === "installments" && (
-              <div className="space-y-2">
-                <Label>Número de parcelas *</Label>
-                <Input type="number" min="2" max="60" value={form.installments || 2}
-                  onChange={(e) => setForm({ ...form, installments: Math.max(2, parseInt(e.target.value || "2")) })} />
-                <p className="text-xs text-muted-foreground">
-                  Valor por parcela: R$ {formatBRL((form.amount || 0) / Math.max(1, form.installments || 1))}. Vencimentos mensais a partir da data informada.
-                </p>
-              </div>
-            )}
-
             {!editing && form.mode === "recurring" && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Frequência</Label>
-                  <Select value={form.recurrence || "mensal"} onValueChange={(v: PayableRecurrence) => setForm({ ...form, recurrence: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="semanal">Semanal</SelectItem>
-                      <SelectItem value="mensal">Mensal</SelectItem>
-                      <SelectItem value="anual">Anual</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Frequência</Label>
+                    <Select value={form.recurrence || "mensal"} onValueChange={(v: PayableRecurrence) => setForm({ ...form, recurrence: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="semanal">Semanal</SelectItem>
+                        <SelectItem value="mensal">Mensal</SelectItem>
+                        <SelectItem value="anual">Anual</SelectItem>
+                        <SelectItem value="personalizada">Personalizada (dias)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {form.recurrence === "personalizada" && (
+                    <div className="space-y-2">
+                      <Label>Intervalo (dias) *</Label>
+                      <Input type="number" min="1" value={form.recurrence_interval_days || 30}
+                        onChange={(e) => setForm({ ...form, recurrence_interval_days: Math.max(1, parseInt(e.target.value || "30")) })} />
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label>Data final (opcional)</Label>
+                    <Input type="date" value={form.recurrence_end_date || ""}
+                      onChange={(e) => setForm({ ...form, recurrence_end_date: e.target.value || null })} />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Data final *</Label>
-                  <Input type="date" value={form.recurrence_end_date || ""}
-                    onChange={(e) => setForm({ ...form, recurrence_end_date: e.target.value })} />
-                </div>
-                <p className="col-span-2 text-xs text-muted-foreground">
-                  Serão geradas todas as ocorrências entre a data inicial e a data final, numeradas automaticamente (ex: 1/12, 2/12...).
+                <p className="text-xs text-muted-foreground">
+                  {form.recurrence_end_date
+                    ? "Todas as ocorrências entre a data inicial e a final serão geradas (ex: 1/12, 2/12...)."
+                    : "Recorrência contínua: ao pagar cada conta, a próxima é gerada automaticamente. Ideal para aluguel, internet, água, energia."}
                 </p>
               </div>
             )}
