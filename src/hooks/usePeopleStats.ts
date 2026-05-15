@@ -117,5 +117,5 @@ export function usePeopleStats<T extends PeopleStatsInput>(
         kids: kidsCount,
       },
     };
-  }, [members, congregationId, periodMode, filterMonth, filterYear]);
+  }, [members, congregationId, periodMode, filterMonth, filterYear, ignoreImported]);
 }
