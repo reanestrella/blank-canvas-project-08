@@ -27,7 +27,7 @@ interface PayablesTabProps {
 
 type StatusFilter = "all" | "pendente" | "vencida" | "pago";
 type PeriodMode = "month" | "year" | "all";
-type CreationMode = "single" | "recurring";
+type CreationMode = "single" | "recurring_open" | "recurring_finite";
 
 const recurrenceLabel: Record<PayableRecurrence, string> = {
   nenhuma: "Sem recorrência",
