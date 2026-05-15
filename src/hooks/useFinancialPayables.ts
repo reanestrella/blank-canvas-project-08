@@ -298,5 +298,14 @@ export function useFinancialPayables(churchId?: string) {
     return { error: null };
   };
 
-  return { payables, isLoading, fetchPayables, createPayable, updatePayable, deletePayable, markAsPaid };
+  /** Skip auto-chain when payable belongs to a finite recurrence group (already pre-generated). */
+  const markAsPaidSmart = async (payable: FinancialPayable, paidDate: string, accountIdOverride?: string) => {
+    if (payable.installment_group_id) {
+      const noChain = { ...payable, recurrence: "nenhuma" as PayableRecurrence };
+      return markAsPaid(noChain, paidDate, accountIdOverride);
+    }
+    return markAsPaid(payable, paidDate, accountIdOverride);
+  };
+
+  return { payables, isLoading, fetchPayables, createPayable, updatePayable, updateGroupFuture, deletePayable, markAsPaid: markAsPaidSmart };
 }
