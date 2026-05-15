@@ -170,6 +170,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
       const result = await onSubmit(cleanedData);
 
       if (!result.error) {
+        clearRhfFormPersistence(PERSIST_KEY);
         form.reset();
         onOpenChange(false);
       }
