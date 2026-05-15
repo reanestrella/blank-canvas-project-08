@@ -87,6 +87,8 @@ export function EventModal({ open, onOpenChange, event, onSubmit }: EventModalPr
     }
   }, [open, event, form]);
 
+  useRhfFormPersistence(PERSIST_KEY, form, { enabled: open && !event });
+
   const handleSubmit = async (data: EventFormData) => {
     setIsSubmitting(true);
     try {
