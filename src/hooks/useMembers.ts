@@ -53,6 +53,7 @@ export interface CreateMemberData {
   wedding_date?: string;
   pastoral_notes?: string;
   is_active?: boolean;
+  origin_type?: string;
 }
 
 export function useMembers(churchId?: string) {
