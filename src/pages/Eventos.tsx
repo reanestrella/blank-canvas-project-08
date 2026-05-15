@@ -26,6 +26,7 @@ import { EventModal } from "@/components/modals/EventModal";
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Event } from "@/hooks/useEvents";
+import { useOpenPersistence } from "@/hooks/useOpenPersistence";
 
 export default function Eventos() {
   const [eventModalOpen, setEventModalOpen] = useState(false);
@@ -35,6 +36,7 @@ export default function Eventos() {
   const { profile } = useAuth();
   const churchId = profile?.church_id;
   const { events, isLoading, createEvent, updateEvent, deleteEvent } = useEvents(churchId || undefined);
+  useOpenPersistence("event-modal-new", eventModalOpen, setEventModalOpen, { enabled: !editingEvent });
 
   const handleCreateEvent = async (data: Partial<Event>) => {
     if (!churchId) return { data: null, error: new Error("Igreja não identificada") };

@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export type PayableStatus = "pendente" | "pago";
-export type PayableRecurrence = "nenhuma" | "semanal" | "mensal" | "anual";
+export type PayableRecurrence = "nenhuma" | "semanal" | "mensal" | "anual" | "personalizada";
 
 export interface FinancialPayable {
   id: string;
@@ -15,6 +15,7 @@ export interface FinancialPayable {
   account_id: string | null;
   status: PayableStatus;
   recurrence: PayableRecurrence;
+  recurrence_interval_days: number | null;
   paid_at: string | null;
   paid_transaction_id: string | null;
   parent_payable_id: string | null;
@@ -32,19 +33,28 @@ export interface CreatePayableData {
   category_id?: string | null;
   account_id?: string | null;
   recurrence?: PayableRecurrence;
+  /** Para recorrência personalizada (em dias). */
+  recurrence_interval_days?: number | null;
   notes?: string | null;
   status?: PayableStatus;
-  /** Quando informado (>1), gera N parcelas mensais com mesmo grupo. */
-  installments?: number;
-  /** Para recorrência: gera todas as ocorrências até esta data. */
+  /**
+   * OPCIONAL — quando informado em recorrência, gera todas as ocorrências
+   * pré-agendadas até essa data. Quando ausente, a recorrência é contínua e
+   * a próxima parcela é gerada automaticamente quando esta for paga.
+   */
   recurrence_end_date?: string | null;
 }
 
-function addToDate(dateIso: string, recurrence: PayableRecurrence): string {
+export function addToDate(
+  dateIso: string,
+  recurrence: PayableRecurrence,
+  intervalDays?: number | null,
+): string {
   const d = new Date(dateIso + "T12:00:00");
   if (recurrence === "semanal") d.setDate(d.getDate() + 7);
   else if (recurrence === "mensal") d.setMonth(d.getMonth() + 1);
   else if (recurrence === "anual") d.setFullYear(d.getFullYear() + 1);
+  else if (recurrence === "personalizada") d.setDate(d.getDate() + Math.max(1, intervalDays || 30));
   return d.toISOString().slice(0, 10);
 }
 
@@ -86,50 +96,19 @@ export function useFinancialPayables(churchId?: string) {
   const createPayable = async (data: CreatePayableData) => {
     if (!churchId) return { error: new Error("Igreja não identificada") };
     const { data: u } = await supabase.auth.getUser();
-    const installments = Math.max(1, Math.floor(data.installments || 1));
-    if (installments > 1) {
-      const groupId = (crypto as any).randomUUID?.() || `${Date.now()}-${Math.random()}`;
-      const baseAmount = Math.round((data.amount / installments) * 100) / 100;
-      const rows = Array.from({ length: installments }).map((_, i) => {
-        const due = new Date(data.due_date + "T12:00:00");
-        due.setMonth(due.getMonth() + i);
-        return {
-          church_id: churchId,
-          description: `${data.description} (${i + 1}/${installments})`,
-          amount: baseAmount,
-          due_date: due.toISOString().slice(0, 10),
-          category_id: data.category_id || null,
-          account_id: data.account_id || null,
-          recurrence: "nenhuma" as PayableRecurrence,
-          notes: data.notes || null,
-          status: data.status || "pendente",
-          created_by: u.user?.id || null,
-          installment_number: i + 1,
-          installment_total: installments,
-          installment_group_id: groupId,
-        };
-      });
-      const { error } = await supabase.from("financial_payables").insert(rows);
-      if (error) {
-        toast({ title: "Erro ao criar parcelas", description: error.message, variant: "destructive" });
-        return { error };
-      }
-      toast({ title: `${installments} parcelas criadas` });
-      await fetchPayables();
-      return { error: null };
-    }
-
-    // Recorrência com data fim → gera todas as ocorrências como grupo
     const rec = data.recurrence || "nenhuma";
+    const intervalDays = rec === "personalizada" ? Math.max(1, data.recurrence_interval_days || 30) : null;
+
+    // Recorrência com data fim → gera todas as ocorrências como grupo (finita)
     if (rec !== "nenhuma" && data.recurrence_end_date) {
       const groupId = (crypto as any).randomUUID?.() || `${Date.now()}-${Math.random()}`;
       const occurrences: { due: string }[] = [];
       let cursor = data.due_date;
       const limit = data.recurrence_end_date;
       let safety = 0;
-      while (cursor <= limit && safety < 240) {
+      while (cursor <= limit && safety < 600) {
         occurrences.push({ due: cursor });
-        cursor = addToDate(cursor, rec);
+        cursor = addToDate(cursor, rec, intervalDays);
         safety++;
       }
       const total = occurrences.length;
@@ -141,6 +120,7 @@ export function useFinancialPayables(churchId?: string) {
         category_id: data.category_id || null,
         account_id: data.account_id || null,
         recurrence: rec,
+        recurrence_interval_days: intervalDays,
         notes: data.notes || null,
         status: data.status || "pendente",
         created_by: u.user?.id || null,
@@ -158,6 +138,8 @@ export function useFinancialPayables(churchId?: string) {
       return { error: null };
     }
 
+    // Recorrência contínua (sem data fim) → cria 1 conta; próximas geradas ao pagar.
+    // Conta única → idem (recurrence='nenhuma')
     const { error } = await supabase.from("financial_payables").insert({
       church_id: churchId,
       description: data.description,
@@ -166,6 +148,7 @@ export function useFinancialPayables(churchId?: string) {
       category_id: data.category_id || null,
       account_id: data.account_id || null,
       recurrence: rec,
+      recurrence_interval_days: intervalDays,
       notes: data.notes || null,
       status: data.status || "pendente",
       created_by: u.user?.id || null,
@@ -174,13 +157,13 @@ export function useFinancialPayables(churchId?: string) {
       toast({ title: "Erro ao criar conta", description: error.message, variant: "destructive" });
       return { error };
     }
-    toast({ title: "Conta criada" });
+    toast({ title: rec === "nenhuma" ? "Conta criada" : "Conta recorrente criada" });
     await fetchPayables();
     return { error: null };
   };
 
   const updatePayable = async (id: string, data: Partial<CreatePayableData>) => {
-    const { installments: _i, recurrence_end_date: _r, ...rest } = data as any;
+    const { recurrence_end_date: _r, ...rest } = data as any;
     const { error } = await supabase.from("financial_payables").update(rest).eq("id", id);
     if (error) {
       toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" });
@@ -193,7 +176,7 @@ export function useFinancialPayables(churchId?: string) {
   /** Edita esta parcela e todas as futuras pendentes do mesmo grupo. */
   const updateGroupFuture = async (base: FinancialPayable, data: Partial<CreatePayableData>) => {
     if (!base.installment_group_id) return updatePayable(base.id, data);
-    const { installments: _i, recurrence_end_date: _r, due_date: _d, ...rest } = data as any;
+    const { recurrence_end_date: _r, due_date: _d, ...rest } = data as any;
     const { error } = await supabase
       .from("financial_payables")
       .update(rest)
@@ -266,10 +249,14 @@ export function useFinancialPayables(churchId?: string) {
       return { error: upErr };
     }
 
-    // Generate next recurrence if applicable and not already chained
-    if (payable.recurrence && payable.recurrence !== "nenhuma") {
-      const nextDue = addToDate(payable.due_date, payable.recurrence);
-      // Avoid duplicate: check if a child already exists with that due_date
+    // Recorrência contínua (sem grupo finito): gera próxima ocorrência se ainda
+    // não houver uma pendente filha. Recorrência finita pré-gera tudo no create.
+    if (
+      payable.recurrence &&
+      payable.recurrence !== "nenhuma" &&
+      !payable.installment_group_id
+    ) {
+      const nextDue = addToDate(payable.due_date, payable.recurrence, payable.recurrence_interval_days);
       const { data: existing } = await supabase
         .from("financial_payables")
         .select("id")
@@ -285,6 +272,7 @@ export function useFinancialPayables(churchId?: string) {
           category_id: payable.category_id,
           account_id: payable.account_id,
           recurrence: payable.recurrence,
+          recurrence_interval_days: payable.recurrence_interval_days,
           notes: payable.notes,
           parent_payable_id: payable.id,
           status: "pendente",
@@ -298,14 +286,14 @@ export function useFinancialPayables(churchId?: string) {
     return { error: null };
   };
 
-  /** Skip auto-chain when payable belongs to a finite recurrence group (already pre-generated). */
-  const markAsPaidSmart = async (payable: FinancialPayable, paidDate: string, accountIdOverride?: string) => {
-    if (payable.installment_group_id) {
-      const noChain = { ...payable, recurrence: "nenhuma" as PayableRecurrence };
-      return markAsPaid(noChain, paidDate, accountIdOverride);
-    }
-    return markAsPaid(payable, paidDate, accountIdOverride);
+  return {
+    payables,
+    isLoading,
+    fetchPayables,
+    createPayable,
+    updatePayable,
+    updateGroupFuture,
+    deletePayable,
+    markAsPaid,
   };
-
-  return { payables, isLoading, fetchPayables, createPayable, updatePayable, updateGroupFuture, deletePayable, markAsPaid: markAsPaidSmart };
 }

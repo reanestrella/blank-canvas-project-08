@@ -2089,6 +2089,7 @@ export type Database = {
           paid_transaction_id: string | null
           parent_payable_id: string | null
           recurrence: string
+          recurrence_interval_days: number | null
           status: string
           updated_at: string
         }
@@ -2110,6 +2111,7 @@ export type Database = {
           paid_transaction_id?: string | null
           parent_payable_id?: string | null
           recurrence?: string
+          recurrence_interval_days?: number | null
           status?: string
           updated_at?: string
         }
@@ -2131,6 +2133,7 @@ export type Database = {
           paid_transaction_id?: string | null
           parent_payable_id?: string | null
           recurrence?: string
+          recurrence_interval_days?: number | null
           status?: string
           updated_at?: string
         }
