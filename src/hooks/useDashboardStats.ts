@@ -129,6 +129,16 @@ export function useDashboardStats(congregationId?: string | null) {
   // Unified people stats (single source of truth shared with Secretaria)
   const peopleStats = usePeopleStats(members as any);
 
+  // Métrica única de consolidação — alinhada com a página /consolidacao
+  const consolMetrics = useMemo(
+    () =>
+      getConsolidationMetrics(consolidationRecords, members as any, {
+        congregationId,
+        periodMode: "all",
+      }),
+    [consolidationRecords, members, congregationId],
+  );
+
   const stats = useMemo<DashboardStats>(() => {
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -181,9 +191,9 @@ export function useDashboardStats(congregationId?: string | null) {
       totalDecididos: peopleStats.decididos,
       totalVisitantes: peopleStats.visitantes,
       totalBaptized: peopleStats.batizados,
-      totalConsolidacao: consolidationCount,
-      totalConsolidados: consolidadosCount,
-      totalDesistentes: desistentesCount,
+      totalConsolidacao: consolMetrics.emConsolidacao,
+      totalConsolidados: consolMetrics.consolidados,
+      totalDesistentes: consolMetrics.desistentes,
       networkStats: peopleStats.networkStats,
       birthdaysThisMonth,
       birthdaysThisWeek,
@@ -191,7 +201,7 @@ export function useDashboardStats(congregationId?: string | null) {
       weddingAnniversariesThisWeek,
       recentAlerts: alerts,
     };
-  }, [members, alerts, consolidationCount, consolidadosCount, desistentesCount, peopleStats]);
+  }, [members, alerts, consolMetrics, peopleStats]);
 
   return {
     stats,
