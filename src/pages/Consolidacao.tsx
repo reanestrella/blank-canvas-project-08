@@ -617,6 +617,43 @@ export default function Consolidacao() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div className="space-y-2">
+                  <Label>Consolidadores responsáveis</Label>
+                  <div className="rounded-md border p-2 max-h-40 overflow-y-auto space-y-1">
+                    {members
+                      .filter((m) => m.is_active && (["membro","lider","discipulador"] as any[]).includes(m.spiritual_status))
+                      .map((m) => {
+                        const checked = editAssignees.includes(m.id);
+                        return (
+                          <label key={m.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent/30 rounded px-2 py-1">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                setEditAssignees((prev) =>
+                                  e.target.checked ? [...prev, m.id] : prev.filter((x) => x !== m.id),
+                                );
+                              }}
+                            />
+                            <span className="truncate">{m.full_name}</span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                  {editAssignees.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {editAssignees.map((id) => {
+                        const m = memberById.get(id);
+                        return (
+                          <Badge key={id} variant="secondary" className="text-xs">
+                            {m?.full_name || "—"}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>Data Visita</Label>
