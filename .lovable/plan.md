@@ -1,71 +1,116 @@
-# Plano: Consolidação, Dashboard, Auditoria e Exclusão Segura
+# Correções de Consistência — Dashboard, Consolidação, Financeiro e Formulários
 
-Vou entregar em 4 lotes para manter qualidade e revisão. Confirmação a cada lote.
-
----
-
-## Lote 1 — Coerência de datas (Decididos / Funil) e Secretaria
-
-**Objetivo:** os números do Dashboard, Funil Espiritual, Consolidação e Relatórios precisam bater usando sempre `conversion_date` (decididos), `created_at`/`visit_date` (visitantes) e `baptism_date` (batizados).
-
-- `usePeopleStats`: aceitar critério por data temática:
-  - Decididos: `conversion_date` cai no período (com fallback para `created_at` se nulo).
-  - Visitantes: `created_at` ou `visit_date` no período.
-  - Batizados: `baptism_date` no período.
-- `SpiritualFunnel`: usar a mesma fonte/critério do Dashboard.
-- `Consolidacao` (estatísticas/funil): mesma fonte.
-- `MemberModal` (Secretaria): remover campo "Consolidador Responsável" (movido para Consolidação).
-- Regra: cadastrar como `novo_convertido` com `conversion_date` antiga → conta no período correto.
-
-## Lote 2 — Consolidadores múltiplos + métricas
-
-**Schema (migration):**
-- Nova tabela `consolidation_assignees(id, consolidation_id, consolidator_member_id, assigned_at, assigned_by)` com RLS por igreja.
-- Manter `consolidator_id` legado (compat) mas UI passa a usar a nova tabela; backfill do legado.
-
-**UI:**
-- Em `ConsolidacaoDetail`/lista: multiselect de consolidadores (qualquer membro ativo), adicionar/remover/editar.
-- Lista "Em Consolidação": mostrar avatares/iniciais e nomes dos consolidadores.
-- Painel "Métricas por Consolidador": cards clicáveis com filtro mês/ano; clique abre lista das pessoas atribuídas.
-
-## Lote 3 — Auditoria (logs + painel)
-
-**Schema (migration):**
-- `audit_logs(id, church_id, user_id, action, module, entity_type, entity_id, metadata jsonb, ip, user_agent, created_at)`.
-- RLS: somente `pastor`/`secretario` da própria igreja podem ler; insert via SECURITY DEFINER `log_audit(...)`.
-- Helper `src/lib/audit.ts` com `logAudit({ action, module, entity, metadata })` chamado nos pontos chave: visualização de ficha, edit/delete de membro, export PDF (extrato), troca de consolidador, remoção de visitante.
-
-**UI:**
-- Página `/auditoria` (guard pastor): tabela com filtros (usuário, módulo, ação, período, tipo), busca, paginação, exportação CSV.
-
-## Lote 4 — Exclusão segura de pessoas (`safeDeleteMember`)
-
-**Schema (migration) — RPC `safe_delete_member(p_member_id uuid)`:**
-Em transação, na ordem:
-1. `UPDATE profiles SET member_id = NULL WHERE member_id = p_member_id` (mantém usuário do app).
-2. `UPDATE cells SET leader_id/supervisor_id/vice_leader_1_id/vice_leader_2_id = NULL` onde apontarem para o membro.
-3. `DELETE FROM cell_members`, `cell_report_attendance`, `cell_visitors (invited_by → NULL)`.
-4. `DELETE FROM consolidation_records WHERE member_id = ... OR consolidator_id = ...` (e nova `consolidation_assignees`).
-5. `DELETE FROM discipleships` onde participar.
-6. `UPDATE financial_transactions SET member_id = NULL` (preserva histórico).
-7. `DELETE FROM ministry_volunteers / ministry_role_members / schedule_volunteers / event_registrations / course_students`.
-8. `DELETE FROM members WHERE id = p_member_id`.
-- Retorna `json` com vínculos removidos, para feedback.
-
-**Frontend:**
-- `src/lib/safeDeleteMember.ts` chamando o RPC; usado por `useMembers.deleteMember`, lista de visitantes, etc.
-- Modal de confirmação listando vínculos detectados (preview via SELECT antes do delete).
-- Toast amigável; logs no console com FK bloqueante caso falhe.
-
-**RLS:** revisar políticas das tabelas tocadas para permitir delete a `user_is_church_admin`.
+Plano dividido em 6 lotes independentes. Confirmar para iniciar (ou indicar quais lotes priorizar).
 
 ---
 
-## Ordem proposta
+## Lote 1 — Fonte única de métricas de Consolidação
 
-1. Lote 1 (datas + remover campo Secretaria) — rápido, alto impacto.
-2. Lote 4 (exclusão segura) — desbloqueia operação imediata.
-3. Lote 2 (consolidadores múltiplos).
-4. Lote 3 (auditoria completa).
+**Problema:** Dashboard mostra 1 em consolidação, página Consolidação mostra 2 — fontes diferentes.
 
-Posso começar pelos **Lotes 1 + 4 juntos** (não conflitam) e depois seguir para 2 e 3. Confirmar para iniciar?
+**Solução:**
+- Criar `src/lib/consolidationMetrics.ts` exportando `getConsolidationMetrics({ churchId, congregationId, dateFrom, dateTo })`.
+- Retorna: `{ emAcompanhamento, concluidos, desistentes, decididos, total, registros[] }`.
+- Regra única: usa `consolidation_records` filtrado por `church_id` + período (em `decision_date` ou `created_at` quando ausente) + congregação opcional.
+- Refatorar para usar essa função:
+  - `src/hooks/useDashboardStats.ts` (cards "Em Consolidação", "Consolidados", "Desistentes")
+  - `src/pages/Consolidacao.tsx` (estatísticas e filtros)
+  - `src/components/dashboard/SpiritualFunnel.tsx` (etapa "Decididos / Consolidação")
+  - Exportações PDF da Consolidação
+- Adicionar filtro de mês/ano padronizado (componente `PeriodFilter` reutilizado).
+
+---
+
+## Lote 2 — Visitante mantém histórico ao virar Decidido
+
+**Problema:** Quando visitante muda `spiritual_status` para "decidido", deixa de aparecer na contagem de visitantes do mês.
+
+**Solução:**
+- Adicionar coluna `members.first_visit_date date` (preenche com `created_at::date` no backfill quando `spiritual_status` foi visitante).
+- Ajustar `usePeopleStats.ts`: `visitantes` = membros cuja `first_visit_date` cai no período filtrado, **independente** do status atual.
+- `decididos` = membros com `conversion_date` no período (já implementado parcialmente).
+- Mesma pessoa pode contar nas duas métricas no mesmo mês.
+- Atualizar:
+  - Dashboard (cards e Funil Espiritual)
+  - Secretaria (resumos)
+  - Consolidação (estatísticas)
+  - Gráficos e PDFs
+
+**Migration necessária:**
+```sql
+ALTER TABLE members ADD COLUMN first_visit_date date;
+UPDATE members SET first_visit_date = created_at::date 
+  WHERE spiritual_status IN ('visitante','decidido','membro') AND first_visit_date IS NULL;
+-- trigger: ao inserir com status visitante, preenche first_visit_date = today se nulo
+```
+
+---
+
+## Lote 3 — Persistência de formulários (anti-fechamento)
+
+**Problema:** Modais perdem dados ao trocar aba/app.
+
+**Solução:**
+- Criar hook `useFormPersistence(key, values, { ttlMs = 120000 })`:
+  - Salva em `sessionStorage` com debounce 500ms.
+  - Restaura ao montar se TTL não expirou.
+  - Limpa ao submeter com sucesso ou ao cancelar explicitamente.
+- Garantir que modais **não fechem** em `visibilitychange` / `blur` (revisar `Dialog onOpenChange` e remover qualquer auto-close).
+- Aplicar em: `TransactionModal`, `MemberModal`, `EventModal`, modal de Consolidação, `CellReportModal`.
+
+---
+
+## Lote 4 — Parcelamento em Contas a Pagar
+
+**Solução:**
+- Adicionar campos em `financial_payables`: `installment_number int`, `installment_total int`, `installment_group_id uuid`.
+- No `useFinancialPayables.createPayable`, aceitar `{ installments: number }`:
+  - Gera N registros, mesmo `installment_group_id`, `due_date` mensal incremental, descrição `"X (3/10)"`.
+- UI em `PayablesTab`:
+  - Switch "Parcelado" + input nº parcelas.
+  - Coluna mostrando "3/10" e badge de status do grupo (pagas/pendentes).
+  - Filtro por competência (mês de vencimento).
+
+**Migration:**
+```sql
+ALTER TABLE financial_payables 
+  ADD COLUMN installment_number int,
+  ADD COLUMN installment_total int,
+  ADD COLUMN installment_group_id uuid;
+```
+
+---
+
+## Lote 5 — PDFs respeitam filtros ativos
+
+**Problema:** Exportações ignoram filtros de tela.
+
+**Solução:**
+- Centralizar geração: passar sempre `{ dateFrom, dateTo, congregationId, ...filters }` para funções de export.
+- Refatorar:
+  - `src/lib/pdfExport.ts` — aceitar filtros e aplicar antes do render.
+  - `ExtratoTab` — passar filtros atuais ao baixar extrato.
+  - Consolidação — exportar apenas registros filtrados.
+  - Secretaria — exportar apenas membros do filtro ativo.
+- Cabeçalho do PDF mostra o período/filtros aplicados.
+
+---
+
+## Lote 6 — Padronização final e QA
+
+- Criar `src/lib/periodFilter.ts` com helpers (`getMonthRange`, `getYearRange`, `formatPeriodLabel`).
+- Padronizar componente `<PeriodFilter />` reutilizado em todas as páginas.
+- Adicionar `console.debug` com tag `[Metrics]` em pontos-chave para auditoria.
+- Smoke test manual: comparar números de Dashboard ↔ Consolidação ↔ PDF para o mesmo período.
+
+---
+
+## Ordem sugerida de execução
+
+1. Lote 2 (migration `first_visit_date`) + Lote 1 (métricas unificadas) — base de tudo.
+2. Lote 4 (migration parcelamento) + UI.
+3. Lote 3 (persistência forms).
+4. Lote 5 (PDFs).
+5. Lote 6 (QA + padronização).
+
+**Pode confirmar para eu iniciar pelo Lote 1+2 (com a migration)?**
