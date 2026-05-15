@@ -348,7 +348,18 @@ export default function Consolidacao() {
                   : r.baptism_date;
                 return (
                   <TableRow key={r.id}>
-                    <TableCell>{personCell(r.member?.full_name || m?.full_name)}</TableCell>
+                    <TableCell>
+                      {personCell(r.member?.full_name || m?.full_name)}
+                      {(assigneesByRecord[r.id]?.length || 0) > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1 pl-11">
+                          {assigneesByRecord[r.id].map((a) => (
+                            <Badge key={a.id} variant="outline" className="text-[10px] px-1.5 py-0">
+                              {a.consolidator?.full_name || "—"}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="hidden md:table-cell">
                       <div className="flex flex-col gap-0.5">
                         {(r.member?.phone || m?.phone) && <span className="text-xs flex items-center gap-1"><Phone className="w-3 h-3" />{r.member?.phone || m?.phone}</span>}
