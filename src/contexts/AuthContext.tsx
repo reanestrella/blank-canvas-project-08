@@ -244,7 +244,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadCurrentUser = async (reason: string, nextSession?: Session | null) => {
     const seq = ++loadSeqRef.current;
-    setIsLoading(true);
+    // Evita re-render destrutivo (que desmonta modais/AppLayout) quando o
+    // Supabase apenas renova token ao voltar a aba/app. Só mostra loading
+    // em login real ou carga inicial.
+    const isBackgroundRefresh = reason === "TOKEN_REFRESHED" || reason === "USER_UPDATED";
+    if (!isBackgroundRefresh) setIsLoading(true);
 
     try {
       const { data, error } = await supabase.auth.getUser();
@@ -316,7 +320,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(nextSession.user);
       setSession(nextSession);
-      setIsLoading(true);
+      // Só mostra loading em SIGNED_IN; TOKEN_REFRESHED/USER_UPDATED rodam em background.
+      if (event === "SIGNED_IN") setIsLoading(true);
 
       window.setTimeout(() => {
         void loadCurrentUser(event, nextSession);
