@@ -243,7 +243,12 @@ export default function Consolidacao() {
   };
 
   // ----- EDIT FULL RECORD -----
-  const openEdit = (r: ConsolidationRecord) => setEditingRecord({ ...r });
+  const openEdit = (r: ConsolidationRecord) => {
+    setEditingRecord({ ...r });
+    const cur = (assigneesByRecord[r.id] || []).map((a) => a.consolidator_member_id);
+    setEditAssignees(cur);
+    logAudit({ action: "view", entity_type: "consolidation_record", entity_id: r.id });
+  };
   const saveEdit = async () => {
     if (!editingRecord) return;
     const r = editingRecord;
@@ -259,6 +264,18 @@ export default function Consolidacao() {
       contact_date: r.contact_date || undefined,
       notes: r.notes || undefined,
     } as any);
+    const prev = (assigneesByRecord[r.id] || []).map((a) => a.consolidator_member_id).sort().join(",");
+    const next = [...editAssignees].sort().join(",");
+    if (prev !== next) {
+      await setAssignees(r.id, editAssignees);
+      logAudit({
+        action: "assign_consolidator",
+        entity_type: "consolidation_record",
+        entity_id: r.id,
+        details: { before: prev.split(",").filter(Boolean), after: editAssignees },
+      });
+    }
+    logAudit({ action: "update", entity_type: "consolidation_record", entity_id: r.id });
     setEditingRecord(null);
   };
 
