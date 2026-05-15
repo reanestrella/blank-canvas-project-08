@@ -119,6 +119,45 @@ export function useFinancialPayables(churchId?: string) {
       return { error: null };
     }
 
+    // Recorrência com data fim → gera todas as ocorrências como grupo
+    const rec = data.recurrence || "nenhuma";
+    if (rec !== "nenhuma" && data.recurrence_end_date) {
+      const groupId = (crypto as any).randomUUID?.() || `${Date.now()}-${Math.random()}`;
+      const occurrences: { due: string }[] = [];
+      let cursor = data.due_date;
+      const limit = data.recurrence_end_date;
+      let safety = 0;
+      while (cursor <= limit && safety < 240) {
+        occurrences.push({ due: cursor });
+        cursor = addToDate(cursor, rec);
+        safety++;
+      }
+      const total = occurrences.length;
+      const rows = occurrences.map((o, i) => ({
+        church_id: churchId,
+        description: `${data.description} (${i + 1}/${total})`,
+        amount: data.amount,
+        due_date: o.due,
+        category_id: data.category_id || null,
+        account_id: data.account_id || null,
+        recurrence: rec,
+        notes: data.notes || null,
+        status: data.status || "pendente",
+        created_by: u.user?.id || null,
+        installment_number: i + 1,
+        installment_total: total,
+        installment_group_id: groupId,
+      }));
+      const { error } = await supabase.from("financial_payables").insert(rows);
+      if (error) {
+        toast({ title: "Erro ao criar recorrência", description: error.message, variant: "destructive" });
+        return { error };
+      }
+      toast({ title: `${total} ocorrências criadas` });
+      await fetchPayables();
+      return { error: null };
+    }
+
     const { error } = await supabase.from("financial_payables").insert({
       church_id: churchId,
       description: data.description,
@@ -126,7 +165,7 @@ export function useFinancialPayables(churchId?: string) {
       due_date: data.due_date,
       category_id: data.category_id || null,
       account_id: data.account_id || null,
-      recurrence: data.recurrence || "nenhuma",
+      recurrence: rec,
       notes: data.notes || null,
       status: data.status || "pendente",
       created_by: u.user?.id || null,
@@ -141,12 +180,31 @@ export function useFinancialPayables(churchId?: string) {
   };
 
   const updatePayable = async (id: string, data: Partial<CreatePayableData>) => {
-    const { installments: _ignore, ...rest } = data as any;
+    const { installments: _i, recurrence_end_date: _r, ...rest } = data as any;
     const { error } = await supabase.from("financial_payables").update(rest).eq("id", id);
     if (error) {
       toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" });
       return { error };
     }
+    await fetchPayables();
+    return { error: null };
+  };
+
+  /** Edita esta parcela e todas as futuras pendentes do mesmo grupo. */
+  const updateGroupFuture = async (base: FinancialPayable, data: Partial<CreatePayableData>) => {
+    if (!base.installment_group_id) return updatePayable(base.id, data);
+    const { installments: _i, recurrence_end_date: _r, due_date: _d, ...rest } = data as any;
+    const { error } = await supabase
+      .from("financial_payables")
+      .update(rest)
+      .eq("installment_group_id", base.installment_group_id)
+      .gte("due_date", base.due_date)
+      .eq("status", "pendente");
+    if (error) {
+      toast({ title: "Erro ao atualizar grupo", description: error.message, variant: "destructive" });
+      return { error };
+    }
+    toast({ title: "Parcelas futuras atualizadas" });
     await fetchPayables();
     return { error: null };
   };
