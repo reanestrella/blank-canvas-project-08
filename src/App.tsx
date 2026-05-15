@@ -33,6 +33,7 @@ const Contribuicao = lazy(() => import("./pages/Contribuicao"));
 const Perfil = lazy(() => import("./pages/Perfil"));
 const Configuracoes = lazy(() => import("./pages/Configuracoes"));
 const Consolidacao = lazy(() => import("./pages/Consolidacao"));
+const Auditoria = lazy(() => import("./pages/Auditoria"));
 const Discipulados = lazy(() => import("./pages/Discipulados"));
 const Visitas = lazy(() => import("./pages/Visitas"));
 const Gabinete = lazy(() => import("./pages/Gabinete"));
@@ -235,6 +236,17 @@ const App = () => {
                       <Sub>
                         <RequireAnyRole allowedRoles={["pastor", "consolidacao"]}>
                           <Consolidacao />
+                        </RequireAnyRole>
+                      </Sub>
+                    }
+                  />
+
+                  <Route
+                    path="/auditoria"
+                    element={
+                      <Sub>
+                        <RequireAnyRole allowedRoles={["pastor"]}>
+                          <Auditoria />
                         </RequireAnyRole>
                       </Sub>
                     }
