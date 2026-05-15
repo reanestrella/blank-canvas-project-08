@@ -9,6 +9,8 @@ export interface PeopleStatsInput {
   congregation_id?: string | null;
   created_at?: string;
   is_baptized?: boolean;
+  first_visit_date?: string | null;
+  conversion_date?: string | null;
 }
 
 export interface PeopleStats {
@@ -44,25 +46,32 @@ export function usePeopleStats<T extends PeopleStatsInput>(
   const { congregationId, periodMode = "all", filterMonth, filterYear } = options;
 
   return useMemo(() => {
-    const filtered = members.filter((m) => {
-      // Congregation: include null (acessível a todas) + match
-      if (congregationId) {
-        if (m.congregation_id && m.congregation_id !== congregationId) return false;
-      }
-      // Period filter on created_at
-      if (periodMode !== "all" && m.created_at) {
-        const d = new Date(m.created_at);
-        if (periodMode === "year") {
-          if (filterYear !== undefined && d.getFullYear() !== filterYear) return false;
-        } else {
-          if (filterYear !== undefined && d.getFullYear() !== filterYear) return false;
-          if (filterMonth !== undefined && d.getMonth() !== filterMonth) return false;
-        }
-      }
+    // Helper: verifica se uma data (string ISO ou date) cai no período filtrado
+    const dateInPeriod = (s?: string | null): boolean => {
+      if (!s) return false;
+      if (periodMode === "all") return true;
+      const d = new Date(s.length === 10 ? s + "T12:00:00" : s);
+      if (periodMode === "year") return filterYear === undefined || d.getFullYear() === filterYear;
+      if (filterYear !== undefined && d.getFullYear() !== filterYear) return false;
+      if (filterMonth !== undefined && d.getMonth() !== filterMonth) return false;
+      return true;
+    };
+
+    // Filtro de congregação aplicado em todos os totais (visitantes/decididos/etc.)
+    const byCongregation = members.filter((m) => {
+      if (!congregationId) return true;
+      if (m.congregation_id && m.congregation_id !== congregationId) return false;
       return true;
     });
 
-    const active = filtered.filter((m) => m.is_active);
+    // Para "membros, batizados, redes" mantemos a regra antiga: filtrar por created_at
+    // (essas categorias representam o estado atual do cadastro).
+    const filteredCadastro = byCongregation.filter((m) => {
+      if (periodMode === "all") return true;
+      return dateInPeriod(m.created_at);
+    });
+
+    const active = filteredCadastro.filter((m) => m.is_active);
     const membrosForNetwork = active.filter((m) => isMembro(m.spiritual_status));
 
     const networks: Record<string, number> = {};
@@ -75,13 +84,24 @@ export function usePeopleStats<T extends PeopleStatsInput>(
     });
     const withoutNetwork = membrosForNetwork.filter((m) => !m.network).length;
 
+    // VISITANTES (histórico): conta toda pessoa cuja first_visit_date cai no período,
+    // independentemente do status atual (mesmo que tenha virado decidido/membro).
+    const visitantes = byCongregation.filter((m) =>
+      dateInPeriod(m.first_visit_date || m.created_at),
+    ).length;
+
+    // DECIDIDOS: pessoas com data de conversão no período.
+    const decididos = byCongregation.filter((m) =>
+      dateInPeriod(m.conversion_date),
+    ).length;
+
     return {
       total: active.length,
       membros: active.filter((m) => isMembro(m.spiritual_status)).length,
-      decididos: active.filter((m) => m.spiritual_status === "novo_convertido").length,
-      visitantes: active.filter((m) => m.spiritual_status === "visitante").length,
+      decididos,
+      visitantes,
       batizados: active.filter((m) => m.is_baptized === true || m.baptism_date !== null).length,
-      inativos: filtered.filter((m) => !m.is_active).length,
+      inativos: filteredCadastro.filter((m) => !m.is_active).length,
       networks,
       withoutNetwork,
       networkStats: {

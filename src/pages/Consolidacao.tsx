@@ -30,6 +30,7 @@ import { logAudit } from "@/lib/audit";
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { VisitorContactDashboard } from "@/components/consolidation/VisitorContactDashboard";
+import { getConsolidationMetrics } from "@/lib/consolidationMetrics";
 
 const stageConfig: Record<ConsolidationStage, { label: string; color: string }> = {
   visitante:       { label: "Visitante",        color: "bg-chart-visitante text-white" },
@@ -106,7 +107,7 @@ export default function Consolidacao() {
   const consolidadosList = useMemo(() => recordsByStage("consolidado"), [recordByMember]);
   const batizadosList = useMemo(() => recordsByStage("batizado"), [recordByMember]);
 
-  // ----- DASHBOARD: filter by DATE -----
+  // Helper local — usado pelo VisitorContactDashboard
   const inPeriod = (dateStr?: string | null) => {
     if (!dateStr) return false;
     if (periodMode === "all") return true;
@@ -115,72 +116,31 @@ export default function Consolidacao() {
     return d.getFullYear() === filterYear && d.getMonth() === filterMonth;
   };
 
+  // ----- DASHBOARD: filter by DATE — usa fonte única -----
   const dashPeople = useMemo(() => {
-    const allRecs = Array.from(recordByMember.values());
-    const toPerson = (r: ConsolidationRecord) => {
-      const m = memberById.get(r.member_id) as any;
-      return { id: r.member_id, full_name: r.member?.full_name || m?.full_name, phone: r.member?.phone || m?.phone, email: r.member?.email || m?.email };
+    const metrics = getConsolidationMetrics(records as any, members as any, {
+      periodMode,
+      filterMonth,
+      filterYear,
+    });
+    const toPerson = (memberId: string) => {
+      const m = memberById.get(memberId) as any;
+      const r = records.find(x => x.member_id === memberId);
+      return {
+        id: memberId,
+        full_name: r?.member?.full_name || m?.full_name,
+        phone: r?.member?.phone || m?.phone,
+        email: r?.member?.email || m?.email,
+      };
     };
-
-    // VISITANTES CUMULATIVO: qualquer pessoa com visit_date no período,
-    // mesmo que tenha avançado para decidido / consolidado / batizado
-    const visitorIds = new Set<string>();
-    const visitantes: any[] = [];
-    for (const r of records) {
-      if (visitorIds.has(r.member_id)) continue;
-      if (inPeriod(r.visit_date)) {
-        visitorIds.add(r.member_id);
-        visitantes.push(toPerson(r));
-      }
-    }
-    // Inclui members status='visitante' sem record cujo created_at no período
-    for (const m of members) {
-      if (visitorIds.has(m.id)) continue;
-      if (m.spiritual_status !== "visitante") continue;
-      const d = (m as any).created_at?.split("T")[0];
-      if (inPeriod(d)) {
-        visitorIds.add(m.id);
-        visitantes.push({ id: m.id, full_name: m.full_name, phone: m.phone, email: m.email });
-      }
-    }
-
-    // Dedupe por member_id em cada estágio
-    const dedupe = (arr: ConsolidationRecord[]) => {
-      const seen = new Set<string>();
-      return arr.filter(r => {
-        if (seen.has(r.member_id)) return false;
-        seen.add(r.member_id);
-        return true;
-      });
-    };
-
-    // DECIDIDOS: respeita decision_date do record OU conversion_date do member
-    // (cobre cadastro novo com data de conversão antiga).
-    const decididoIds = new Set<string>();
-    const decididos: any[] = [];
-    for (const r of records) {
-      if (decididoIds.has(r.member_id)) continue;
-      if (inPeriod(r.decision_date)) {
-        decididoIds.add(r.member_id);
-        decididos.push(toPerson(r));
-      }
-    }
-    for (const m of members as any[]) {
-      if (decididoIds.has(m.id)) continue;
-      if (m.conversion_date && inPeriod(m.conversion_date)) {
-        decididoIds.add(m.id);
-        decididos.push({ id: m.id, full_name: m.full_name, phone: m.phone, email: m.email });
-      }
-    }
-
     return {
-      visitantes,
-      decididos,
-      emConsol:     dedupe(records.filter(r => inPeriod(r.consolidation_start_date))).map(toPerson),
-      consolidados: dedupe(records.filter(r => inPeriod(r.consolidation_end_date))).map(toPerson),
-      batizados:    dedupe(records.filter(r => inPeriod(r.baptism_date))).map(toPerson),
+      visitantes: Array.from(metrics.visitanteIds).map(toPerson),
+      decididos: Array.from(metrics.decididoIds).map(toPerson),
+      emConsol: Array.from(metrics.emConsolidacaoIds).map(toPerson),
+      consolidados: Array.from(metrics.consolidadoIds).map(toPerson),
+      batizados: Array.from(metrics.batizadoIds).map(toPerson),
     };
-  }, [members, records, recordByMember, memberById, periodMode, filterMonth, filterYear]);
+  }, [members, records, memberById, periodMode, filterMonth, filterYear]);
 
   const dashCounts = {
     visitantes: dashPeople.visitantes.length,

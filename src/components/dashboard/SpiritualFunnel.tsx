@@ -7,6 +7,7 @@ import { Loader2, ArrowDown, Users } from "lucide-react";
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { getConsolidationMetrics } from "@/lib/consolidationMetrics";
 
 type StageKey = "visitante" | "decidido" | "consolidacao" | "batizado" | "membro";
 
@@ -55,7 +56,7 @@ export function SpiritualFunnel() {
           .limit(5000),
         supabase
           .from("members")
-          .select("id, full_name, spiritual_status, baptism_date, conversion_date, is_active, created_at, phone, email")
+          .select("id, full_name, spiritual_status, baptism_date, conversion_date, first_visit_date, congregation_id, is_active, created_at, phone, email")
           .eq("church_id", currentChurchId)
           .limit(5000),
       ]);
@@ -77,89 +78,40 @@ export function SpiritualFunnel() {
 
   const stagePeople = useMemo(() => {
     const memberById = new Map(members.map(m => [m.id, m]));
-    const recordByMember = new Map<string, Row>();
-    for (const r of records) {
-      const prev = recordByMember.get(r.member_id);
-      if (!prev) recordByMember.set(r.member_id, r);
-    }
 
-    // Dedupe helper: pega 1 record por member com data válida no período
-    const dedupByMember = (rs: Row[]) => {
-      const seen = new Set<string>();
-      const out: Row[] = [];
-      for (const r of rs) {
-        if (seen.has(r.member_id)) continue;
-        seen.add(r.member_id);
-        out.push(r);
-      }
-      return out;
-    };
-
-    // Visitante CUMULATIVO: qualquer pessoa que visitou no período,
-    // independentemente do estágio atual (decidido, consolidado, etc.)
-    // Fonte: consolidation_records.visit_date OU member.created_at quando há record/visitante.
-    const visitorMemberIds = new Set<string>();
-    const visitantes: any[] = [];
-    for (const r of records) {
-      if (visitorMemberIds.has(r.member_id)) continue;
-      if (inPeriod(r.visit_date)) {
-        visitorMemberIds.add(r.member_id);
-        const m = memberById.get(r.member_id);
-        visitantes.push(m || { id: r.member_id, full_name: r.member?.full_name, phone: r.member?.phone, email: r.member?.email });
-      }
-    }
-    // Inclui visitantes sem record ainda (status='visitante' + created_at no período)
-    for (const m of members) {
-      if (visitorMemberIds.has(m.id)) continue;
-      if (!m.is_active || m.spiritual_status !== "visitante") continue;
-      const d = m.created_at ? m.created_at.split("T")[0] : null;
-      if (inPeriod(d)) {
-        visitorMemberIds.add(m.id);
-        visitantes.push(m);
-      }
-    }
-
-    // DECIDIDOS: usa decision_date do record OU conversion_date do member.
-    // Garante que pessoa cadastrada hoje com conversão antiga conte no período correto.
-    const decididoIds = new Set<string>();
-    const decididos: any[] = [];
-    for (const r of records) {
-      if (decididoIds.has(r.member_id)) continue;
-      if (inPeriod(r.decision_date)) {
-        decididoIds.add(r.member_id);
-        decididos.push(memberById.get(r.member_id) || { id: r.member_id, full_name: r.member?.full_name, phone: r.member?.phone, email: r.member?.email });
-      }
-    }
-    for (const m of members) {
-      if (decididoIds.has(m.id)) continue;
-      if (m.conversion_date && inPeriod(m.conversion_date)) {
-        decididoIds.add(m.id);
-        decididos.push(m);
-      }
-    }
-
-    const consolidacao = dedupByMember(records.filter(r => inPeriod(r.consolidation_start_date)))
-      .map(r => memberById.get(r.member_id) || { id: r.member_id, full_name: r.member?.full_name, phone: r.member?.phone, email: r.member?.email });
-
-    const batizadosFromRec = records.filter(r => inPeriod(r.baptism_date));
-    const batizadosIds = new Set(batizadosFromRec.map(r => r.member_id));
-    const batizadosFromMembers = members.filter(m => m.baptism_date && inPeriod(m.baptism_date) && !batizadosIds.has(m.id));
-    const batizados = [
-      ...batizadosFromRec.map(r => memberById.get(r.member_id) || { id: r.member_id, full_name: r.member?.full_name }),
-      ...batizadosFromMembers,
-    ];
-
-    const membros = members.filter(m => {
-      if (!m.is_active) return false;
-      const isMembro = m.spiritual_status === "membro" || m.spiritual_status === "lider" || m.spiritual_status === "discipulador";
-      if (!isMembro) return false;
-      if (periodMode === "all") return true;
-      // membros novos no período = consolidation_end_date ou baptism_date no período
-      const r = recordByMember.get(m.id);
-      return inPeriod(r?.consolidation_end_date) || inPeriod(m.baptism_date);
+    // Fonte única — mesma função usada pelo Dashboard e página /consolidacao
+    const metrics = getConsolidationMetrics(records as any, members as any, {
+      periodMode,
+      filterMonth,
+      filterYear,
     });
 
-    return { visitante: visitantes, decidido: decididos, consolidacao, batizado: batizados, membro: membros };
+    const personFor = (memberId: string) => {
+      const m = memberById.get(memberId);
+      const r = records.find(x => x.member_id === memberId);
+      return m || { id: memberId, full_name: r?.member?.full_name, phone: r?.member?.phone, email: r?.member?.email };
+    };
+
+    return {
+      visitante: Array.from(metrics.visitanteIds).map(personFor),
+      decidido: Array.from(metrics.decididoIds).map(personFor),
+      consolidacao: Array.from(metrics.emConsolidacaoIds).map(personFor),
+      batizado: Array.from(metrics.batizadoIds).map(personFor),
+      membro: members.filter(m => {
+        if (!m.is_active) return false;
+        const isMembro = m.spiritual_status === "membro" || m.spiritual_status === "lider" || m.spiritual_status === "discipulador";
+        if (!isMembro) return false;
+        if (periodMode === "all") return true;
+        const r = records.find(x => x.member_id === m.id);
+        const inPeriodCheck = (s?: string | null) => {
+          if (!s) return false;
+          const d = new Date(s.length === 10 ? s + "T12:00:00" : s);
+          if (periodMode === "year") return d.getFullYear() === filterYear;
+          return d.getFullYear() === filterYear && d.getMonth() === filterMonth;
+        };
+        return inPeriodCheck(r?.consolidation_end_date) || inPeriodCheck(m.baptism_date);
+      }),
+    };
   }, [records, members, periodMode, filterMonth, filterYear]);
 
   const steps: StageKey[] = ["visitante", "decidido", "consolidacao", "batizado", "membro"];

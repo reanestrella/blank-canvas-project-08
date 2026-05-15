@@ -2078,6 +2078,9 @@ export type Database = {
           description: string
           due_date: string
           id: string
+          installment_group_id: string | null
+          installment_number: number | null
+          installment_total: number | null
           notes: string | null
           paid_at: string | null
           paid_transaction_id: string | null
@@ -2096,6 +2099,9 @@ export type Database = {
           description: string
           due_date: string
           id?: string
+          installment_group_id?: string | null
+          installment_number?: number | null
+          installment_total?: number | null
           notes?: string | null
           paid_at?: string | null
           paid_transaction_id?: string | null
@@ -2114,6 +2120,9 @@ export type Database = {
           description?: string
           due_date?: string
           id?: string
+          installment_group_id?: string | null
+          installment_number?: number | null
+          installment_total?: number | null
           notes?: string | null
           paid_at?: string | null
           paid_transaction_id?: string | null
@@ -2550,6 +2559,7 @@ export type Database = {
           conversion_date: string | null
           created_at: string | null
           email: string | null
+          first_visit_date: string | null
           full_name: string
           gender: string | null
           id: string
@@ -2582,6 +2592,7 @@ export type Database = {
           conversion_date?: string | null
           created_at?: string | null
           email?: string | null
+          first_visit_date?: string | null
           full_name: string
           gender?: string | null
           id?: string
@@ -2614,6 +2625,7 @@ export type Database = {
           conversion_date?: string | null
           created_at?: string | null
           email?: string | null
+          first_visit_date?: string | null
           full_name?: string
           gender?: string | null
           id?: string

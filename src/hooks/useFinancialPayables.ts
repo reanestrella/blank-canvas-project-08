@@ -20,6 +20,9 @@ export interface FinancialPayable {
   parent_payable_id: string | null;
   notes: string | null;
   created_at: string;
+  installment_number: number | null;
+  installment_total: number | null;
+  installment_group_id: string | null;
 }
 
 export interface CreatePayableData {
@@ -31,6 +34,8 @@ export interface CreatePayableData {
   recurrence?: PayableRecurrence;
   notes?: string | null;
   status?: PayableStatus;
+  /** Quando informado (>1), gera N parcelas mensais com mesmo grupo. */
+  installments?: number;
 }
 
 function addToDate(dateIso: string, recurrence: PayableRecurrence): string {
@@ -67,6 +72,39 @@ export function useFinancialPayables(churchId?: string) {
   const createPayable = async (data: CreatePayableData) => {
     if (!churchId) return { error: new Error("Igreja não identificada") };
     const { data: u } = await supabase.auth.getUser();
+    const installments = Math.max(1, Math.floor(data.installments || 1));
+    if (installments > 1) {
+      const groupId = (crypto as any).randomUUID?.() || `${Date.now()}-${Math.random()}`;
+      const baseAmount = Math.round((data.amount / installments) * 100) / 100;
+      const rows = Array.from({ length: installments }).map((_, i) => {
+        const due = new Date(data.due_date + "T12:00:00");
+        due.setMonth(due.getMonth() + i);
+        return {
+          church_id: churchId,
+          description: `${data.description} (${i + 1}/${installments})`,
+          amount: baseAmount,
+          due_date: due.toISOString().slice(0, 10),
+          category_id: data.category_id || null,
+          account_id: data.account_id || null,
+          recurrence: "nenhuma" as PayableRecurrence,
+          notes: data.notes || null,
+          status: data.status || "pendente",
+          created_by: u.user?.id || null,
+          installment_number: i + 1,
+          installment_total: installments,
+          installment_group_id: groupId,
+        };
+      });
+      const { error } = await supabase.from("financial_payables").insert(rows);
+      if (error) {
+        toast({ title: "Erro ao criar parcelas", description: error.message, variant: "destructive" });
+        return { error };
+      }
+      toast({ title: `${installments} parcelas criadas` });
+      await fetchPayables();
+      return { error: null };
+    }
+
     const { error } = await supabase.from("financial_payables").insert({
       church_id: churchId,
       description: data.description,
@@ -89,7 +127,8 @@ export function useFinancialPayables(churchId?: string) {
   };
 
   const updatePayable = async (id: string, data: Partial<CreatePayableData>) => {
-    const { error } = await supabase.from("financial_payables").update(data).eq("id", id);
+    const { installments: _ignore, ...rest } = data as any;
+    const { error } = await supabase.from("financial_payables").update(rest).eq("id", id);
     if (error) {
       toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" });
       return { error };
