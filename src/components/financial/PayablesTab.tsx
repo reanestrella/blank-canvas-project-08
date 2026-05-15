@@ -12,8 +12,8 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Plus, Loader2, Check, Trash2, Edit, Download, AlertCircle } from "lucide-react";
-import { useFinancialPayables, type FinancialPayable, type PayableRecurrence, type CreatePayableData } from "@/hooks/useFinancialPayables";
+import { Plus, Loader2, Check, Trash2, Edit, Download, AlertCircle, Calendar } from "lucide-react";
+import { useFinancialPayables, type FinancialPayable, type PayableRecurrence, type CreatePayableData, isOverdue, daysBetween } from "@/hooks/useFinancialPayables";
 import type { FinancialAccount } from "@/hooks/useFinancialAccounts";
 import type { FinancialCategory } from "@/hooks/useFinancial";
 import { exportToPdf, formatBRL } from "@/lib/pdfExport";
@@ -25,6 +25,10 @@ interface PayablesTabProps {
   churchName?: string;
 }
 
+type StatusFilter = "all" | "pendente" | "vencida" | "pago";
+type PeriodMode = "month" | "year" | "all";
+type CreationMode = "single" | "installments" | "recurring";
+
 const recurrenceLabel: Record<PayableRecurrence, string> = {
   nenhuma: "Sem recorrência",
   semanal: "Semanal",
@@ -32,7 +36,14 @@ const recurrenceLabel: Record<PayableRecurrence, string> = {
   anual: "Anual",
 };
 
-const empty: CreatePayableData = {
+const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+interface FormState extends CreatePayableData {
+  mode: CreationMode;
+}
+
+const buildEmpty = (): FormState => ({
+  mode: "single",
   description: "",
   amount: 0,
   due_date: new Date().toISOString().slice(0, 10),
@@ -41,44 +52,115 @@ const empty: CreatePayableData = {
   recurrence: "nenhuma",
   notes: "",
   installments: 1,
-};
+  recurrence_end_date: null,
+});
 
 export function PayablesTab({ churchId, accounts, categories, churchName }: PayablesTabProps) {
-  const { payables, isLoading, createPayable, updatePayable, deletePayable, markAsPaid } = useFinancialPayables(churchId);
+  const { payables, isLoading, createPayable, updatePayable, updateGroupFuture, deletePayable, markAsPaid } = useFinancialPayables(churchId);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialPayable | null>(null);
-  const [form, setForm] = useState<CreatePayableData>(empty);
+  const [editScope, setEditScope] = useState<"single" | "future">("single");
+  const [form, setForm] = useState<FormState>(buildEmpty());
   const [submitting, setSubmitting] = useState(false);
 
   const [payOpen, setPayOpen] = useState<FinancialPayable | null>(null);
   const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10));
   const [payAccount, setPayAccount] = useState<string>("");
 
-  const [statusFilter, setStatusFilter] = useState<"all" | "pendente" | "pago">("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [periodMode, setPeriodMode] = useState<PeriodMode>("month");
+  const now = new Date();
+  const [filterMonth, setFilterMonth] = useState(now.getMonth());
+  const [filterYear, setFilterYear] = useState(now.getFullYear());
 
   const expenseCategories = useMemo(() => categories.filter((c) => c.type === "despesa"), [categories]);
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Period filter range
+  const periodRange = useMemo(() => {
+    if (periodMode === "all") return null;
+    if (periodMode === "year") {
+      return { start: `${filterYear}-01-01`, end: `${filterYear}-12-31` };
+    }
+    const m = String(filterMonth + 1).padStart(2, "0");
+    const last = new Date(filterYear, filterMonth + 1, 0).getDate();
+    return { start: `${filterYear}-${m}-01`, end: `${filterYear}-${m}-${String(last).padStart(2, "0")}` };
+  }, [periodMode, filterMonth, filterYear]);
 
   const filtered = useMemo(() => {
-    if (statusFilter === "all") return payables;
-    return payables.filter((p) => p.status === statusFilter);
-  }, [payables, statusFilter]);
+    return payables.filter((p) => {
+      // Period
+      if (periodRange) {
+        if (p.due_date < periodRange.start || p.due_date > periodRange.end) return false;
+      }
+      // Status
+      if (statusFilter === "all") return true;
+      if (statusFilter === "vencida") return isOverdue(p, today);
+      if (statusFilter === "pendente") return p.status === "pendente" && !isOverdue(p, today);
+      if (statusFilter === "pago") return p.status === "pago";
+      return true;
+    });
+  }, [payables, periodRange, statusFilter, today]);
 
-  const totals = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    return {
-      pending: payables.filter((p) => p.status === "pendente").reduce((s, p) => s + Number(p.amount), 0),
-      paid: payables.filter((p) => p.status === "pago").reduce((s, p) => s + Number(p.amount), 0),
-      overdue: payables.filter((p) => p.status === "pendente" && p.due_date < today).length,
-    };
-  }, [payables]);
+  // Metrics: based on full payables (church-wide), not filtered
+  const metrics = useMemo(() => {
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    const monthLast = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(monthLast).padStart(2, "0")}`;
+    let monthDue = 0, overdue = 0, future = 0, overdueCount = 0;
+    const groups = new Set<string>();
+    let pendingInstallments = 0;
+    payables.forEach((p) => {
+      if (p.installment_group_id) groups.add(p.installment_group_id);
+      if (p.status === "pendente") {
+        if (p.installment_total && p.installment_total > 1) pendingInstallments++;
+        if (isOverdue(p, today)) { overdue += Number(p.amount); overdueCount++; }
+        else if (p.due_date >= monthStart && p.due_date <= monthEnd) monthDue += Number(p.amount);
+        else if (p.due_date > monthEnd) future += Number(p.amount);
+      }
+    });
+    return { monthDue, overdue, overdueCount, future, recurringGroups: groups.size, pendingInstallments };
+  }, [payables, today]);
 
-  const openNew = () => { setEditing(null); setForm(empty); setOpen(true); };
+  // Sibling groups: count overdue siblings per group for warning indicator
+  const overdueByGroup = useMemo(() => {
+    const map = new Map<string, number>();
+    payables.forEach((p) => {
+      if (p.installment_group_id && isOverdue(p, today)) {
+        map.set(p.installment_group_id, (map.get(p.installment_group_id) || 0) + 1);
+      }
+    });
+    return map;
+  }, [payables, today]);
+
+  const periodLabel = useMemo(() => {
+    if (periodMode === "all") return "Todos os períodos";
+    if (periodMode === "year") return `Ano ${filterYear}`;
+    return `${MONTHS[filterMonth]}/${filterYear}`;
+  }, [periodMode, filterMonth, filterYear]);
+
+  const statusLabel = useMemo(() => {
+    if (statusFilter === "all") return "Todas";
+    if (statusFilter === "pendente") return "Pendentes";
+    if (statusFilter === "vencida") return "Vencidas";
+    return "Pagas";
+  }, [statusFilter]);
+
+  const openNew = () => {
+    setEditing(null);
+    setForm(buildEmpty());
+    setEditScope("single");
+    setOpen(true);
+  };
   const openEdit = (p: FinancialPayable) => {
     setEditing(p);
+    setEditScope("single");
     setForm({
-      description: p.description, amount: Number(p.amount), due_date: p.due_date,
+      mode: "single",
+      description: p.description.replace(/\s*\(\d+\/\d+\)\s*$/, ""),
+      amount: Number(p.amount), due_date: p.due_date,
       category_id: p.category_id, account_id: p.account_id, recurrence: p.recurrence,
-      notes: p.notes || "",
+      notes: p.notes || "", installments: 1, recurrence_end_date: null,
     });
     setOpen(true);
   };
@@ -86,9 +168,33 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
   const handleSave = async () => {
     if (!form.description || !form.amount || form.amount <= 0) return;
     setSubmitting(true);
-    const res = editing
-      ? await updatePayable(editing.id, form)
-      : await createPayable(form);
+    let res;
+    if (editing) {
+      const payload: Partial<CreatePayableData> = {
+        description: form.description,
+        amount: form.amount,
+        due_date: form.due_date,
+        category_id: form.category_id,
+        account_id: form.account_id,
+        notes: form.notes,
+      };
+      res = editScope === "future" && editing.installment_group_id
+        ? await updateGroupFuture(editing, payload)
+        : await updatePayable(editing.id, payload);
+    } else {
+      const payload: CreatePayableData = {
+        description: form.description,
+        amount: form.amount,
+        due_date: form.due_date,
+        category_id: form.category_id,
+        account_id: form.account_id,
+        notes: form.notes,
+        recurrence: form.mode === "recurring" ? (form.recurrence || "mensal") : "nenhuma",
+        installments: form.mode === "installments" ? (form.installments || 1) : 1,
+        recurrence_end_date: form.mode === "recurring" ? (form.recurrence_end_date || null) : null,
+      };
+      res = await createPayable(payload);
+    }
     setSubmitting(false);
     if (!res.error) setOpen(false);
   };
@@ -106,83 +212,127 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
   };
 
   const handleExportPdf = () => {
+    const periodText = `${periodLabel} • ${statusLabel}`;
+    const totalFiltered = filtered.reduce((s, p) => s + Number(p.amount), 0);
     exportToPdf({
       title: "Contas a Pagar",
       churchName,
-      period: statusFilter === "all" ? "Todas" : statusFilter === "pendente" ? "Pendentes" : "Pagas",
+      period: periodText,
       columns: [
         { header: "Vencimento", dataKey: "due" },
         { header: "Descrição", dataKey: "desc" },
+        { header: "Parcela", dataKey: "parc" },
         { header: "Categoria", dataKey: "cat" },
         { header: "Conta", dataKey: "acc" },
         { header: "Status", dataKey: "status" },
-        { header: "Recorrência", dataKey: "rec" },
         { header: "Valor", dataKey: "amount", align: "right" },
       ],
-      rows: filtered.map((p) => ({
-        due: new Date(p.due_date + "T12:00:00").toLocaleDateString("pt-BR"),
-        desc: p.description,
-        cat: categories.find((c) => c.id === p.category_id)?.name || "—",
-        acc: accounts.find((a) => a.id === p.account_id)?.name || "—",
-        status: p.status === "pago" ? "Pago" : "Pendente",
-        rec: recurrenceLabel[p.recurrence],
-        amount: `R$ ${formatBRL(Number(p.amount))}`,
-      })),
+      rows: filtered.map((p) => {
+        const overdueRow = isOverdue(p, today);
+        return {
+          due: new Date(p.due_date + "T12:00:00").toLocaleDateString("pt-BR"),
+          desc: p.description.replace(/\s*\(\d+\/\d+\)\s*$/, ""),
+          parc: p.installment_total ? `${p.installment_number}/${p.installment_total}` : "—",
+          cat: categories.find((c) => c.id === p.category_id)?.name || "—",
+          acc: accounts.find((a) => a.id === p.account_id)?.name || "—",
+          status: p.status === "pago" ? "Pago" : overdueRow ? `Vencida (${daysBetween(p.due_date, today)}d)` : "Pendente",
+          amount: `R$ ${formatBRL(Number(p.amount))}`,
+        };
+      }),
       totals: [
-        { label: "Total pendente", value: `R$ ${formatBRL(totals.pending)}` },
-        { label: "Total pago", value: `R$ ${formatBRL(totals.paid)}` },
+        { label: `Total (${filtered.length} contas)`, value: `R$ ${formatBRL(totalFiltered)}` },
       ],
-      filename: `contas-a-pagar-${new Date().toISOString().slice(0, 10)}.pdf`,
+      filename: `contas-a-pagar-${periodMode}-${new Date().toISOString().slice(0, 10)}.pdf`,
     });
   };
 
-  const today = new Date().toISOString().slice(0, 10);
+  const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 2 + i);
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Dashboard metrics */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <div className="stat-card">
-          <p className="text-sm text-muted-foreground">Pendente</p>
-          <p className="text-2xl font-bold mt-1 text-destructive">R$ {formatBRL(totals.pending)}</p>
+          <p className="text-xs text-muted-foreground">Vence no mês</p>
+          <p className="text-xl font-bold mt-1">R$ {formatBRL(metrics.monthDue)}</p>
         </div>
         <div className="stat-card">
-          <p className="text-sm text-muted-foreground">Pago</p>
-          <p className="text-2xl font-bold mt-1 text-success">R$ {formatBRL(totals.paid)}</p>
-        </div>
-        <div className="stat-card">
-          <p className="text-sm text-muted-foreground">Vencidas</p>
-          <p className="text-2xl font-bold mt-1 flex items-center gap-2">
-            {totals.overdue > 0 && <AlertCircle className="w-5 h-5 text-destructive" />}
-            {totals.overdue}
+          <p className="text-xs text-muted-foreground">Vencidas</p>
+          <p className="text-xl font-bold mt-1 text-destructive flex items-center gap-2">
+            {metrics.overdueCount > 0 && <AlertCircle className="w-4 h-4" />}
+            R$ {formatBRL(metrics.overdue)}
           </p>
+          <p className="text-[10px] text-muted-foreground">{metrics.overdueCount} contas</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-xs text-muted-foreground">Futuras</p>
+          <p className="text-xl font-bold mt-1">R$ {formatBRL(metrics.future)}</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-xs text-muted-foreground">Recorrências</p>
+          <p className="text-xl font-bold mt-1">{metrics.recurringGroups}</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-xs text-muted-foreground">Parcelas pendentes</p>
+          <p className="text-xl font-bold mt-1">{metrics.pendingInstallments}</p>
         </div>
       </div>
 
       <Card>
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <CardTitle className="text-lg">Contas a Pagar</CardTitle>
-          <div className="flex flex-wrap gap-2">
-            <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+        <CardHeader className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <CardTitle className="text-lg">Contas a Pagar</CardTitle>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={handleExportPdf}>
+                <Download className="w-4 h-4 mr-2" /> PDF
+              </Button>
+              <Button size="sm" onClick={openNew}>
+                <Plus className="w-4 h-4 mr-2" /> Nova Conta
+              </Button>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <Select value={periodMode} onValueChange={(v: PeriodMode) => setPeriodMode(v)}>
+              <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="month">Mês</SelectItem>
+                <SelectItem value="year">Ano</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
+              </SelectContent>
+            </Select>
+            {periodMode === "month" && (
+              <Select value={String(filterMonth)} onValueChange={(v) => setFilterMonth(Number(v))}>
+                <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {MONTHS.map((m, i) => (<SelectItem key={i} value={String(i)}>{m}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            )}
+            {(periodMode === "month" || periodMode === "year") && (
+              <Select value={String(filterYear)} onValueChange={(v) => setFilterYear(Number(v))}>
+                <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {years.map((y) => (<SelectItem key={y} value={String(y)}>{y}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={statusFilter} onValueChange={(v: StatusFilter) => setStatusFilter(v)}>
               <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="all">Todos status</SelectItem>
                 <SelectItem value="pendente">Pendentes</SelectItem>
+                <SelectItem value="vencida">Vencidas</SelectItem>
                 <SelectItem value="pago">Pagas</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm" onClick={handleExportPdf}>
-              <Download className="w-4 h-4 mr-2" /> PDF
-            </Button>
-            <Button size="sm" onClick={openNew}>
-              <Plus className="w-4 h-4 mr-2" /> Nova Conta
-            </Button>
           </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
           ) : filtered.length === 0 ? (
-            <div className="text-center p-8 text-muted-foreground">Nenhuma conta {statusFilter !== "all" ? statusFilter : ""}.</div>
+            <div className="text-center p-8 text-muted-foreground">Nenhuma conta neste filtro.</div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -191,7 +341,6 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
                     <TableHead>Vencimento</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead className="hidden md:table-cell">Categoria</TableHead>
-                    <TableHead className="hidden md:table-cell">Recorrência</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
                     <TableHead className="w-[120px]"></TableHead>
@@ -199,33 +348,48 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
                 </TableHeader>
                 <TableBody>
                   {filtered.map((p) => {
-                    const overdue = p.status === "pendente" && p.due_date < today;
+                    const overdueRow = isOverdue(p, today);
+                    const dDays = daysBetween(today, p.due_date);
+                    const cleanDesc = p.description.replace(/\s*\(\d+\/\d+\)\s*$/, "");
+                    const groupOverdue = p.installment_group_id ? (overdueByGroup.get(p.installment_group_id) || 0) : 0;
                     return (
                       <TableRow key={p.id}>
-                        <TableCell className={overdue ? "text-destructive font-medium" : ""}>
-                          {new Date(p.due_date + "T12:00:00").toLocaleDateString("pt-BR")}
+                        <TableCell className={overdueRow ? "text-destructive font-medium" : ""}>
+                          <div>{new Date(p.due_date + "T12:00:00").toLocaleDateString("pt-BR")}</div>
+                          {p.status === "pendente" && (
+                            <div className="text-[10px] text-muted-foreground">
+                              {overdueRow ? `${-dDays} dias atrasada` : dDays === 0 ? "vence hoje" : `em ${dDays} dias`}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="font-medium">
-                          {p.description}
-                          {p.installment_total && p.installment_total > 1 && (
-                            <Badge variant="outline" className="ml-2 text-[10px]">
-                              {p.installment_number}/{p.installment_total}
-                            </Badge>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span>{cleanDesc}</span>
+                            {p.installment_total && p.installment_total > 1 && (
+                              <Badge variant="outline" className="text-[10px]">
+                                {p.installment_number}/{p.installment_total}
+                              </Badge>
+                            )}
+                            {p.recurrence !== "nenhuma" && !p.installment_group_id && (
+                              <Badge variant="outline" className="text-[10px]">{recurrenceLabel[p.recurrence]}</Badge>
+                            )}
+                          </div>
+                          {groupOverdue > 0 && p.status === "pendente" && (
+                            <div className="text-[10px] text-destructive mt-0.5">
+                              {groupOverdue} parcela{groupOverdue > 1 ? "s" : ""} vencida{groupOverdue > 1 ? "s" : ""} deste compromisso
+                            </div>
                           )}
                         </TableCell>
                         <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
                           {categories.find((c) => c.id === p.category_id)?.name || "—"}
                         </TableCell>
-                        <TableCell className="hidden md:table-cell text-xs">
-                          {recurrenceLabel[p.recurrence]}
-                        </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className={
                             p.status === "pago"
                               ? "bg-success/20 text-success"
-                              : overdue ? "bg-destructive/20 text-destructive" : "bg-warning/20 text-foreground"
+                              : overdueRow ? "bg-destructive/20 text-destructive" : "bg-warning/20 text-foreground"
                           }>
-                            {p.status === "pago" ? "Pago" : overdue ? "Vencida" : "Pendente"}
+                            {p.status === "pago" ? "Pago" : overdueRow ? "Vencida" : "Pendente"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-semibold">
@@ -262,22 +426,53 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? "Editar Conta" : "Nova Conta a Pagar"}</DialogTitle>
-            <DialogDescription>Cadastre vencimentos e marque como pago para gerar a saída automaticamente.</DialogDescription>
+            <DialogDescription>
+              {editing
+                ? "Edite esta parcela ou aplique a todas as futuras pendentes do compromisso."
+                : "Crie uma conta única, parcelada ou recorrente com data inicial e final."}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {!editing && (
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Select value={form.mode} onValueChange={(v: CreationMode) => setForm({ ...form, mode: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">Conta única</SelectItem>
+                    <SelectItem value="installments">Parcelada</SelectItem>
+                    <SelectItem value="recurring">Recorrente (com data fim)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {editing && editing.installment_group_id && (
+              <div className="space-y-2 p-3 bg-muted/40 rounded-lg">
+                <Label className="text-xs">Aplicar alteração em</Label>
+                <Select value={editScope} onValueChange={(v: "single" | "future") => setEditScope(v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">Apenas esta parcela</SelectItem>
+                    <SelectItem value="future">Esta e todas as futuras pendentes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Descrição *</Label>
               <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Valor (R$) *</Label>
+                <Label>{form.mode === "installments" && !editing ? "Valor total (R$) *" : "Valor (R$) *"}</Label>
                 <Input type="number" step="0.01" min="0" value={form.amount || ""}
                   onChange={(e) => setForm({ ...form, amount: parseFloat(e.target.value || "0") })} />
               </div>
               <div className="space-y-2">
-                <Label>Vencimento *</Label>
-                <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
+                <Label>{form.mode === "recurring" && !editing ? "Data inicial *" : "Vencimento *"}</Label>
+                <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} disabled={editScope === "future"} />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -302,28 +497,42 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
                 </Select>
               </div>
             </div>
-            {!editing && (
+
+            {!editing && form.mode === "installments" && (
+              <div className="space-y-2">
+                <Label>Número de parcelas *</Label>
+                <Input type="number" min="2" max="60" value={form.installments || 2}
+                  onChange={(e) => setForm({ ...form, installments: Math.max(2, parseInt(e.target.value || "2")) })} />
+                <p className="text-xs text-muted-foreground">
+                  Valor por parcela: R$ {formatBRL((form.amount || 0) / Math.max(1, form.installments || 1))}. Vencimentos mensais a partir da data informada.
+                </p>
+              </div>
+            )}
+
+            {!editing && form.mode === "recurring" && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Parcelas</Label>
-                  <Input type="number" min="1" max="60" value={form.installments || 1}
-                    onChange={(e) => setForm({ ...form, installments: Math.max(1, parseInt(e.target.value || "1")) })} />
-                  <p className="text-xs text-muted-foreground">Use 1 para conta única. Mais de 1 gera parcelas mensais com mesmo valor.</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Recorrência</Label>
-                  <Select value={form.recurrence || "nenhuma"} onValueChange={(v: PayableRecurrence) => setForm({ ...form, recurrence: v })} disabled={(form.installments || 1) > 1}>
+                  <Label>Frequência</Label>
+                  <Select value={form.recurrence || "mensal"} onValueChange={(v: PayableRecurrence) => setForm({ ...form, recurrence: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="nenhuma">Sem recorrência</SelectItem>
                       <SelectItem value="semanal">Semanal</SelectItem>
                       <SelectItem value="mensal">Mensal</SelectItem>
                       <SelectItem value="anual">Anual</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>Data final *</Label>
+                  <Input type="date" value={form.recurrence_end_date || ""}
+                    onChange={(e) => setForm({ ...form, recurrence_end_date: e.target.value })} />
+                </div>
+                <p className="col-span-2 text-xs text-muted-foreground">
+                  Serão geradas todas as ocorrências entre a data inicial e a data final, numeradas automaticamente (ex: 1/12, 2/12...).
+                </p>
               </div>
             )}
+
             <div className="space-y-2">
               <Label>Observações</Label>
               <Textarea value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="resize-none" />
@@ -331,7 +540,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={submitting || !form.description || !form.amount}>
+            <Button onClick={handleSave} disabled={submitting || !form.description || !form.amount || (!editing && form.mode === "recurring" && !form.recurrence_end_date)}>
               {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {editing ? "Salvar" : "Criar"}
             </Button>
