@@ -205,7 +205,14 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
                         <TableCell className={overdue ? "text-destructive font-medium" : ""}>
                           {new Date(p.due_date + "T12:00:00").toLocaleDateString("pt-BR")}
                         </TableCell>
-                        <TableCell className="font-medium">{p.description}</TableCell>
+                        <TableCell className="font-medium">
+                          {p.description}
+                          {p.installment_total && p.installment_total > 1 && (
+                            <Badge variant="outline" className="ml-2 text-[10px]">
+                              {p.installment_number}/{p.installment_total}
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
                           {categories.find((c) => c.id === p.category_id)?.name || "—"}
                         </TableCell>
