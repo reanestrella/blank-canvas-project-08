@@ -544,7 +544,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={submitting || !form.description || !form.amount || (!editing && form.mode === "recurring" && !form.recurrence_end_date)}>
+            <Button onClick={handleSave} disabled={submitting || !form.description || !form.amount || (!editing && form.mode === "recurring" && form.recurrence === "personalizada" && !(form.recurrence_interval_days && form.recurrence_interval_days > 0))}>
               {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {editing ? "Salvar" : "Criar"}
             </Button>
