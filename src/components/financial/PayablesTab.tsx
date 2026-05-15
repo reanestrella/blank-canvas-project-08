@@ -27,13 +27,14 @@ interface PayablesTabProps {
 
 type StatusFilter = "all" | "pendente" | "vencida" | "pago";
 type PeriodMode = "month" | "year" | "all";
-type CreationMode = "single" | "installments" | "recurring";
+type CreationMode = "single" | "recurring";
 
 const recurrenceLabel: Record<PayableRecurrence, string> = {
   nenhuma: "Sem recorrência",
   semanal: "Semanal",
   mensal: "Mensal",
   anual: "Anual",
+  personalizada: "Personalizada",
 };
 
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
@@ -50,8 +51,8 @@ const buildEmpty = (): FormState => ({
   category_id: null,
   account_id: null,
   recurrence: "nenhuma",
+  recurrence_interval_days: 30,
   notes: "",
-  installments: 1,
   recurrence_end_date: null,
 });
 
@@ -156,11 +157,12 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
     setEditing(p);
     setEditScope("single");
     setForm({
-      mode: "single",
+      mode: p.recurrence === "nenhuma" ? "single" : "recurring",
       description: p.description.replace(/\s*\(\d+\/\d+\)\s*$/, ""),
       amount: Number(p.amount), due_date: p.due_date,
       category_id: p.category_id, account_id: p.account_id, recurrence: p.recurrence,
-      notes: p.notes || "", installments: 1, recurrence_end_date: null,
+      recurrence_interval_days: p.recurrence_interval_days || 30,
+      notes: p.notes || "", recurrence_end_date: null,
     });
     setOpen(true);
   };
@@ -190,7 +192,9 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
         account_id: form.account_id,
         notes: form.notes,
         recurrence: form.mode === "recurring" ? (form.recurrence || "mensal") : "nenhuma",
-        installments: form.mode === "installments" ? (form.installments || 1) : 1,
+        recurrence_interval_days: form.mode === "recurring" && form.recurrence === "personalizada"
+          ? Math.max(1, form.recurrence_interval_days || 30)
+          : null,
         recurrence_end_date: form.mode === "recurring" ? (form.recurrence_end_date || null) : null,
       };
       res = await createPayable(payload);
