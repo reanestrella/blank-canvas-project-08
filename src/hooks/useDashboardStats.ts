@@ -36,7 +36,10 @@ interface Member {
   congregation_id: string | null;
   photo_url: string | null;
   baptism_date: string | null;
+  conversion_date: string | null;
+  first_visit_date: string | null;
   is_active: boolean;
+  created_at?: string;
 }
 
 interface Alert {
