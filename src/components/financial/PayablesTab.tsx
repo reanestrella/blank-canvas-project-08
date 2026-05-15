@@ -157,7 +157,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
     setEditing(p);
     setEditScope("single");
     setForm({
-      mode: p.recurrence === "nenhuma" ? "single" : "recurring",
+      mode: p.recurrence === "nenhuma" ? "single" : (p.installment_group_id ? "recurring_finite" : "recurring_open"),
       description: p.description.replace(/\s*\(\d+\/\d+\)\s*$/, ""),
       amount: Number(p.amount), due_date: p.due_date,
       category_id: p.category_id, account_id: p.account_id, recurrence: p.recurrence,
