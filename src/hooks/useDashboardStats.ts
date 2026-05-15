@@ -80,7 +80,7 @@ export function useDashboardStats(congregationId?: string | null) {
       try {
         let membersQuery = supabase
           .from("members")
-          .select("id, full_name, birth_date, wedding_date, spiritual_status, network, gender, congregation_id, photo_url, baptism_date, conversion_date, first_visit_date, is_active, created_at")
+          .select("id, full_name, birth_date, wedding_date, spiritual_status, network, gender, congregation_id, photo_url, baptism_date, conversion_date, first_visit_date, is_active, origin_type, created_at")
           .eq("church_id", currentChurchId)
           .order("full_name")
           .limit(5000);
