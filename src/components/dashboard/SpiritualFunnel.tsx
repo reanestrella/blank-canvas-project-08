@@ -7,6 +7,7 @@ import { Loader2, ArrowDown, Users } from "lucide-react";
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { getConsolidationMetrics } from "@/lib/consolidationMetrics";
 
 type StageKey = "visitante" | "decidido" | "consolidacao" | "batizado" | "membro";
 
