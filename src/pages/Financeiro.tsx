@@ -33,6 +33,7 @@ import { FinancialChartsTab } from "@/components/financial/FinancialChartsTab";
 import { FinancialSummaryTab } from "@/components/financial/FinancialSummaryTab";
 import { PercentagesTab } from "@/components/financial/PercentagesTab";
 import { PayablesTab } from "@/components/financial/PayablesTab";
+import { useOpenPersistence } from "@/hooks/useOpenPersistence";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +48,7 @@ export default function Financeiro() {
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | undefined>();
   const [deletingTransaction, setDeletingTransaction] = useState<FinancialTransaction | null>(null);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  useOpenPersistence("transaction-modal-new", transactionModalOpen, setTransactionModalOpen, { enabled: !editingTransaction });
 
   // Period filters
   const now = new Date();
