@@ -25,6 +25,8 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useConsolidation, ConsolidationRecord, ConsolidationStage } from "@/hooks/useConsolidation";
 import { useMembers } from "@/hooks/useMembers";
+import { useConsolidationAssignees } from "@/hooks/useConsolidationAssignees";
+import { logAudit } from "@/lib/audit";
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { VisitorContactDashboard } from "@/components/consolidation/VisitorContactDashboard";
@@ -71,6 +73,8 @@ export default function Consolidacao() {
   const churchId = profile?.church_id;
   const { records, isLoading, createRecord, updateRecord, deleteRecord } = useConsolidation(churchId || undefined);
   const { members, updateMember } = useMembers(churchId || undefined);
+  const { byRecord: assigneesByRecord, setAssignees } = useConsolidationAssignees(churchId || undefined);
+  const [editAssignees, setEditAssignees] = useState<string[]>([]);
 
   // Most recent record per member (drives "current stage" of a person)
   const recordByMember = useMemo(() => {
@@ -239,7 +243,12 @@ export default function Consolidacao() {
   };
 
   // ----- EDIT FULL RECORD -----
-  const openEdit = (r: ConsolidationRecord) => setEditingRecord({ ...r });
+  const openEdit = (r: ConsolidationRecord) => {
+    setEditingRecord({ ...r });
+    const cur = (assigneesByRecord[r.id] || []).map((a) => a.consolidator_member_id);
+    setEditAssignees(cur);
+    logAudit({ action: "view", entity_type: "consolidation_record", entity_id: r.id });
+  };
   const saveEdit = async () => {
     if (!editingRecord) return;
     const r = editingRecord;
@@ -255,6 +264,18 @@ export default function Consolidacao() {
       contact_date: r.contact_date || undefined,
       notes: r.notes || undefined,
     } as any);
+    const prev = (assigneesByRecord[r.id] || []).map((a) => a.consolidator_member_id).sort().join(",");
+    const next = [...editAssignees].sort().join(",");
+    if (prev !== next) {
+      await setAssignees(r.id, editAssignees);
+      logAudit({
+        action: "assign_consolidator",
+        entity_type: "consolidation_record",
+        entity_id: r.id,
+        details: { before: prev.split(",").filter(Boolean), after: editAssignees },
+      });
+    }
+    logAudit({ action: "update", entity_type: "consolidation_record", entity_id: r.id });
     setEditingRecord(null);
   };
 
@@ -327,7 +348,18 @@ export default function Consolidacao() {
                   : r.baptism_date;
                 return (
                   <TableRow key={r.id}>
-                    <TableCell>{personCell(r.member?.full_name || m?.full_name)}</TableCell>
+                    <TableCell>
+                      {personCell(r.member?.full_name || m?.full_name)}
+                      {(assigneesByRecord[r.id]?.length || 0) > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1 pl-11">
+                          {assigneesByRecord[r.id].map((a) => (
+                            <Badge key={a.id} variant="outline" className="text-[10px] px-1.5 py-0">
+                              {a.consolidator?.full_name || "—"}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="hidden md:table-cell">
                       <div className="flex flex-col gap-0.5">
                         {(r.member?.phone || m?.phone) && <span className="text-xs flex items-center gap-1"><Phone className="w-3 h-3" />{r.member?.phone || m?.phone}</span>}
@@ -351,7 +383,13 @@ export default function Consolidacao() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => openEdit(r)}>Editar tudo</DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={() => deleteRecord(r.id)}>Excluir registro</DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={async () => {
+                                await deleteRecord(r.id);
+                                logAudit({ action: "delete", entity_type: "consolidation_record", entity_id: r.id });
+                              }}
+                            >Excluir registro</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -595,6 +633,43 @@ export default function Consolidacao() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Consolidadores responsáveis</Label>
+                  <div className="rounded-md border p-2 max-h-40 overflow-y-auto space-y-1">
+                    {members
+                      .filter((m) => m.is_active && (["membro","lider","discipulador"] as any[]).includes(m.spiritual_status))
+                      .map((m) => {
+                        const checked = editAssignees.includes(m.id);
+                        return (
+                          <label key={m.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent/30 rounded px-2 py-1">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                setEditAssignees((prev) =>
+                                  e.target.checked ? [...prev, m.id] : prev.filter((x) => x !== m.id),
+                                );
+                              }}
+                            />
+                            <span className="truncate">{m.full_name}</span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                  {editAssignees.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {editAssignees.map((id) => {
+                        const m = memberById.get(id);
+                        return (
+                          <Badge key={id} variant="secondary" className="text-xs">
+                            {m?.full_name || "—"}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">

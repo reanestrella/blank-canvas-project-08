@@ -189,6 +189,16 @@ export function useMembers(churchId?: string) {
         throw new Error(result.error || "Não foi possível remover o membro.");
       }
 
+      try {
+        const { logAudit } = await import("@/lib/audit");
+        await logAudit({
+          action: "delete",
+          entity_type: "member",
+          entity_id: id,
+          details: { summary: result.summary },
+        });
+      } catch {}
+
       setMembers((prev) => prev.filter((m) => m.id !== id));
       toast({
         title: "Sucesso",
