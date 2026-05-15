@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { isRealVisitor } from "@/lib/originType";
 
 export interface PeopleStatsInput {
   id: string;
