@@ -39,6 +39,7 @@ interface Member {
   conversion_date: string | null;
   first_visit_date: string | null;
   is_active: boolean;
+  origin_type?: string | null;
   created_at?: string;
 }
 
