@@ -36,6 +36,8 @@ export interface CreatePayableData {
   status?: PayableStatus;
   /** Quando informado (>1), gera N parcelas mensais com mesmo grupo. */
   installments?: number;
+  /** Para recorrência: gera todas as ocorrências até esta data. */
+  recurrence_end_date?: string | null;
 }
 
 function addToDate(dateIso: string, recurrence: PayableRecurrence): string {
@@ -44,6 +46,18 @@ function addToDate(dateIso: string, recurrence: PayableRecurrence): string {
   else if (recurrence === "mensal") d.setMonth(d.getMonth() + 1);
   else if (recurrence === "anual") d.setFullYear(d.getFullYear() + 1);
   return d.toISOString().slice(0, 10);
+}
+
+/** Returns true if payable is overdue based on today (date string YYYY-MM-DD). */
+export function isOverdue(p: { status: PayableStatus; due_date: string }, today?: string): boolean {
+  const t = today || new Date().toISOString().slice(0, 10);
+  return p.status === "pendente" && p.due_date < t;
+}
+
+export function daysBetween(fromIso: string, toIso: string): number {
+  const a = new Date(fromIso + "T12:00:00").getTime();
+  const b = new Date(toIso + "T12:00:00").getTime();
+  return Math.round((b - a) / 86400000);
 }
 
 export function useFinancialPayables(churchId?: string) {
