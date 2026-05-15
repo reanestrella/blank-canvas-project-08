@@ -25,6 +25,8 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useConsolidation, ConsolidationRecord, ConsolidationStage } from "@/hooks/useConsolidation";
 import { useMembers } from "@/hooks/useMembers";
+import { useConsolidationAssignees } from "@/hooks/useConsolidationAssignees";
+import { logAudit } from "@/lib/audit";
 import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFilters";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { VisitorContactDashboard } from "@/components/consolidation/VisitorContactDashboard";
@@ -71,6 +73,8 @@ export default function Consolidacao() {
   const churchId = profile?.church_id;
   const { records, isLoading, createRecord, updateRecord, deleteRecord } = useConsolidation(churchId || undefined);
   const { members, updateMember } = useMembers(churchId || undefined);
+  const { byRecord: assigneesByRecord, setAssignees } = useConsolidationAssignees(churchId || undefined);
+  const [editAssignees, setEditAssignees] = useState<string[]>([]);
 
   // Most recent record per member (drives "current stage" of a person)
   const recordByMember = useMemo(() => {
