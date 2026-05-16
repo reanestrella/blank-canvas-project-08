@@ -146,16 +146,20 @@ export default function Secretaria() {
         else matchesPeriod = d.getFullYear() === filterYear && d.getMonth() === filterMonth;
       }
 
-      // Tab filter (by spiritual status)
+      // Tab filter (by spiritual status) — Kids são excluídos dessas abas (contam apenas como Kids).
+      const isKid = member.network === "kids";
       let matchesTab = true;
       if (activeTab === "membros") {
-        matchesTab = member.spiritual_status === "membro" || 
-                     member.spiritual_status === "lider" || 
-                     member.spiritual_status === "discipulador";
+        matchesTab = !isKid && (member.spiritual_status === "membro" ||
+                     member.spiritual_status === "lider" ||
+                     member.spiritual_status === "discipulador");
       } else if (activeTab === "decididos") {
-        matchesTab = member.spiritual_status === "novo_convertido";
+        matchesTab = !isKid && member.spiritual_status === "novo_convertido";
       } else if (activeTab === "visitantes") {
-        matchesTab = member.spiritual_status === "visitante";
+        matchesTab = !isKid && member.spiritual_status === "visitante";
+      } else if (activeTab === "todos") {
+        // "Todos" exclui Kids — eles aparecem ao filtrar pela rede Kids.
+        matchesTab = !isKid || networkFilter === "kids";
       }
 
       // Network filter
