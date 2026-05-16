@@ -624,6 +624,18 @@ export default function Financeiro() {
             {churchId && <PatrimonioTab churchId={churchId} />}
           </TabsContent>
 
+          <TabsContent value="categories" className="mt-6">
+            {churchId && (
+              <CategoriesTab
+                allCategories={allCategories}
+                onCreate={createCategory}
+                onUpdate={updateCategory}
+                onDelete={deleteCategory}
+                churchId={churchId}
+              />
+            )}
+          </TabsContent>
+
         </Tabs>
       </div>
 
