@@ -123,7 +123,7 @@ export function TransactionModal({
   useRhfFormPersistence(PERSIST_KEY, form, { enabled: open && !transaction });
 
   const selectedType = form.watch("type");
-  const filteredCategories = categories.filter((c) => c.type === selectedType);
+  const filteredCategories = categories.filter((c) => c.type === selectedType || c.type === "ambos");
 
   const handleSubmit = async (data: TransactionFormData) => {
     setIsSubmitting(true);
