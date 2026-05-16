@@ -49,6 +49,7 @@ export interface CreateTransactionData {
 export function useFinancial(churchId?: string) {
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [categories, setCategories] = useState<FinancialCategory[]>([]);
+  const [allCategories, setAllCategories] = useState<FinancialCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
