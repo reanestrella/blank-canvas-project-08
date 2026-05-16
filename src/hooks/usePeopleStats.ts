@@ -76,11 +76,14 @@ export function usePeopleStats<T extends PeopleStatsInput>(
       return dateInPeriod(m.created_at);
     });
 
+    // Kids são contabilizados APENAS na rede Kids, nunca como membros/visitantes/decididos/batizados/total da igreja.
+    const isKid = (m: T) => m.network === "kids";
     const active = filteredCadastro.filter((m) => m.is_active);
-    const membrosForNetwork = active.filter((m) => isMembro(m.spiritual_status));
+    const activeNonKids = active.filter((m) => !isKid(m));
+    const membrosForNetwork = activeNonKids.filter((m) => isMembro(m.spiritual_status));
 
     const networks: Record<string, number> = {};
-    const kidsCount = active.filter((m) => m.network === "kids").length;
+    const kidsCount = active.filter(isKid).length;
     if (kidsCount > 0) networks["kids"] = kidsCount;
     membrosForNetwork.forEach((m) => {
       if (m.network && m.network !== "kids") {
@@ -91,23 +94,23 @@ export function usePeopleStats<T extends PeopleStatsInput>(
 
     // VISITANTES (histórico): conta toda pessoa cuja first_visit_date cai no período,
     // independentemente do status atual (mesmo que tenha virado decidido/membro).
-    // Exclui membros importados/migrados (origin_type não-real) para não inflar métricas.
+    // Exclui membros importados/migrados e crianças (rede Kids) para não inflar métricas.
     const visitantes = byCongregation.filter(
-      (m) => (!ignoreImported || isRealVisitor(m)) && dateInPeriod(m.first_visit_date || m.created_at),
+      (m) => !isKid(m) && (!ignoreImported || isRealVisitor(m)) && dateInPeriod(m.first_visit_date || m.created_at),
     ).length;
 
-    // DECIDIDOS: pessoas com data de conversão no período.
+    // DECIDIDOS: pessoas com data de conversão no período (exclui Kids).
     const decididos = byCongregation.filter((m) =>
-      dateInPeriod(m.conversion_date),
+      !isKid(m) && dateInPeriod(m.conversion_date),
     ).length;
 
     return {
-      total: active.length,
-      membros: active.filter((m) => isMembro(m.spiritual_status)).length,
+      total: activeNonKids.length,
+      membros: membrosForNetwork.length,
       decididos,
       visitantes,
-      batizados: active.filter((m) => m.is_baptized === true || m.baptism_date !== null).length,
-      inativos: filteredCadastro.filter((m) => !m.is_active).length,
+      batizados: activeNonKids.filter((m) => m.is_baptized === true || m.baptism_date !== null).length,
+      inativos: filteredCadastro.filter((m) => !m.is_active && !isKid(m)).length,
       networks,
       withoutNetwork,
       networkStats: {
