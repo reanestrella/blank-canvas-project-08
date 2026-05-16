@@ -33,6 +33,7 @@ import { FinancialChartsTab } from "@/components/financial/FinancialChartsTab";
 import { FinancialSummaryTab } from "@/components/financial/FinancialSummaryTab";
 import { PercentagesTab } from "@/components/financial/PercentagesTab";
 import { PayablesTab } from "@/components/financial/PayablesTab";
+import { CategoriesTab } from "@/components/financial/CategoriesTab";
 import { useOpenPersistence } from "@/hooks/useOpenPersistence";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
