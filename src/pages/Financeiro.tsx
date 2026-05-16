@@ -64,11 +64,15 @@ export default function Financeiro() {
   const {
     transactions,
     categories,
+    allCategories,
     isLoading,
     fetchTransactions,
     createTransaction,
     updateTransaction,
     deleteTransaction,
+    createCategory,
+    updateCategory,
+    deleteCategory,
   } = useFinancial(churchId || undefined);
 
   const { accounts } = useFinancialAccounts(churchId || undefined);
