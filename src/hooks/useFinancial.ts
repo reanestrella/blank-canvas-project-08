@@ -23,8 +23,13 @@ export interface FinancialCategory {
   id: string;
   church_id: string;
   name: string;
-  type: "receita" | "despesa";
+  type: "receita" | "despesa" | "ambos";
   is_active: boolean;
+  color?: string | null;
+  icon?: string | null;
+  description?: string | null;
+  sort_order?: number | null;
+  is_system?: boolean;
   created_at: string;
 }
 
@@ -44,6 +49,7 @@ export interface CreateTransactionData {
 export function useFinancial(churchId?: string) {
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [categories, setCategories] = useState<FinancialCategory[]>([]);
+  const [allCategories, setAllCategories] = useState<FinancialCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -115,40 +121,44 @@ export function useFinancial(churchId?: string) {
       { name: "Compras gerais", type: "despesa" },
       { name: "Outros (Despesa)", type: "despesa" },
     ];
-    const rows = defaults.map((d) => ({ ...d, church_id: churchId, is_active: true }));
+    const rows = defaults.map((d) => ({ ...d, church_id: churchId, is_active: true, is_system: true } as any));
     await supabase.from("financial_categories").insert(rows);
   };
 
   const fetchCategories = async () => {
     if (!churchId) {
       setCategories([]);
+      setAllCategories([]);
       return;
     }
     try {
       const { data, error } = await supabase
         .from("financial_categories")
         .select("*")
-        .eq("is_active", true)
         .eq("church_id", churchId)
-        .order("name");
-      
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
+
       if (error) throw error;
 
       // Seed defaults if church has no categories
       if (!data || data.length === 0) {
         await seedDefaultCategories();
-        // Re-fetch after seeding
         const { data: seeded } = await supabase
           .from("financial_categories")
           .select("*")
-          .eq("is_active", true)
           .eq("church_id", churchId)
-          .order("name");
-        setCategories((seeded as FinancialCategory[]) || []);
+          .order("sort_order", { ascending: true })
+          .order("name", { ascending: true });
+        const all = (seeded as FinancialCategory[]) || [];
+        setAllCategories(all);
+        setCategories(all.filter((c) => c.is_active));
         return;
       }
 
-      setCategories((data as FinancialCategory[]) || []);
+      const all = (data as FinancialCategory[]) || [];
+      setAllCategories(all);
+      setCategories(all.filter((c) => c.is_active));
     } catch (error: any) {
       console.error("Error fetching categories:", error);
     }
@@ -253,22 +263,30 @@ export function useFinancial(churchId?: string) {
     }
   };
 
-  const createCategory = async (data: { name: string; type: "receita" | "despesa"; church_id: string }) => {
+  const createCategory = async (data: {
+    name: string;
+    type: "receita" | "despesa" | "ambos";
+    church_id: string;
+    color?: string | null;
+    icon?: string | null;
+    description?: string | null;
+    sort_order?: number;
+  }) => {
     try {
+      const payload = { ...data, is_active: true, is_system: false } as any;
       const { data: newCategory, error } = await supabase
         .from("financial_categories")
-        .insert([data])
+        .insert([payload])
         .select()
         .single();
-      
+
       if (error) throw error;
-      
-      setCategories((prev) => [...prev, newCategory as FinancialCategory]);
-      toast({
-        title: "Sucesso",
-        description: "Categoria criada com sucesso!",
-      });
-      return { data: newCategory as FinancialCategory, error: null };
+
+      const saved = newCategory as FinancialCategory;
+      setAllCategories((prev) => [...prev, saved]);
+      setCategories((prev) => [...prev, saved]);
+      toast({ title: "Categoria criada", description: `"${saved.name}" foi adicionada.` });
+      return { data: saved, error: null };
     } catch (error: any) {
       console.error("Error creating category:", error);
       toast({
@@ -277,6 +295,60 @@ export function useFinancial(churchId?: string) {
         variant: "destructive",
       });
       return { data: null, error };
+    }
+  };
+
+  const updateCategory = async (
+    id: string,
+    data: Partial<Pick<FinancialCategory, "name" | "type" | "color" | "icon" | "description" | "sort_order" | "is_active">>
+  ) => {
+    try {
+      const { data: updated, error } = await supabase
+        .from("financial_categories")
+        .update(data as any)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      const saved = updated as FinancialCategory;
+      setAllCategories((prev) => prev.map((c) => (c.id === id ? saved : c)));
+      setCategories((prev) => {
+        const others = prev.filter((c) => c.id !== id);
+        return saved.is_active ? [...others, saved] : others;
+      });
+      toast({ title: "Categoria atualizada" });
+      return { data: saved, error: null };
+    } catch (error: any) {
+      console.error("Error updating category:", error);
+      toast({ title: "Erro", description: error.message || "Não foi possível atualizar.", variant: "destructive" });
+      return { data: null, error };
+    }
+  };
+
+  const deleteCategory = async (id: string) => {
+    try {
+      const { count: txCount } = await supabase
+        .from("financial_transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("category_id", id);
+      if ((txCount || 0) > 0) {
+        toast({
+          title: "Não é possível excluir",
+          description: "Existem lançamentos vinculados. Desative a categoria em vez de excluir.",
+          variant: "destructive",
+        });
+        return { error: new Error("has_transactions") };
+      }
+      const { error } = await supabase.from("financial_categories").delete().eq("id", id);
+      if (error) throw error;
+      setAllCategories((prev) => prev.filter((c) => c.id !== id));
+      setCategories((prev) => prev.filter((c) => c.id !== id));
+      toast({ title: "Categoria excluída" });
+      return { error: null };
+    } catch (error: any) {
+      console.error("Error deleting category:", error);
+      toast({ title: "Erro", description: error.message || "Não foi possível excluir.", variant: "destructive" });
+      return { error };
     }
   };
 
@@ -289,16 +361,17 @@ export function useFinancial(churchId?: string) {
   const totalIncome = transactions
     .filter((t) => t.type === "receita")
     .reduce((sum, t) => sum + Number(t.amount), 0);
-  
+
   const totalExpense = transactions
     .filter((t) => t.type === "despesa")
     .reduce((sum, t) => sum + Number(t.amount), 0);
-  
+
   const balance = totalIncome - totalExpense;
 
   return {
     transactions,
     categories,
+    allCategories,
     isLoading,
     totalIncome,
     totalExpense,
@@ -309,5 +382,7 @@ export function useFinancial(churchId?: string) {
     updateTransaction,
     deleteTransaction,
     createCategory,
+    updateCategory,
+    deleteCategory,
   };
 }

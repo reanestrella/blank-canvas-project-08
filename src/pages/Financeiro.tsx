@@ -33,6 +33,7 @@ import { FinancialChartsTab } from "@/components/financial/FinancialChartsTab";
 import { FinancialSummaryTab } from "@/components/financial/FinancialSummaryTab";
 import { PercentagesTab } from "@/components/financial/PercentagesTab";
 import { PayablesTab } from "@/components/financial/PayablesTab";
+import { CategoriesTab } from "@/components/financial/CategoriesTab";
 import { useOpenPersistence } from "@/hooks/useOpenPersistence";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -63,11 +64,15 @@ export default function Financeiro() {
   const {
     transactions,
     categories,
+    allCategories,
     isLoading,
     fetchTransactions,
     createTransaction,
     updateTransaction,
     deleteTransaction,
+    createCategory,
+    updateCategory,
+    deleteCategory,
   } = useFinancial(churchId || undefined);
 
   const { accounts } = useFinancialAccounts(churchId || undefined);
@@ -319,6 +324,7 @@ export default function Financeiro() {
             <TabsTrigger value="accounts">Contas</TabsTrigger>
             <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
             <TabsTrigger value="patrimonio">Patrimônio</TabsTrigger>
+            <TabsTrigger value="categories">Categorias</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6 mt-6">
@@ -616,6 +622,18 @@ export default function Financeiro() {
 
           <TabsContent value="patrimonio" className="mt-6">
             {churchId && <PatrimonioTab churchId={churchId} />}
+          </TabsContent>
+
+          <TabsContent value="categories" className="mt-6">
+            {churchId && (
+              <CategoriesTab
+                allCategories={allCategories}
+                onCreate={createCategory}
+                onUpdate={updateCategory}
+                onDelete={deleteCategory}
+                churchId={churchId}
+              />
+            )}
           </TabsContent>
 
         </Tabs>

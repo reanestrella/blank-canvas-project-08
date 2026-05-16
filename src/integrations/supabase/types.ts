@@ -2038,27 +2038,45 @@ export type Database = {
       financial_categories: {
         Row: {
           church_id: string
+          color: string | null
           created_at: string
+          description: string | null
+          icon: string | null
           id: string
           is_active: boolean
+          is_system: boolean
           name: string
+          sort_order: number
           type: string
+          updated_at: string
         }
         Insert: {
           church_id: string
+          color?: string | null
           created_at?: string
+          description?: string | null
+          icon?: string | null
           id?: string
           is_active?: boolean
+          is_system?: boolean
           name: string
+          sort_order?: number
           type: string
+          updated_at?: string
         }
         Update: {
           church_id?: string
+          color?: string | null
           created_at?: string
+          description?: string | null
+          icon?: string | null
           id?: string
           is_active?: boolean
+          is_system?: boolean
           name?: string
+          sort_order?: number
           type?: string
+          updated_at?: string
         }
         Relationships: [
           {
