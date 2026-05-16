@@ -273,7 +273,16 @@ export function TransactionModal({
                     <SelectContent>
                       {filteredCategories.map((category) => (
                         <SelectItem key={category.id} value={category.id}>
-                          {category.name}
+                          <span className="inline-flex items-center gap-2">
+                            {category.color && (
+                              <span
+                                className="inline-block w-2.5 h-2.5 rounded-full"
+                                style={{ backgroundColor: category.color }}
+                              />
+                            )}
+                            {category.icon && <span aria-hidden>{category.icon}</span>}
+                            <span>{category.name}</span>
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
