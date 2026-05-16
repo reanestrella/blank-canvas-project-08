@@ -23,8 +23,13 @@ export interface FinancialCategory {
   id: string;
   church_id: string;
   name: string;
-  type: "receita" | "despesa";
+  type: "receita" | "despesa" | "ambos";
   is_active: boolean;
+  color?: string | null;
+  icon?: string | null;
+  description?: string | null;
+  sort_order?: number | null;
+  is_system?: boolean;
   created_at: string;
 }
 
