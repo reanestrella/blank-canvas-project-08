@@ -121,40 +121,44 @@ export function useFinancial(churchId?: string) {
       { name: "Compras gerais", type: "despesa" },
       { name: "Outros (Despesa)", type: "despesa" },
     ];
-    const rows = defaults.map((d) => ({ ...d, church_id: churchId, is_active: true }));
+    const rows = defaults.map((d) => ({ ...d, church_id: churchId, is_active: true, is_system: true } as any));
     await supabase.from("financial_categories").insert(rows);
   };
 
   const fetchCategories = async () => {
     if (!churchId) {
       setCategories([]);
+      setAllCategories([]);
       return;
     }
     try {
       const { data, error } = await supabase
         .from("financial_categories")
         .select("*")
-        .eq("is_active", true)
         .eq("church_id", churchId)
-        .order("name");
-      
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
+
       if (error) throw error;
 
       // Seed defaults if church has no categories
       if (!data || data.length === 0) {
         await seedDefaultCategories();
-        // Re-fetch after seeding
         const { data: seeded } = await supabase
           .from("financial_categories")
           .select("*")
-          .eq("is_active", true)
           .eq("church_id", churchId)
-          .order("name");
-        setCategories((seeded as FinancialCategory[]) || []);
+          .order("sort_order", { ascending: true })
+          .order("name", { ascending: true });
+        const all = (seeded as FinancialCategory[]) || [];
+        setAllCategories(all);
+        setCategories(all.filter((c) => c.is_active));
         return;
       }
 
-      setCategories((data as FinancialCategory[]) || []);
+      const all = (data as FinancialCategory[]) || [];
+      setAllCategories(all);
+      setCategories(all.filter((c) => c.is_active));
     } catch (error: any) {
       console.error("Error fetching categories:", error);
     }
