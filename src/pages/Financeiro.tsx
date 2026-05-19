@@ -529,7 +529,15 @@ export default function Financeiro() {
           {/* Payables Tab */}
           <TabsContent value="payables" className="mt-6">
             {churchId && (
-              <PayablesTab churchId={churchId} accounts={accounts} categories={categories} />
+              <PayablesTab
+                churchId={churchId}
+                accounts={accounts}
+                categories={categories}
+                churchName={church?.name}
+                externalRange={globalRange}
+                externalLabel={periodLabel}
+                hideInternalPeriod
+              />
             )}
           </TabsContent>
 
