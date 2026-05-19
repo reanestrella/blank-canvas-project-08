@@ -556,15 +556,11 @@ export default function Financeiro() {
 
           {/* Tithers Tab */}
           <TabsContent value="tithers" className="space-y-6 mt-6">
-            {/* Tither Period Filters */}
-            <FinancialFilters
-              mode={titherPeriodMode}
-              month={titherMonth}
-              year={titherYear}
-              onModeChange={setTitherPeriodMode}
-              onMonthChange={setTitherMonth}
-              onYearChange={setTitherYear}
-            />
+            <p className="text-xs text-muted-foreground">
+              Usando o filtro global de período: <span className="font-medium text-foreground">{periodLabel}</span>
+            </p>
+
+
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="stat-card">
