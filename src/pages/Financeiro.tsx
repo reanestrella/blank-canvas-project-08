@@ -169,6 +169,21 @@ export default function Financeiro() {
     : periodMode === "custom" ? `${fmtBR(startDate)} a ${fmtBR(endDate)}`
     : "Total";
 
+  // Global period range used by tabs that need a date window (e.g. PayablesTab)
+  const globalRange = useMemo<{ start: string; end: string } | null>(() => {
+    if (periodMode === "all") return null;
+    if (periodMode === "custom") {
+      if (!startDate || !endDate) return null;
+      return { start: startDate, end: endDate };
+    }
+    if (periodMode === "year") {
+      return { start: `${filterYear}-01-01`, end: `${filterYear}-12-31` };
+    }
+    const m = String(filterMonth + 1).padStart(2, "0");
+    const last = new Date(filterYear, filterMonth + 1, 0).getDate();
+    return { start: `${filterYear}-${m}-01`, end: `${filterYear}-${m}-${String(last).padStart(2, "0")}` };
+  }, [periodMode, filterMonth, filterYear, startDate, endDate]);
+
   const stats = [
     {
       title: "Saldo",
