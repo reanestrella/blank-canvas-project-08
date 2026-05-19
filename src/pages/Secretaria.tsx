@@ -174,8 +174,13 @@ export default function Secretaria() {
     });
   }, [members, searchTerm, activeTab, networkFilter, selectedCongregation, periodMode, filterMonth, filterYear]);
 
-  // Stats by type — unified hook (single source of truth)
-  const stats = usePeopleStats(members as any, { congregationId: selectedCongregation });
+  // Stats by type — unified hook (single source of truth). Period filter aplicado.
+  const stats = usePeopleStats(members as any, {
+    congregationId: selectedCongregation,
+    periodMode,
+    filterMonth,
+    filterYear,
+  });
 
   const handleCreateMember = async (data: CreateMemberData) => {
     if (!churchId) return { data: null, error: new Error("Igreja não identificada") };
