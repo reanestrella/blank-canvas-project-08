@@ -26,7 +26,7 @@ interface PayablesTabProps {
 }
 
 type StatusFilter = "all" | "pendente" | "vencida" | "pago";
-type PeriodMode = "month" | "year" | "all";
+type PeriodMode = "month" | "year" | "all" | "custom";
 type CreationMode = "single" | "recurring_open" | "recurring_finite";
 
 const recurrenceLabel: Record<PayableRecurrence, string> = {
@@ -73,6 +73,8 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
   const now = new Date();
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
   const [filterYear, setFilterYear] = useState(now.getFullYear());
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   const expenseCategories = useMemo(() => categories.filter((c) => c.type === "despesa"), [categories]);
   const today = new Date().toISOString().slice(0, 10);
@@ -80,13 +82,17 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
   // Period filter range
   const periodRange = useMemo(() => {
     if (periodMode === "all") return null;
+    if (periodMode === "custom") {
+      if (!startDate || !endDate) return null;
+      return { start: startDate, end: endDate };
+    }
     if (periodMode === "year") {
       return { start: `${filterYear}-01-01`, end: `${filterYear}-12-31` };
     }
     const m = String(filterMonth + 1).padStart(2, "0");
     const last = new Date(filterYear, filterMonth + 1, 0).getDate();
     return { start: `${filterYear}-${m}-01`, end: `${filterYear}-${m}-${String(last).padStart(2, "0")}` };
-  }, [periodMode, filterMonth, filterYear]);
+  }, [periodMode, filterMonth, filterYear, startDate, endDate]);
 
   const filtered = useMemo(() => {
     return payables.filter((p) => {
@@ -137,8 +143,12 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
   const periodLabel = useMemo(() => {
     if (periodMode === "all") return "Todos os períodos";
     if (periodMode === "year") return `Ano ${filterYear}`;
+    if (periodMode === "custom") {
+      const fmt = (d: string) => d ? new Date(d + "T12:00:00").toLocaleDateString("pt-BR") : "—";
+      return `${fmt(startDate)} a ${fmt(endDate)}`;
+    }
     return `${MONTHS[filterMonth]}/${filterYear}`;
-  }, [periodMode, filterMonth, filterYear]);
+  }, [periodMode, filterMonth, filterYear, startDate, endDate]);
 
   const statusLabel = useMemo(() => {
     if (statusFilter === "all") return "Todas";
@@ -300,11 +310,12 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <Calendar className="w-4 h-4 text-muted-foreground" />
             <Select value={periodMode} onValueChange={(v: PeriodMode) => setPeriodMode(v)}>
-              <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="month">Mês</SelectItem>
                 <SelectItem value="year">Ano</SelectItem>
                 <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="custom">Personalizado</SelectItem>
               </SelectContent>
             </Select>
             {periodMode === "month" && (
@@ -322,6 +333,25 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
                   {years.map((y) => (<SelectItem key={y} value={String(y)}>{y}</SelectItem>))}
                 </SelectContent>
               </Select>
+            )}
+            {periodMode === "custom" && (
+              <div className="flex flex-wrap items-center gap-1">
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-[150px] h-9"
+                  aria-label="Data inicial"
+                />
+                <span className="text-xs text-muted-foreground">até</span>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-[150px] h-9"
+                  aria-label="Data final"
+                />
+              </div>
             )}
             <Select value={statusFilter} onValueChange={(v: StatusFilter) => setStatusFilter(v)}>
               <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
