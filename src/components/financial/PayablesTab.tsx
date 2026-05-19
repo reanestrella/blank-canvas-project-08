@@ -61,7 +61,7 @@ const buildEmpty = (): FormState => ({
   recurrence_end_date: null,
 });
 
-export function PayablesTab({ churchId, accounts, categories, churchName }: PayablesTabProps) {
+export function PayablesTab({ churchId, accounts, categories, churchName, externalRange, externalLabel, hideInternalPeriod }: PayablesTabProps) {
   const { payables, isLoading, createPayable, updatePayable, updateGroupFuture, deletePayable, markAsPaid } = useFinancialPayables(churchId);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialPayable | null>(null);
@@ -84,8 +84,11 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
   const expenseCategories = useMemo(() => categories.filter((c) => c.type === "despesa"), [categories]);
   const today = new Date().toISOString().slice(0, 10);
 
-  // Period filter range
+  const useExternal = hideInternalPeriod === true;
+
+  // Period filter range — external takes precedence when active
   const periodRange = useMemo(() => {
+    if (useExternal) return externalRange ?? null;
     if (periodMode === "all") return null;
     if (periodMode === "custom") {
       if (!startDate || !endDate) return null;
@@ -97,7 +100,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
     const m = String(filterMonth + 1).padStart(2, "0");
     const last = new Date(filterYear, filterMonth + 1, 0).getDate();
     return { start: `${filterYear}-${m}-01`, end: `${filterYear}-${m}-${String(last).padStart(2, "0")}` };
-  }, [periodMode, filterMonth, filterYear, startDate, endDate]);
+  }, [useExternal, externalRange, periodMode, filterMonth, filterYear, startDate, endDate]);
 
   const filtered = useMemo(() => {
     return payables.filter((p) => {
