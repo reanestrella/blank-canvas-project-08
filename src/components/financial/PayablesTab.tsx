@@ -23,6 +23,11 @@ interface PayablesTabProps {
   accounts: FinancialAccount[];
   categories: FinancialCategory[];
   churchName?: string;
+  /** When provided, Payables uses this global range instead of its own period selector */
+  externalRange?: { start: string; end: string } | null;
+  externalLabel?: string;
+  /** When true, hides the internal period selector (mode/month/year/custom) */
+  hideInternalPeriod?: boolean;
 }
 
 type StatusFilter = "all" | "pendente" | "vencida" | "pago";
