@@ -54,7 +54,7 @@ export function usePeopleStats<T extends PeopleStatsInput>(
     // Helper: verifica se uma data (string ISO ou date) cai no período filtrado
     const dateInPeriod = (s?: string | null): boolean => {
       if (!s) return false;
-      if (periodMode === "all") return true;
+      if (periodMode === "all" || periodMode === "custom") return true;
       const d = new Date(s.length === 10 ? s + "T12:00:00" : s);
       if (periodMode === "year") return filterYear === undefined || d.getFullYear() === filterYear;
       if (filterYear !== undefined && d.getFullYear() !== filterYear) return false;
@@ -72,7 +72,7 @@ export function usePeopleStats<T extends PeopleStatsInput>(
     // Para "membros, batizados, redes" mantemos a regra antiga: filtrar por created_at
     // (essas categorias representam o estado atual do cadastro).
     const filteredCadastro = byCongregation.filter((m) => {
-      if (periodMode === "all") return true;
+      if (periodMode === "all" || periodMode === "custom") return true;
       return dateInPeriod(m.created_at);
     });
 
