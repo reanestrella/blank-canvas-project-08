@@ -5,9 +5,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Calendar } from "lucide-react";
 
-export type PeriodMode = "month" | "year" | "all";
+export type PeriodMode = "month" | "year" | "all" | "custom";
 
 interface FinancialFiltersProps {
   mode: PeriodMode;
@@ -19,6 +20,10 @@ interface FinancialFiltersProps {
   accountFilter?: string;
   accounts?: { id: string; name: string }[];
   onAccountFilterChange?: (accountId: string) => void;
+  startDate?: string;
+  endDate?: string;
+  onStartDateChange?: (d: string) => void;
+  onEndDateChange?: (d: string) => void;
 }
 
 const MONTHS = [
@@ -36,21 +41,27 @@ export function FinancialFilters({
   accountFilter,
   accounts,
   onAccountFilterChange,
+  startDate,
+  endDate,
+  onStartDateChange,
+  onEndDateChange,
 }: FinancialFiltersProps) {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 10 }, (_, i) => currentYear - i);
+  const supportsCustom = !!onStartDateChange && !!onEndDateChange;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Calendar className="w-4 h-4 text-muted-foreground" />
       <Select value={mode} onValueChange={(v) => onModeChange(v as PeriodMode)}>
-        <SelectTrigger className="w-[120px]">
+        <SelectTrigger className="w-[140px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="month">Mês</SelectItem>
           <SelectItem value="year">Ano</SelectItem>
           <SelectItem value="all">Todos</SelectItem>
+          {supportsCustom && <SelectItem value="custom">Personalizado</SelectItem>}
         </SelectContent>
       </Select>
 
@@ -78,6 +89,26 @@ export function FinancialFilters({
             ))}
           </SelectContent>
         </Select>
+      )}
+
+      {mode === "custom" && supportsCustom && (
+        <div className="flex flex-wrap items-center gap-1">
+          <Input
+            type="date"
+            value={startDate || ""}
+            onChange={(e) => onStartDateChange!(e.target.value)}
+            className="w-[150px] h-9"
+            aria-label="Data inicial"
+          />
+          <span className="text-xs text-muted-foreground">até</span>
+          <Input
+            type="date"
+            value={endDate || ""}
+            onChange={(e) => onEndDateChange!(e.target.value)}
+            className="w-[150px] h-9"
+            aria-label="Data final"
+          />
+        </div>
       )}
 
       {accounts && accounts.length > 0 && onAccountFilterChange && (
