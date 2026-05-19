@@ -310,11 +310,12 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <Calendar className="w-4 h-4 text-muted-foreground" />
             <Select value={periodMode} onValueChange={(v: PeriodMode) => setPeriodMode(v)}>
-              <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="month">Mês</SelectItem>
                 <SelectItem value="year">Ano</SelectItem>
                 <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="custom">Personalizado</SelectItem>
               </SelectContent>
             </Select>
             {periodMode === "month" && (
@@ -332,6 +333,25 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
                   {years.map((y) => (<SelectItem key={y} value={String(y)}>{y}</SelectItem>))}
                 </SelectContent>
               </Select>
+            )}
+            {periodMode === "custom" && (
+              <div className="flex flex-wrap items-center gap-1">
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-[150px] h-9"
+                  aria-label="Data inicial"
+                />
+                <span className="text-xs text-muted-foreground">até</span>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-[150px] h-9"
+                  aria-label="Data final"
+                />
+              </div>
             )}
             <Select value={statusFilter} onValueChange={(v: StatusFilter) => setStatusFilter(v)}>
               <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
