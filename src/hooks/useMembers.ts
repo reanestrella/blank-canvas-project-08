@@ -15,7 +15,7 @@ export interface Member {
   state: string | null;
   gender: "M" | "F" | null;
   marital_status: string | null;
-  spiritual_status: "visitante" | "novo_convertido" | "membro" | "lider" | "discipulador";
+  spiritual_status: "visitante" | "novo_convertido" | "membro" | "lider" | "discipulador" | "crianca";
   baptism_date: string | null;
   baptism_location: string | null;
   conversion_date: string | null;
