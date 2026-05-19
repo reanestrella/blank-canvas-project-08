@@ -8,6 +8,7 @@ export interface TitherData {
   month: string;
   year: number;
   monthNum: number; // 0-indexed
+  date: string; // YYYY-MM-DD (transaction_date) — used for custom range filters
   total: number;
 }
 
