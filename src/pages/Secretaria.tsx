@@ -84,7 +84,7 @@ export default function Secretaria() {
   const [networkFilter, setNetworkFilter] = useState<string>("all");
   
   const now = new Date();
-  const [periodMode, setPeriodMode] = useState<"month" | "year" | "all">("all");
+  const [periodMode, setPeriodMode] = useState<PeriodMode>("all");
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
   const [filterYear, setFilterYear] = useState(now.getFullYear());
   
