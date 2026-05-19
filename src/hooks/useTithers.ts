@@ -8,6 +8,7 @@ export interface TitherData {
   month: string;
   year: number;
   monthNum: number; // 0-indexed
+  date: string; // YYYY-MM-DD (transaction_date) — used for custom range filters
   total: number;
 }
 
@@ -72,6 +73,7 @@ export function useTithers(churchId?: string) {
           month: `${year}-${month}`,
           year: parseInt(year),
           monthNum: parseInt(month) - 1, // 0-indexed
+          date: tx.transaction_date,
           total: Number(tx.amount),
         };
       });

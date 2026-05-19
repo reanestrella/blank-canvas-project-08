@@ -23,6 +23,11 @@ interface PayablesTabProps {
   accounts: FinancialAccount[];
   categories: FinancialCategory[];
   churchName?: string;
+  /** When provided, Payables uses this global range instead of its own period selector */
+  externalRange?: { start: string; end: string } | null;
+  externalLabel?: string;
+  /** When true, hides the internal period selector (mode/month/year/custom) */
+  hideInternalPeriod?: boolean;
 }
 
 type StatusFilter = "all" | "pendente" | "vencida" | "pago";
@@ -56,7 +61,7 @@ const buildEmpty = (): FormState => ({
   recurrence_end_date: null,
 });
 
-export function PayablesTab({ churchId, accounts, categories, churchName }: PayablesTabProps) {
+export function PayablesTab({ churchId, accounts, categories, churchName, externalRange, externalLabel, hideInternalPeriod }: PayablesTabProps) {
   const { payables, isLoading, createPayable, updatePayable, updateGroupFuture, deletePayable, markAsPaid } = useFinancialPayables(churchId);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialPayable | null>(null);
@@ -79,8 +84,11 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
   const expenseCategories = useMemo(() => categories.filter((c) => c.type === "despesa"), [categories]);
   const today = new Date().toISOString().slice(0, 10);
 
-  // Period filter range
+  const useExternal = hideInternalPeriod === true;
+
+  // Period filter range — external takes precedence when active
   const periodRange = useMemo(() => {
+    if (useExternal) return externalRange ?? null;
     if (periodMode === "all") return null;
     if (periodMode === "custom") {
       if (!startDate || !endDate) return null;
@@ -92,7 +100,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
     const m = String(filterMonth + 1).padStart(2, "0");
     const last = new Date(filterYear, filterMonth + 1, 0).getDate();
     return { start: `${filterYear}-${m}-01`, end: `${filterYear}-${m}-${String(last).padStart(2, "0")}` };
-  }, [periodMode, filterMonth, filterYear, startDate, endDate]);
+  }, [useExternal, externalRange, periodMode, filterMonth, filterYear, startDate, endDate]);
 
   const filtered = useMemo(() => {
     return payables.filter((p) => {
@@ -141,6 +149,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
   }, [payables, today]);
 
   const periodLabel = useMemo(() => {
+    if (useExternal) return externalLabel || (externalRange ? "Período global" : "Todos os períodos");
     if (periodMode === "all") return "Todos os períodos";
     if (periodMode === "year") return `Ano ${filterYear}`;
     if (periodMode === "custom") {
@@ -148,7 +157,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
       return `${fmt(startDate)} a ${fmt(endDate)}`;
     }
     return `${MONTHS[filterMonth]}/${filterYear}`;
-  }, [periodMode, filterMonth, filterYear, startDate, endDate]);
+  }, [useExternal, externalLabel, externalRange, periodMode, filterMonth, filterYear, startDate, endDate]);
 
   const statusLabel = useMemo(() => {
     if (statusFilter === "all") return "Todas";
@@ -309,49 +318,57 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
           </div>
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <Calendar className="w-4 h-4 text-muted-foreground" />
-            <Select value={periodMode} onValueChange={(v: PeriodMode) => setPeriodMode(v)}>
-              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="month">Mês</SelectItem>
-                <SelectItem value="year">Ano</SelectItem>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="custom">Personalizado</SelectItem>
-              </SelectContent>
-            </Select>
-            {periodMode === "month" && (
-              <Select value={String(filterMonth)} onValueChange={(v) => setFilterMonth(Number(v))}>
-                <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {MONTHS.map((m, i) => (<SelectItem key={i} value={String(i)}>{m}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            )}
-            {(periodMode === "month" || periodMode === "year") && (
-              <Select value={String(filterYear)} onValueChange={(v) => setFilterYear(Number(v))}>
-                <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {years.map((y) => (<SelectItem key={y} value={String(y)}>{y}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            )}
-            {periodMode === "custom" && (
-              <div className="flex flex-wrap items-center gap-1">
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-[150px] h-9"
-                  aria-label="Data inicial"
-                />
-                <span className="text-xs text-muted-foreground">até</span>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-[150px] h-9"
-                  aria-label="Data final"
-                />
-              </div>
+            {useExternal ? (
+              <span className="text-xs text-muted-foreground">
+                Filtro global: <span className="font-medium text-foreground">{periodLabel}</span>
+              </span>
+            ) : (
+              <>
+                <Select value={periodMode} onValueChange={(v: PeriodMode) => setPeriodMode(v)}>
+                  <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="month">Mês</SelectItem>
+                    <SelectItem value="year">Ano</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="custom">Personalizado</SelectItem>
+                  </SelectContent>
+                </Select>
+                {periodMode === "month" && (
+                  <Select value={String(filterMonth)} onValueChange={(v) => setFilterMonth(Number(v))}>
+                    <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {MONTHS.map((m, i) => (<SelectItem key={i} value={String(i)}>{m}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {(periodMode === "month" || periodMode === "year") && (
+                  <Select value={String(filterYear)} onValueChange={(v) => setFilterYear(Number(v))}>
+                    <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {years.map((y) => (<SelectItem key={y} value={String(y)}>{y}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {periodMode === "custom" && (
+                  <div className="flex flex-wrap items-center gap-1">
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-[150px] h-9"
+                      aria-label="Data inicial"
+                    />
+                    <span className="text-xs text-muted-foreground">até</span>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-[150px] h-9"
+                      aria-label="Data final"
+                    />
+                  </div>
+                )}
+              </>
             )}
             <Select value={statusFilter} onValueChange={(v: StatusFilter) => setStatusFilter(v)}>
               <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
