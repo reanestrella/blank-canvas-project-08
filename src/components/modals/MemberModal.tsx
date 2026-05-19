@@ -50,7 +50,7 @@ const memberSchema = z.object({
   state: z.string().max(2).optional().or(z.literal("")),
   gender: z.enum(["M", "F"]).optional(),
   marital_status: z.string().optional().or(z.literal("")),
-  spiritual_status: z.enum(["visitante", "novo_convertido", "membro", "lider", "discipulador"]).optional(),
+  spiritual_status: z.enum(["visitante", "novo_convertido", "membro", "lider", "discipulador", "crianca"]).optional(),
   baptism_date: z.string().optional().or(z.literal("")),
   baptism_location: z.string().max(200).optional().or(z.literal("")),
   conversion_date: z.string().optional().or(z.literal("")),
@@ -416,32 +416,40 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
 
               <TabsContent value="spiritual" className="space-y-4 mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {form.watch("network") !== "kids" && (
-                    <FormField
-                      control={form.control}
-                      name="spiritual_status"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Status Espiritual</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="visitante">Visitante</SelectItem>
-                              <SelectItem value="novo_convertido">Novo Convertido (Decidido)</SelectItem>
-                              <SelectItem value="membro">Membro</SelectItem>
-                              <SelectItem value="lider">Líder</SelectItem>
-                              <SelectItem value="discipulador">Discipulador</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
+                  <FormField
+                    control={form.control}
+                    name="spiritual_status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status Espiritual</FormLabel>
+                        <Select
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            // Ao selecionar "Criança" pré-seleciona a Rede Kids automaticamente.
+                            if (value === "crianca") {
+                              form.setValue("network", "kids", { shouldDirty: true });
+                            }
+                          }}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="visitante">Visitante</SelectItem>
+                            <SelectItem value="novo_convertido">Novo Convertido (Decidido)</SelectItem>
+                            <SelectItem value="membro">Membro</SelectItem>
+                            <SelectItem value="lider">Líder</SelectItem>
+                            <SelectItem value="discipulador">Discipulador</SelectItem>
+                            <SelectItem value="crianca">Criança</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <FormField
                     control={form.control}
