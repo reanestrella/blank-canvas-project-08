@@ -28,7 +28,7 @@ interface ExtratoTabProps {
   members?: Member[];
   year: number;
   month: number;
-  mode: "month" | "year" | "all";
+  mode: "month" | "year" | "all" | "custom";
   churchName?: string;
 }
 

@@ -29,7 +29,7 @@ export interface PeopleStats {
 
 export interface PeopleStatsOptions {
   congregationId?: string | null;
-  periodMode?: "all" | "year" | "month";
+  periodMode?: "all" | "year" | "month" | "custom";
   filterMonth?: number;
   filterYear?: number;
   /** Default true — exclude imported/migrated members from visitor counts. */
@@ -54,7 +54,7 @@ export function usePeopleStats<T extends PeopleStatsInput>(
     // Helper: verifica se uma data (string ISO ou date) cai no período filtrado
     const dateInPeriod = (s?: string | null): boolean => {
       if (!s) return false;
-      if (periodMode === "all") return true;
+      if (periodMode === "all" || periodMode === "custom") return true;
       const d = new Date(s.length === 10 ? s + "T12:00:00" : s);
       if (periodMode === "year") return filterYear === undefined || d.getFullYear() === filterYear;
       if (filterYear !== undefined && d.getFullYear() !== filterYear) return false;
@@ -72,12 +72,13 @@ export function usePeopleStats<T extends PeopleStatsInput>(
     // Para "membros, batizados, redes" mantemos a regra antiga: filtrar por created_at
     // (essas categorias representam o estado atual do cadastro).
     const filteredCadastro = byCongregation.filter((m) => {
-      if (periodMode === "all") return true;
+      if (periodMode === "all" || periodMode === "custom") return true;
       return dateInPeriod(m.created_at);
     });
 
-    // Kids são contabilizados APENAS na rede Kids, nunca como membros/visitantes/decididos/batizados/total da igreja.
-    const isKid = (m: T) => m.network === "kids";
+    // Kids são contabilizados APENAS na rede Kids: identificados por rede="kids"
+    // ou por status espiritual "crianca".
+    const isKid = (m: T) => m.network === "kids" || (m as any).spiritual_status === "crianca";
     const active = filteredCadastro.filter((m) => m.is_active);
     const activeNonKids = active.filter((m) => !isKid(m));
     const membrosForNetwork = activeNonKids.filter((m) => isMembro(m.spiritual_status));
@@ -104,12 +105,18 @@ export function usePeopleStats<T extends PeopleStatsInput>(
       !isKid(m) && dateInPeriod(m.conversion_date),
     ).length;
 
+    // BATIZADOS: respeita o período via baptism_date (quando não for "all").
+    const batizados = (periodMode === "all"
+      ? activeNonKids.filter((m) => m.is_baptized === true || m.baptism_date !== null)
+      : byCongregation.filter((m) => !isKid(m) && dateInPeriod(m.baptism_date))
+    ).length;
+
     return {
       total: activeNonKids.length,
       membros: membrosForNetwork.length,
       decididos,
       visitantes,
-      batizados: activeNonKids.filter((m) => m.is_baptized === true || m.baptism_date !== null).length,
+      batizados,
       inativos: filteredCadastro.filter((m) => !m.is_active && !isKid(m)).length,
       networks,
       withoutNetwork,

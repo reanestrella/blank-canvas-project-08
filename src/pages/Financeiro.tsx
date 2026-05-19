@@ -56,6 +56,8 @@ export default function Financeiro() {
   const [periodMode, setPeriodMode] = useState<PeriodMode>("month");
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
   const [filterYear, setFilterYear] = useState(now.getFullYear());
+  const [startDate, setStartDate] = useState<string>(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`);
+  const [endDate, setEndDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [accountFilter, setAccountFilter] = useState("all");
 
   const { profile, church } = useAuth();
@@ -127,6 +129,13 @@ export default function Financeiro() {
 
       if (periodMode === "all") return true;
 
+      // Custom date range (YYYY-MM-DD inclusive)
+      if (periodMode === "custom") {
+        if (startDate && tx.transaction_date < startDate) return false;
+        if (endDate && tx.transaction_date > endDate) return false;
+        return true;
+      }
+
       // Parse date as local to avoid timezone shift
       const parts = tx.transaction_date.split("-");
       const txYear = parseInt(parts[0]);
@@ -136,7 +145,7 @@ export default function Financeiro() {
       // month
       return txYear === filterYear && txMonth === filterMonth;
     });
-  }, [transactions, periodMode, filterMonth, filterYear, accountFilter]);
+  }, [transactions, periodMode, filterMonth, filterYear, accountFilter, startDate, endDate]);
 
   // Totals from filtered
   const totalIncome = filteredTransactions
@@ -149,9 +158,16 @@ export default function Financeiro() {
 
   const balance = totalIncome - totalExpense;
 
+  const fmtBR = (d: string) => {
+    if (!d) return "";
+    const [y, m, day] = d.split("-");
+    return `${day}/${m}/${y}`;
+  };
   const periodLabel = periodMode === "month"
     ? `${["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"][filterMonth]}/${filterYear}`
-    : periodMode === "year" ? String(filterYear) : "Total";
+    : periodMode === "year" ? String(filterYear)
+    : periodMode === "custom" ? `${fmtBR(startDate)} a ${fmtBR(endDate)}`
+    : "Total";
 
   const stats = [
     {
@@ -287,7 +303,12 @@ export default function Financeiro() {
           accountFilter={accountFilter}
           accounts={accounts}
           onAccountFilterChange={setAccountFilter}
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
         />
+
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
