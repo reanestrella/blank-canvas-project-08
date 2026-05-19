@@ -200,11 +200,20 @@ export function useDashboardStats(congregationId?: string | null) {
       return thisYearWd >= weekStart && thisYearWd <= weekEnd;
     });
 
+    // Batizados no dashboard principal: apenas do ano vigente.
+    const currentYear = now.getFullYear();
+    const totalBaptizedThisYear = activeMembers.filter((m) => {
+      if (m.network === "kids") return false;
+      if (!m.baptism_date) return false;
+      const d = new Date(m.baptism_date.length === 10 ? m.baptism_date + "T12:00:00" : m.baptism_date);
+      return d.getFullYear() === currentYear;
+    }).length;
+
     return {
       totalMembers: peopleStats.membros,
       totalDecididos: peopleStats.decididos,
       totalVisitantes: peopleStats.visitantes,
-      totalBaptized: peopleStats.batizados,
+      totalBaptized: totalBaptizedThisYear,
       totalConsolidacao: consolMetrics.emConsolidacao,
       totalConsolidados: consolMetrics.consolidados,
       totalDesistentes: consolMetrics.desistentes,

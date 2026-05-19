@@ -153,8 +153,8 @@ function PastorDashboard() {
 
       {/* Birthdays & Anniversaries */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <BirthdayCard birthdaysThisMonth={stats.birthdaysThisMonth} birthdaysThisWeek={stats.birthdaysThisWeek} />
-        <WeddingAnniversaryCard anniversariesThisMonth={stats.weddingAnniversariesThisMonth} anniversariesThisWeek={stats.weddingAnniversariesThisWeek} />
+        <BirthdayCard members={members.filter(m => m.is_active && m.birth_date)} />
+        <WeddingAnniversaryCard members={members.filter(m => m.is_active && m.wedding_date)} />
       </div>
 
       {/* Events & Finance */}
