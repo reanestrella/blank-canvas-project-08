@@ -73,6 +73,7 @@ export function useTithers(churchId?: string) {
           month: `${year}-${month}`,
           year: parseInt(year),
           monthNum: parseInt(month) - 1, // 0-indexed
+          date: tx.transaction_date,
           total: Number(tx.amount),
         };
       });
