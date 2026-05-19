@@ -318,49 +318,57 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
           </div>
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <Calendar className="w-4 h-4 text-muted-foreground" />
-            <Select value={periodMode} onValueChange={(v: PeriodMode) => setPeriodMode(v)}>
-              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="month">Mês</SelectItem>
-                <SelectItem value="year">Ano</SelectItem>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="custom">Personalizado</SelectItem>
-              </SelectContent>
-            </Select>
-            {periodMode === "month" && (
-              <Select value={String(filterMonth)} onValueChange={(v) => setFilterMonth(Number(v))}>
-                <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {MONTHS.map((m, i) => (<SelectItem key={i} value={String(i)}>{m}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            )}
-            {(periodMode === "month" || periodMode === "year") && (
-              <Select value={String(filterYear)} onValueChange={(v) => setFilterYear(Number(v))}>
-                <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {years.map((y) => (<SelectItem key={y} value={String(y)}>{y}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            )}
-            {periodMode === "custom" && (
-              <div className="flex flex-wrap items-center gap-1">
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-[150px] h-9"
-                  aria-label="Data inicial"
-                />
-                <span className="text-xs text-muted-foreground">até</span>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-[150px] h-9"
-                  aria-label="Data final"
-                />
-              </div>
+            {useExternal ? (
+              <span className="text-xs text-muted-foreground">
+                Filtro global: <span className="font-medium text-foreground">{periodLabel}</span>
+              </span>
+            ) : (
+              <>
+                <Select value={periodMode} onValueChange={(v: PeriodMode) => setPeriodMode(v)}>
+                  <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="month">Mês</SelectItem>
+                    <SelectItem value="year">Ano</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="custom">Personalizado</SelectItem>
+                  </SelectContent>
+                </Select>
+                {periodMode === "month" && (
+                  <Select value={String(filterMonth)} onValueChange={(v) => setFilterMonth(Number(v))}>
+                    <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {MONTHS.map((m, i) => (<SelectItem key={i} value={String(i)}>{m}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {(periodMode === "month" || periodMode === "year") && (
+                  <Select value={String(filterYear)} onValueChange={(v) => setFilterYear(Number(v))}>
+                    <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {years.map((y) => (<SelectItem key={y} value={String(y)}>{y}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {periodMode === "custom" && (
+                  <div className="flex flex-wrap items-center gap-1">
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-[150px] h-9"
+                      aria-label="Data inicial"
+                    />
+                    <span className="text-xs text-muted-foreground">até</span>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-[150px] h-9"
+                      aria-label="Data final"
+                    />
+                  </div>
+                )}
+              </>
             )}
             <Select value={statusFilter} onValueChange={(v: StatusFilter) => setStatusFilter(v)}>
               <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
