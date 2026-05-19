@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getConsolidationMetrics } from "@/lib/consolidationMetrics";
 import { useMetricsSettings } from "@/hooks/useMetricsSettings";
 
-type StageKey = "visitante" | "decidido" | "consolidacao" | "batizado" | "membro";
+type StageKey = "visitante" | "decidido" | "consolidacao" | "consolidado" | "batizado" | "membro";
 
 interface Row {
   id: string;
@@ -28,6 +28,7 @@ const stageMeta: Record<StageKey, { label: string; barClass: string; gradient: s
   visitante:    { label: "Visitantes",      barClass: "bg-chart-visitante",    gradient: "from-chart-visitante/20 to-chart-visitante/5" },
   decidido:     { label: "Decididos",       barClass: "bg-chart-decidido",     gradient: "from-chart-decidido/20 to-chart-decidido/5" },
   consolidacao: { label: "Em Consolidação", barClass: "bg-chart-consolidacao", gradient: "from-chart-consolidacao/20 to-chart-consolidacao/5" },
+  consolidado:  { label: "Consolidados",    barClass: "bg-chart-discipulado",  gradient: "from-chart-discipulado/20 to-chart-discipulado/5" },
   batizado:     { label: "Batizados",       barClass: "bg-chart-batizado",     gradient: "from-chart-batizado/20 to-chart-batizado/5" },
   membro:       { label: "Membros",         barClass: "bg-chart-membro",       gradient: "from-chart-membro/20 to-chart-membro/5" },
 };
@@ -99,6 +100,7 @@ export function SpiritualFunnel() {
       visitante: Array.from(metrics.visitanteIds).map(personFor),
       decidido: Array.from(metrics.decididoIds).map(personFor),
       consolidacao: Array.from(metrics.emConsolidacaoIds).map(personFor),
+      consolidado: Array.from(metrics.consolidadoIds).map(personFor),
       batizado: Array.from(metrics.batizadoIds).map(personFor),
       membro: members.filter(m => {
         if (!m.is_active) return false;
@@ -117,7 +119,7 @@ export function SpiritualFunnel() {
     };
   }, [records, members, periodMode, filterMonth, filterYear, ignoreImported]);
 
-  const steps: StageKey[] = ["visitante", "decidido", "consolidacao", "batizado", "membro"];
+  const steps: StageKey[] = ["visitante", "decidido", "consolidacao", "consolidado", "batizado", "membro"];
 
   if (isLoading) {
     return (
