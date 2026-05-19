@@ -149,6 +149,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
   }, [payables, today]);
 
   const periodLabel = useMemo(() => {
+    if (useExternal) return externalLabel || (externalRange ? "Período global" : "Todos os períodos");
     if (periodMode === "all") return "Todos os períodos";
     if (periodMode === "year") return `Ano ${filterYear}`;
     if (periodMode === "custom") {
@@ -156,7 +157,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
       return `${fmt(startDate)} a ${fmt(endDate)}`;
     }
     return `${MONTHS[filterMonth]}/${filterYear}`;
-  }, [periodMode, filterMonth, filterYear, startDate, endDate]);
+  }, [useExternal, externalLabel, externalRange, periodMode, filterMonth, filterYear, startDate, endDate]);
 
   const statusLabel = useMemo(() => {
     if (statusFilter === "all") return "Todas";
