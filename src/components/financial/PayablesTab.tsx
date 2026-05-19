@@ -143,8 +143,12 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
   const periodLabel = useMemo(() => {
     if (periodMode === "all") return "Todos os períodos";
     if (periodMode === "year") return `Ano ${filterYear}`;
+    if (periodMode === "custom") {
+      const fmt = (d: string) => d ? new Date(d + "T12:00:00").toLocaleDateString("pt-BR") : "—";
+      return `${fmt(startDate)} a ${fmt(endDate)}`;
+    }
     return `${MONTHS[filterMonth]}/${filterYear}`;
-  }, [periodMode, filterMonth, filterYear]);
+  }, [periodMode, filterMonth, filterYear, startDate, endDate]);
 
   const statusLabel = useMemo(() => {
     if (statusFilter === "all") return "Todas";
