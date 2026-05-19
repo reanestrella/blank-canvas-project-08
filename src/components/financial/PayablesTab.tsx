@@ -73,6 +73,8 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
   const now = new Date();
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
   const [filterYear, setFilterYear] = useState(now.getFullYear());
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   const expenseCategories = useMemo(() => categories.filter((c) => c.type === "despesa"), [categories]);
   const today = new Date().toISOString().slice(0, 10);
@@ -80,13 +82,17 @@ export function PayablesTab({ churchId, accounts, categories, churchName }: Paya
   // Period filter range
   const periodRange = useMemo(() => {
     if (periodMode === "all") return null;
+    if (periodMode === "custom") {
+      if (!startDate || !endDate) return null;
+      return { start: startDate, end: endDate };
+    }
     if (periodMode === "year") {
       return { start: `${filterYear}-01-01`, end: `${filterYear}-12-31` };
     }
     const m = String(filterMonth + 1).padStart(2, "0");
     const last = new Date(filterYear, filterMonth + 1, 0).getDate();
     return { start: `${filterYear}-${m}-01`, end: `${filterYear}-${m}-${String(last).padStart(2, "0")}` };
-  }, [periodMode, filterMonth, filterYear]);
+  }, [periodMode, filterMonth, filterYear, startDate, endDate]);
 
   const filtered = useMemo(() => {
     return payables.filter((p) => {
