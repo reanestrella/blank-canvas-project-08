@@ -535,7 +535,7 @@ export default function Financeiro() {
 
           {/* Charts Tab */}
           <TabsContent value="charts" className="mt-6">
-            <FinancialChartsTab transactions={transactions} filterYear={filterYear} />
+            <FinancialChartsTab transactions={filteredTransactions} periodLabel={periodLabel} />
           </TabsContent>
 
           {/* Summary Tab */}
