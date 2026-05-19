@@ -29,7 +29,7 @@ export interface PeopleStats {
 
 export interface PeopleStatsOptions {
   congregationId?: string | null;
-  periodMode?: "all" | "year" | "month";
+  periodMode?: "all" | "year" | "month" | "custom";
   filterMonth?: number;
   filterYear?: number;
   /** Default true — exclude imported/migrated members from visitor counts. */

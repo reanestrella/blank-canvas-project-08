@@ -44,7 +44,7 @@ export interface MemberLite extends OriginAware {
 
 export interface MetricsFilters {
   congregationId?: string | null;
-  periodMode?: "all" | "year" | "month";
+  periodMode?: "all" | "year" | "month" | "custom";
   filterMonth?: number; // 0-11
   filterYear?: number;
   /** Default true — exclude imported/migrated members from visitor counts. */
@@ -70,7 +70,7 @@ const inPeriod = (
   filters: MetricsFilters,
 ): boolean => {
   if (!dateStr) return false;
-  const mode = filters.periodMode || "all";
+  const mode = filters.periodMode === "custom" ? "all" : (filters.periodMode || "all");
   if (mode === "all") return true;
   const d = new Date(dateStr.length === 10 ? dateStr + "T12:00:00" : dateStr);
   if (mode === "year") return d.getFullYear() === filters.filterYear;
