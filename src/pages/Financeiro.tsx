@@ -85,19 +85,19 @@ export default function Financeiro() {
     stats: allTitherStats, isLoading: loadingTithers,
   } = useTithers(churchId || undefined);
 
-  // ─── Dizimistas period filters ───
-  const [titherPeriodMode, setTitherPeriodMode] = useState<PeriodMode>("month");
-  const [titherMonth, setTitherMonth] = useState(now.getMonth());
-  const [titherYear, setTitherYear] = useState(now.getFullYear());
-
-  // Filter tithers by selected period
+  // ─── Dizimistas: usa o filtro global de período ───
   const filteredTitherData = useMemo(() => {
-    if (titherPeriodMode === "all") return titherRawData;
-    return titherRawData.filter(d => {
-      if (titherPeriodMode === "year") return d.year === titherYear;
-      return d.year === titherYear && d.monthNum === titherMonth;
+    if (periodMode === "all") return titherRawData;
+    return titherRawData.filter((d) => {
+      if (periodMode === "custom") {
+        if (startDate && d.date < startDate) return false;
+        if (endDate && d.date > endDate) return false;
+        return true;
+      }
+      if (periodMode === "year") return d.year === filterYear;
+      return d.year === filterYear && d.monthNum === filterMonth;
     });
-  }, [titherRawData, titherPeriodMode, titherMonth, titherYear]);
+  }, [titherRawData, periodMode, filterMonth, filterYear, startDate, endDate]);
 
   const filteredTithers = useMemo(() => {
     const memberMap = new Map<string, { member_id: string; member_name: string; total_year: number; months_paid: number; monthly_data: Record<string, number> }>();
