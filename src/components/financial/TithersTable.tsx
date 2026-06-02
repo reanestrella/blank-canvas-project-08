@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, CheckCircle2, XCircle } from "lucide-react";
+import { Search, CheckCircle2, XCircle, Download } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -12,7 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { exportToPdf, formatBRL } from "@/lib/pdfExport";
 import type { TitherSummary } from "@/hooks/useTithers";
 
 interface TithersTableProps {
@@ -22,6 +24,25 @@ interface TithersTableProps {
 
 export function TithersTable({ tithers, months }: TithersTableProps) {
   const [search, setSearch] = useState("");
+
+  const handleExportPdf = () => {
+    exportToPdf({
+      title: "Relatório de Dizimistas",
+      columns: [
+        { header: "Nome", dataKey: "nome" },
+        { header: "Meses Pagos", dataKey: "meses" },
+        { header: "Total do Ano", dataKey: "total", align: "right" },
+        { header: "Frequência", dataKey: "freq" },
+      ],
+      rows: filteredTithers.map((t) => ({
+        nome: t.member_name,
+        meses: String(t.months_paid),
+        total: `R$ ${formatBRL(t.total_year)}`,
+        freq: t.months_paid >= 6 ? "Ativo" : t.months_paid >= 3 ? "Regular" : "Irregular",
+      })),
+      filename: `dizimistas-${new Date().toISOString().slice(0, 10)}.pdf`,
+    });
+  };
 
   const displayMonths = useMemo(() => {
     return months.slice(-6).map((m) => {
@@ -54,14 +75,19 @@ export function TithersTable({ tithers, months }: TithersTableProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg">Dizimistas</CardTitle>
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar membro..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar membro..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button variant="outline" size="sm" onClick={handleExportPdf}>
+            <Download className="w-4 h-4 mr-2" /> Baixar Relatório
+          </Button>
         </div>
       </CardHeader>
       <CardContent>

@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export type PayableStatus = "pendente" | "pago";
 export type PayableRecurrence = "nenhuma" | "semanal" | "mensal" | "anual" | "personalizada";
+export type PayableEntryType = "pagar" | "receber";
 
 export interface FinancialPayable {
   id: string;
@@ -24,6 +25,7 @@ export interface FinancialPayable {
   installment_number: number | null;
   installment_total: number | null;
   installment_group_id: string | null;
+  entry_type: PayableEntryType;
 }
 
 export interface CreatePayableData {
@@ -43,6 +45,7 @@ export interface CreatePayableData {
    * a próxima parcela é gerada automaticamente quando esta for paga.
    */
   recurrence_end_date?: string | null;
+  entry_type?: PayableEntryType;
 }
 
 export function addToDate(
@@ -127,6 +130,7 @@ export function useFinancialPayables(churchId?: string) {
         installment_number: i + 1,
         installment_total: total,
         installment_group_id: groupId,
+        entry_type: data.entry_type || "pagar",
       }));
       const { error } = await supabase.from("financial_payables").insert(rows);
       if (error) {
@@ -152,6 +156,7 @@ export function useFinancialPayables(churchId?: string) {
       notes: data.notes || null,
       status: data.status || "pendente",
       created_by: u.user?.id || null,
+      entry_type: data.entry_type || "pagar",
     });
     if (error) {
       toast({ title: "Erro ao criar conta", description: error.message, variant: "destructive" });

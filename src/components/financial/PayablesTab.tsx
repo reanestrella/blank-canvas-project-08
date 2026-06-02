@@ -13,7 +13,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Plus, Loader2, Check, Trash2, Edit, Download, AlertCircle, Calendar } from "lucide-react";
-import { useFinancialPayables, type FinancialPayable, type PayableRecurrence, type CreatePayableData, isOverdue, daysBetween } from "@/hooks/useFinancialPayables";
+import { useFinancialPayables, type FinancialPayable, type PayableRecurrence, type PayableEntryType, type CreatePayableData, isOverdue, daysBetween } from "@/hooks/useFinancialPayables";
 import type { FinancialAccount } from "@/hooks/useFinancialAccounts";
 import type { FinancialCategory } from "@/hooks/useFinancial";
 import { exportToPdf, formatBRL } from "@/lib/pdfExport";
@@ -31,6 +31,7 @@ interface PayablesTabProps {
 }
 
 type StatusFilter = "all" | "pendente" | "vencida" | "pago";
+type EntryTypeFilter = "all" | "pagar" | "receber";
 type PeriodMode = "month" | "year" | "all" | "custom";
 type CreationMode = "single" | "recurring_open" | "recurring_finite";
 
@@ -59,6 +60,7 @@ const buildEmpty = (): FormState => ({
   recurrence_interval_days: 30,
   notes: "",
   recurrence_end_date: null,
+  entry_type: "pagar",
 });
 
 export function PayablesTab({ churchId, accounts, categories, churchName, externalRange, externalLabel, hideInternalPeriod }: PayablesTabProps) {
@@ -74,6 +76,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
   const [payAccount, setPayAccount] = useState<string>("");
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [entryTypeFilter, setEntryTypeFilter] = useState<EntryTypeFilter>("all");
   const [periodMode, setPeriodMode] = useState<PeriodMode>("month");
   const now = new Date();
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
@@ -108,6 +111,8 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
       if (periodRange) {
         if (p.due_date < periodRange.start || p.due_date > periodRange.end) return false;
       }
+      // Entry type
+      if (entryTypeFilter !== "all" && p.entry_type !== entryTypeFilter) return false;
       // Status
       if (statusFilter === "all") return true;
       if (statusFilter === "vencida") return isOverdue(p, today);
@@ -115,7 +120,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
       if (statusFilter === "pago") return p.status === "pago";
       return true;
     });
-  }, [payables, periodRange, statusFilter, today]);
+  }, [payables, periodRange, statusFilter, entryTypeFilter, today]);
 
   // Metrics: based on full payables (church-wide), not filtered
   const metrics = useMemo(() => {
@@ -182,6 +187,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
       category_id: p.category_id, account_id: p.account_id, recurrence: p.recurrence,
       recurrence_interval_days: p.recurrence_interval_days || 30,
       notes: p.notes || "", recurrence_end_date: null,
+      entry_type: p.entry_type || "pagar",
     });
     setOpen(true);
   };
@@ -217,6 +223,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
           ? Math.max(1, form.recurrence_interval_days || 30)
           : null,
         recurrence_end_date: isFinite ? (form.recurrence_end_date || null) : null,
+        entry_type: form.entry_type || "pagar",
       };
       res = await createPayable(payload);
     }
@@ -240,7 +247,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
     const periodText = `${periodLabel} • ${statusLabel}`;
     const totalFiltered = filtered.reduce((s, p) => s + Number(p.amount), 0);
     exportToPdf({
-      title: "Contas a Pagar",
+      title: "Contas Futuras",
       churchName,
       period: periodText,
       columns: [
@@ -306,7 +313,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
       <Card>
         <CardHeader className="flex flex-col gap-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <CardTitle className="text-lg">Contas a Pagar</CardTitle>
+            <CardTitle className="text-lg">Contas Futuras</CardTitle>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={handleExportPdf}>
                 <Download className="w-4 h-4 mr-2" /> PDF
@@ -379,6 +386,22 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
                 <SelectItem value="pago">Pagas</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          {/* Entry type tabs */}
+          <div className="flex gap-1">
+            {(["all", "pagar", "receber"] as EntryTypeFilter[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => setEntryTypeFilter(t)}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  entryTypeFilter === t
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {t === "all" ? "Todas" : t === "pagar" ? "A Pagar" : "A Receber"}
+              </button>
+            ))}
           </div>
         </CardHeader>
         <CardContent>
@@ -478,7 +501,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing ? "Editar Conta" : "Nova Conta a Pagar"}</DialogTitle>
+            <DialogTitle>{editing ? "Editar Conta" : "Nova Conta Futura"}</DialogTitle>
             <DialogDescription>
               {editing
                 ? "Edite esta parcela ou aplique a todas as futuras pendentes do compromisso."
@@ -517,6 +540,28 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
                 </Select>
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label>Tipo *</Label>
+              <div className="flex gap-2">
+                {(["pagar", "receber"] as PayableEntryType[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setForm({ ...form, entry_type: t })}
+                    className={`flex-1 py-2 rounded-md text-sm font-medium border transition-colors ${
+                      form.entry_type === t
+                        ? t === "pagar"
+                          ? "bg-destructive/10 border-destructive text-destructive"
+                          : "bg-success/10 border-success text-success"
+                        : "border-input text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {t === "pagar" ? "A Pagar" : "A Receber"}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div className="space-y-2">
               <Label>Descrição *</Label>
