@@ -242,12 +242,40 @@ export function useCells(churchId?: string, leaderUserId?: string | null) {
 
   const updateCell = async (id: string, data: Partial<CreateCellData>) => {
     try {
+      // When leader_id (member record) is being set, also resolve the linked user
+      // account and write leader_user_id + cell_leaders so the N:N model stays in sync.
+      const payload: Record<string, any> = { ...data };
+      let resolvedLeaderUserId: string | null = null;
+
+      if (data.leader_id && churchId) {
+        const { data: profileRow } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("member_id", data.leader_id)
+          .maybeSingle();
+
+        if (profileRow?.user_id) {
+          resolvedLeaderUserId = profileRow.user_id;
+          payload.leader_user_id = profileRow.user_id;
+        }
+      }
+
       const { data: updatedCell, error } = await supabase
         .from("cells")
-        .update(data)
+        .update(payload)
         .eq("id", id)
         .select()
         .single();
+
+      // Keep cell_leaders in sync with the resolved user
+      if (!error && resolvedLeaderUserId && churchId) {
+        await (supabase as any)
+          .from("cell_leaders")
+          .upsert(
+            { user_id: resolvedLeaderUserId, cell_id: id, church_id: churchId },
+            { onConflict: "user_id,cell_id" }
+          );
+      }
       
       if (error) throw error;
       
