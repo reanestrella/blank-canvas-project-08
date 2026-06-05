@@ -77,26 +77,17 @@ export function useInvitations() {
           p_congregation_id: (data.congregation_id && data.congregation_id !== "_all") ? data.congregation_id : null,
           p_member_id: data.member_id || null,
           p_invited_by: user.id,
+          p_cell_ids: data.cell_ids ?? null,
+          p_permissions: data.permissions ?? null,
         } as any
       );
-      
+
       if (error) {
         console.error("Error in reissue_invitation RPC:", error);
         throw error;
       }
-      
-      const invitation = newInvitation as unknown as Invitation;
 
-      // Aplicar permissions / cell_ids granulares (campos novos não suportados pela RPC)
-      if (invitation?.id && (data.permissions !== undefined || data.cell_ids !== undefined)) {
-        await (supabase
-          .from("invitations" as any)
-          .update({
-            permissions: data.permissions ?? null,
-            cell_ids: data.cell_ids ?? null,
-          } as any)
-          .eq("id", invitation.id) as any);
-      }
+      const invitation = newInvitation as unknown as Invitation;
       
       await fetchInvitations();
       
