@@ -55,10 +55,10 @@ export async function applyInvitationForUser(
     userId: user.id,
   });
 
-  // 🔥 CORREÇÃO PRINCIPAL AQUI
+  // accept_invitation uses auth.uid() internally — only p_token is needed.
+  // Passing p_user_id causes PostgREST to fail finding the function overload.
   const { data, error } = await supabase.rpc("accept_invitation" as any, {
     p_token: token,
-    p_user_id: user.id, // ✅ AGORA ENVIA O USER ID CORRETO
   } as any);
 
   if (error) {
