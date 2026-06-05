@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Check, X, Loader2, UserPlus, Users, Link2, ArrowRight, AlertTriangle } from "lucide-react";
+import { Check, X, Loader2, UserPlus, Users, Link2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -47,13 +47,19 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
 
   const fetchPending = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("pending_users" as any)
-      .select("*")
-      .eq("church_id", churchId)
-      .order("created_at", { ascending: false });
-    setUsers((data as PendingUser[]) || []);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from("pending_users" as any)
+        .select("*")
+        .eq("church_id", churchId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setUsers((data as PendingUser[]) || []);
+    } catch (err: any) {
+      toast({ title: "Erro ao carregar cadastros", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchPending(); }, [churchId]);
@@ -66,14 +72,18 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
       return;
     }
     const fetchMember = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("members")
         .select("id, full_name, email, phone, birth_date, spiritual_status, network")
         .eq("id", selectedMemberId)
+        .eq("church_id", churchId)
         .single();
+      if (error) {
+        console.error("[PendingUsersTab] fetchMember error:", error);
+        return;
+      }
       if (data) {
         setExistingMember(data as ExistingMember);
-        // Auto-select fields where pending has data but existing doesn't
         const fields: Record<string, boolean> = {};
         if (linkingUser?.phone && !data.phone) fields.phone = true;
         if (linkingUser?.email && !data.email) fields.email = true;
@@ -82,7 +92,7 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
       }
     };
     fetchMember();
-  }, [selectedMemberId]);
+  }, [selectedMemberId, churchId]);
 
   const handleApprove = async (pu: PendingUser) => {
     setProcessing(pu.id);
@@ -101,14 +111,15 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
 
       if (memberErr) throw memberErr;
 
-      await supabase.from("pending_users" as any)
+      const { error: puErr } = await supabase.from("pending_users" as any)
         .update({ status: "aprovado", linked_member_id: newMember.id } as any)
         .eq("id", pu.id);
+      if (puErr) throw puErr;
 
       toast({ title: "Cadastro aprovado!", description: `${pu.full_name} adicionado como ${pu.tipo}.` });
       fetchPending();
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      toast({ title: "Erro ao aprovar", description: err.message, variant: "destructive" });
     } finally {
       setProcessing(null);
     }
@@ -118,30 +129,42 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
     if (!linkingUser || !selectedMemberId) return;
     setProcessing(linkingUser.id);
     try {
-      await supabase.from("pending_users" as any)
+      const { error: puErr } = await supabase.from("pending_users" as any)
         .update({ status: "aprovado", linked_member_id: selectedMemberId } as any)
         .eq("id", linkingUser.id);
+      if (puErr) throw puErr;
 
       if (linkingUser.email) {
-        const { data: authUsers } = await supabase.from("profiles")
+        const { data: authUsers, error: profileFetchErr } = await supabase
+          .from("profiles")
           .select("user_id")
           .eq("email", linkingUser.email)
           .limit(1);
-        if (authUsers?.length) {
-          await supabase.from("profiles")
+        if (profileFetchErr) {
+          console.error("[PendingUsersTab] profile lookup error:", profileFetchErr);
+        } else if (authUsers?.length) {
+          const { error: profileUpdateErr } = await supabase.from("profiles")
             .update({ member_id: selectedMemberId } as any)
             .eq("user_id", authUsers[0].user_id);
+          if (profileUpdateErr) {
+            console.error("[PendingUsersTab] profile update error:", profileUpdateErr);
+          }
         }
       }
 
-      // Only update fields that were selected for merge
       const updates: any = {};
       if (mergeFields.phone && linkingUser.phone) updates.phone = linkingUser.phone;
       if (mergeFields.birth_date && linkingUser.birth_date) updates.birth_date = linkingUser.birth_date;
       if (mergeFields.email && linkingUser.email) updates.email = linkingUser.email;
       if (mergeFields.full_name && linkingUser.full_name) updates.full_name = linkingUser.full_name;
       if (Object.keys(updates).length > 0) {
-        await supabase.from("members").update(updates).eq("id", selectedMemberId);
+        const { error: memberUpdateErr } = await supabase.from("members")
+          .update(updates)
+          .eq("id", selectedMemberId)
+          .eq("church_id", churchId);
+        if (memberUpdateErr) {
+          console.error("[PendingUsersTab] member update error:", memberUpdateErr);
+        }
       }
 
       toast({ title: "Vinculado!", description: `${linkingUser.full_name} vinculado ao membro existente.` });
@@ -150,7 +173,7 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
       setExistingMember(null);
       fetchPending();
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      toast({ title: "Erro ao vincular", description: err.message, variant: "destructive" });
     } finally {
       setProcessing(null);
     }
@@ -159,11 +182,14 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
   const handleReject = async (id: string) => {
     setProcessing(id);
     try {
-      await supabase.from("pending_users" as any).update({ status: "rejeitado" } as any).eq("id", id);
+      const { error } = await supabase.from("pending_users" as any)
+        .update({ status: "rejeitado" } as any)
+        .eq("id", id);
+      if (error) throw error;
       toast({ title: "Cadastro rejeitado." });
       fetchPending();
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      toast({ title: "Erro ao rejeitar", description: err.message, variant: "destructive" });
     } finally {
       setProcessing(null);
     }
@@ -180,20 +206,15 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
     const hasDiff = pendingValue && existingValue && pendingValue !== existingValue;
     const pendingHasData = !!pendingValue;
     const existingHasData = !!existingValue;
-    
+
     return (
-      <div className="grid grid-cols-[120px_1fr_40px_1fr] items-center gap-2 py-2 border-b border-border/50 last:border-0">
+      <div className="grid grid-cols-[100px_1fr_40px_1fr] items-center gap-2 py-2 border-b border-border/50 last:border-0">
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
         <div className={`text-sm p-2 rounded ${mergeFields[field] ? "bg-amber-100 dark:bg-amber-800/30 ring-2 ring-amber-400" : pendingHasData ? "bg-amber-50 dark:bg-amber-900/20" : "bg-muted/30"}`}>
           {pendingValue || <span className="text-muted-foreground italic">Vazio</span>}
         </div>
         <div className="flex justify-center">
-          {hasDiff ? (
-            <Switch
-              checked={mergeFields[field] || false}
-              onCheckedChange={(v) => setMergeFields(prev => ({ ...prev, [field]: v }))}
-            />
-          ) : pendingHasData && !existingHasData ? (
+          {(hasDiff || (pendingHasData && !existingHasData)) ? (
             <Switch
               checked={mergeFields[field] || false}
               onCheckedChange={(v) => setMergeFields(prev => ({ ...prev, [field]: v }))}
@@ -222,46 +243,48 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
           {pendingOnly.length === 0 ? (
             <p className="text-center text-muted-foreground py-4">Nenhum cadastro pendente.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead className="hidden md:table-cell">Email</TableHead>
-                  <TableHead className="hidden md:table-cell">Telefone</TableHead>
-                  <TableHead className="hidden md:table-cell">Data</TableHead>
-                  <TableHead className="w-[180px]">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pendingOnly.map(pu => (
-                  <TableRow key={pu.id}>
-                    <TableCell className="font-medium">{pu.full_name}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{pu.tipo === "visitante" ? "Visitante" : "Membro"}</Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">{pu.email || "—"}</TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">{pu.phone || "—"}</TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">
-                      {new Date(pu.created_at).toLocaleDateString("pt-BR")}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button size="sm" variant="outline" disabled={processing === pu.id} onClick={() => { setLinkingUser(pu); setSelectedMemberId(null); setExistingMember(null); }} title="Vincular a membro existente">
-                          <Link2 className="w-3 h-3" />
-                        </Button>
-                        <Button size="sm" variant="default" disabled={processing === pu.id} onClick={() => handleApprove(pu)} title="Aprovar como novo membro">
-                          {processing === pu.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                        </Button>
-                        <Button size="sm" variant="destructive" disabled={processing === pu.id} onClick={() => handleReject(pu.id)}>
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead className="hidden md:table-cell">Email</TableHead>
+                    <TableHead className="hidden md:table-cell">Telefone</TableHead>
+                    <TableHead className="hidden md:table-cell">Data</TableHead>
+                    <TableHead className="w-[180px]">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {pendingOnly.map(pu => (
+                    <TableRow key={pu.id}>
+                      <TableCell className="font-medium">{pu.full_name}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{pu.tipo === "visitante" ? "Visitante" : "Membro"}</Badge>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-sm">{pu.email || "—"}</TableCell>
+                      <TableCell className="hidden md:table-cell text-sm">{pu.phone || "—"}</TableCell>
+                      <TableCell className="hidden md:table-cell text-sm">
+                        {new Date(pu.created_at).toLocaleDateString("pt-BR")}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="outline" disabled={!!processing} onClick={() => { setLinkingUser(pu); setSelectedMemberId(null); setExistingMember(null); }} title="Vincular a membro existente">
+                            <Link2 className="w-3 h-3" />
+                          </Button>
+                          <Button size="sm" variant="default" disabled={!!processing} onClick={() => handleApprove(pu)} title="Aprovar como novo membro">
+                            {processing === pu.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                          </Button>
+                          <Button size="sm" variant="destructive" disabled={!!processing} onClick={() => handleReject(pu.id)}>
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -274,35 +297,36 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Data</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {processedOnly.slice(0, 20).map(pu => (
-                  <TableRow key={pu.id}>
-                    <TableCell className="font-medium text-sm">{pu.full_name}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-xs">{pu.tipo}</Badge></TableCell>
-                    <TableCell>
-                      <Badge className={pu.status === "aprovado" ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"}>
-                        {pu.status === "aprovado" ? "Aprovado" : "Rejeitado"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm">{new Date(pu.created_at).toLocaleDateString("pt-BR")}</TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Data</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {processedOnly.slice(0, 20).map(pu => (
+                    <TableRow key={pu.id}>
+                      <TableCell className="font-medium text-sm">{pu.full_name}</TableCell>
+                      <TableCell><Badge variant="outline" className="text-xs">{pu.tipo}</Badge></TableCell>
+                      <TableCell>
+                        <Badge className={pu.status === "aprovado" ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"}>
+                          {pu.status === "aprovado" ? "Aprovado" : "Rejeitado"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">{new Date(pu.created_at).toLocaleDateString("pt-BR")}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Link to existing member modal with data comparison */}
       <Dialog open={!!linkingUser} onOpenChange={(open) => { if (!open) { setLinkingUser(null); setExistingMember(null); } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -312,7 +336,6 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Pending user info */}
             <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
               <p className="text-sm font-semibold mb-1">📋 Dados do Autocadastro</p>
               <div className="grid grid-cols-2 gap-1 text-sm">
@@ -333,7 +356,6 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
               />
             </div>
 
-            {/* Comparison view */}
             {existingMember && linkingUser && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 mb-2">
@@ -341,7 +363,7 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
                   <p className="text-sm font-medium">Compare os dados e escolha o que atualizar:</p>
                 </div>
                 <div className="rounded-lg border p-3">
-                  <div className="grid grid-cols-[120px_1fr_40px_1fr] items-center gap-2 pb-2 border-b mb-1">
+                  <div className="grid grid-cols-[100px_1fr_40px_1fr] items-center gap-2 pb-2 border-b mb-1">
                     <span className="text-xs font-bold">Campo</span>
                     <span className="text-xs font-bold text-amber-600">Autocadastro</span>
                     <span className="text-xs font-bold text-center">Usar</span>
@@ -358,7 +380,7 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Ative o switch para usar os dados do autocadastro. O campo destacado será o valor salvo.
+                  Ative o switch para usar os dados do autocadastro.
                 </p>
               </div>
             )}

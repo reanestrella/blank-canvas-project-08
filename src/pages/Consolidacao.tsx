@@ -20,7 +20,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Users, UserCheck, Heart, MoreHorizontal,
-  Phone, Mail, Eye, Droplets, ArrowDown, Sparkles,
+  Phone, Mail, Eye, Droplets, ArrowDown, Sparkles, Loader2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConsolidation, ConsolidationRecord, ConsolidationStage } from "@/hooks/useConsolidation";
@@ -71,8 +71,8 @@ export default function Consolidacao() {
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
   const [filterYear, setFilterYear] = useState(now.getFullYear());
 
-  const { profile } = useAuth();
-  const churchId = profile?.church_id;
+  const { profile, currentChurchId } = useAuth();
+  const churchId = profile?.church_id || currentChurchId || null;
   const { ignoreImported } = useMetricsSettings();
   const { records, isLoading, createRecord, updateRecord, deleteRecord } = useConsolidation(churchId || undefined);
   const { members, updateMember } = useMembers(churchId || undefined);
@@ -376,6 +376,19 @@ export default function Consolidacao() {
     </Card>
   );
 
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center py-16">
+          <div className="flex flex-col items-center gap-3 text-muted-foreground">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-sm">Carregando consolidações...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -436,7 +449,7 @@ export default function Consolidacao() {
 
         {/* TABS POR STAGE */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="!grid h-auto w-full grid-cols-5">
+          <TabsList className="!grid h-auto w-full grid-cols-3 sm:grid-cols-5">
             <TabsTrigger value="visitantes"      className="min-w-0 whitespace-normal px-2 py-2 text-[10px] leading-tight sm:text-sm">Visitantes ({visitorsList.length})</TabsTrigger>
             <TabsTrigger value="decididos"       className="min-w-0 whitespace-normal px-2 py-2 text-[10px] leading-tight sm:text-sm">Decididos ({decididosList.length})</TabsTrigger>
             <TabsTrigger value="em_consolidacao" className="min-w-0 whitespace-normal px-2 py-2 text-[10px] leading-tight sm:text-sm">Em Consol. ({emConsolidacaoList.length})</TabsTrigger>

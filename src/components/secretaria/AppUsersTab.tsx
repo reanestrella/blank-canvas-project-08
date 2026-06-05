@@ -44,8 +44,8 @@ export function AppUsersTab({ churchId }: AppUsersTabProps) {
         .order("full_name");
       if (error) throw error;
       setUsers((data as AppUser[]) || []);
-    } catch (err) {
-      console.error("Error fetching app users:", err);
+    } catch (err: any) {
+      toast({ title: "Erro ao carregar usuários", description: err.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }

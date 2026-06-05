@@ -51,6 +51,7 @@ export function useInvitations() {
       setInvitations((data as Invitation[]) || []);
     } catch (error: any) {
       console.error("Error fetching invitations:", error);
+      toast({ title: "Erro ao carregar convites", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
