@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ensureUserProfile } from "@/lib/authProfile";
 import { syncSelfRegistrationProfile } from "@/lib/selfRegistration";
+import { fetchInvitationByToken } from "@/lib/authInvitation";
 import { isValidUUID } from "@/lib/getRoleBasedRedirect";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,19 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, Church, User, Mail, Lock, Phone, Calendar, CheckCircle2 } from "lucide-react";
+
+const ROLE_LABELS: Record<string, string> = {
+  pastor: "Pastor",
+  secretario: "Secretário(a)",
+  tesoureiro: "Tesoureiro(a)",
+  lider_celula: "Líder de Célula",
+  lider_ministerio: "Líder de Ministério",
+  consolidacao: "Consolidação",
+  membro: "Membro",
+  admin: "Administrador",
+};
 
 const phoneMask = (v: string) => {
   const d = v.replace(/\D/g, "").slice(0, 11);
@@ -47,6 +60,8 @@ export default function Cadastrar() {
   const { toast } = useToast();
 
   const [churchName, setChurchName] = useState<string | null>(null);
+  const [inviteRole, setInviteRole] = useState<string | null>(null);
+  const [inviteFullName, setInviteFullName] = useState<string | null>(null);
   const [churchCheckError, setChurchCheckError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -67,6 +82,30 @@ export default function Cadastrar() {
   };
 
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
+
+  // Fetch invite details (for ?token=UUID invite flow)
+  useEffect(() => {
+    if (!validToken || !token) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const invite = await fetchInvitationByToken(token);
+        if (cancelled) return;
+        setInviteRole(invite.role);
+        if (invite.full_name) setInviteFullName(invite.full_name);
+        if (invite.email) setForm((p) => ({ ...p, email: invite.email! }));
+        const { data: church } = await supabase
+          .from("churches")
+          .select("name")
+          .eq("id", invite.church_id)
+          .maybeSingle();
+        if (!cancelled && church?.name) setChurchName(church.name);
+      } catch {
+        // non-fatal
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [validToken, token]);
 
   // Validate church_id exists in DB (for ?church=ID self-registration)
   useEffect(() => {
@@ -176,7 +215,12 @@ export default function Cadastrar() {
       // Refresh session so AuthContext picks up new profile/roles immediately
       await supabase.auth.refreshSession();
 
-      toast({ title: "Bem-vindo!", description: "Conta criada. Aguarde aprovação da secretaria." });
+      toast({
+        title: "Bem-vindo!",
+        description: validToken
+          ? "Conta criada com sucesso. Você já está vinculado à igreja."
+          : "Conta criada. Aguarde aprovação da secretaria.",
+      });
       console.log("[Autocadastro] redirecionando para /meu-app");
       window.location.href = "/meu-app";
     } catch (error: any) {
@@ -222,14 +266,23 @@ export default function Cadastrar() {
           <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
             <Church className="w-7 h-7 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Criar conta</CardTitle>
+          <CardTitle className="text-2xl">
+            {inviteFullName ? `Olá, ${inviteFullName.split(" ")[0]}!` : "Criar conta"}
+          </CardTitle>
           <CardDescription>
             {churchName
-              ? <>Cadastre-se para acessar o app da <span className="font-semibold text-foreground">{churchName}</span></>
+              ? <>Crie sua conta para acessar o app da <span className="font-semibold text-foreground">{churchName}</span></>
               : validToken
-                ? "Preencha seus dados para entrar na igreja"
+                ? "Preencha seus dados para aceitar o convite"
                 : "Cadastre-se para acessar o app da igreja"}
           </CardDescription>
+          {validToken && inviteRole && (
+            <div className="pt-1">
+              <Badge variant="secondary">
+                {ROLE_LABELS[inviteRole] ?? inviteRole}
+              </Badge>
+            </div>
+          )}
         </CardHeader>
 
         <CardContent>
@@ -254,7 +307,7 @@ export default function Cadastrar() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="flex items-center gap-2"><Mail className="w-3.5 h-3.5" /> Email</Label>
-                <Input id="email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="voce@email.com" required />
+                <Input id="email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="voce@email.com" readOnly={validToken && !!form.email} className={validToken && form.email ? "bg-muted cursor-default" : ""} required />
                 {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
               </div>
               <div className="space-y-2">
@@ -277,30 +330,34 @@ export default function Cadastrar() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Você é</Label>
-              <Select value={form.tipo} onValueChange={(v) => set("tipo", v as "visitante" | "membro")}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="visitante">Visitante</SelectItem>
-                  <SelectItem value="membro">Membro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {!validToken && (
+              <>
+                <div className="space-y-2">
+                  <Label>Você é</Label>
+                  <Select value={form.tipo} onValueChange={(v) => set("tipo", v as "visitante" | "membro")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="visitante">Visitante</SelectItem>
+                      <SelectItem value="membro">Membro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5" /> Já é batizado?</Label>
-              <RadioGroup value={form.isBaptized} onValueChange={(v) => set("isBaptized", v as "sim" | "nao")} className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <RadioGroupItem value="sim" id="bap-sim" />
-                  <span className="text-sm">Sim</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <RadioGroupItem value="nao" id="bap-nao" />
-                  <span className="text-sm">Não</span>
-                </label>
-              </RadioGroup>
-            </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5" /> Já é batizado?</Label>
+                  <RadioGroup value={form.isBaptized} onValueChange={(v) => set("isBaptized", v as "sim" | "nao")} className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <RadioGroupItem value="sim" id="bap-sim" />
+                      <span className="text-sm">Sim</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <RadioGroupItem value="nao" id="bap-nao" />
+                      <span className="text-sm">Não</span>
+                    </label>
+                  </RadioGroup>
+                </div>
+              </>
+            )}
 
             <Button type="submit" className="w-full mt-2" disabled={isLoading}>
               {isLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Criando conta...</> : "Criar conta"}

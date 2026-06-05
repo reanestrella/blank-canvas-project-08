@@ -3,27 +3,75 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertCircle, Church, LogOut, LogIn, UserPlus } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Loader2, AlertCircle, Church, LogOut, LogIn, UserPlus, CheckCircle2 } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { isValidUUID, getRoleBasedRedirect } from "@/lib/getRoleBasedRedirect";
-import { applyInvitationForUser } from "@/lib/authInvitation";
+import { applyInvitationForUser, fetchInvitationByToken } from "@/lib/authInvitation";
 import { clearAuthBrowserCache } from "@/lib/authProfile";
+
+const ROLE_LABELS: Record<string, string> = {
+  pastor: "Pastor",
+  secretario: "Secretário(a)",
+  tesoureiro: "Tesoureiro(a)",
+  lider_celula: "Líder de Célula",
+  lider_ministerio: "Líder de Ministério",
+  consolidacao: "Consolidação",
+  membro: "Membro",
+  admin: "Administrador",
+};
+
+type InviteInfo = {
+  churchName: string;
+  role: string;
+  fullName: string | null;
+  email: string | null;
+};
 
 export default function InviteGate() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token")?.trim() || null;
-  console.log("[InviteGate] Token recebido:", token);
   const navigate = useNavigate();
   const { user, isLoading: authLoading, refreshUserData, signOut } = useAuth();
   const { toast } = useToast();
   const [status, setStatus] = useState<"idle" | "processing" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null);
+  const [inviteLoading, setInviteLoading] = useState(false);
   const autoAcceptRan = useRef(false);
 
   const validToken = !!token && isValidUUID(token);
 
-  console.log("[InviteGate] render — token:", token, "validUUID:", validToken, "user:", user?.id, "authLoading:", authLoading, "status:", status);
+  // Fetch invite details for display
+  useEffect(() => {
+    if (!validToken || !token) return;
+    let cancelled = false;
+    setInviteLoading(true);
+    (async () => {
+      try {
+        const invite = await fetchInvitationByToken(token);
+        if (cancelled) return;
+        const { data: church } = await supabase
+          .from("churches")
+          .select("name")
+          .eq("id", invite.church_id)
+          .maybeSingle();
+        if (cancelled) return;
+        setInviteInfo({
+          churchName: church?.name ?? "Igreja",
+          role: invite.role,
+          fullName: invite.full_name,
+          email: invite.email,
+        });
+      } catch {
+        // non-fatal: still show the page
+      } finally {
+        if (!cancelled) setInviteLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [validToken, token]);
 
   const handleAccept = useCallback(async () => {
     if (!token) return;
@@ -48,14 +96,13 @@ export default function InviteGate() {
 
       const roles: string[] = result.roles || [];
       const redirectTo = getRoleBasedRedirect(roles);
-      console.log("[InviteGate] success — redirecting to:", redirectTo);
       window.location.href = redirectTo;
     } catch (err: any) {
       console.error("[InviteGate] exception:", err);
       setErrorMsg(err.message || "Erro inesperado ao aceitar convite.");
       setStatus("error");
     }
-  }, [token, refreshUserData, toast, navigate]);
+  }, [token, refreshUserData, toast]);
 
   const handleSwitchAccount = useCallback(async () => {
     if (!token) return;
@@ -75,20 +122,17 @@ export default function InviteGate() {
   if (!validToken) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
-              <AlertCircle className="w-6 h-6 text-destructive" />
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="text-center pt-8 pb-6">
+            <div className="mx-auto w-14 h-14 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
+              <AlertCircle className="w-7 h-7 text-destructive" />
             </div>
-            <CardTitle>Convite inválido</CardTitle>
-            <CardDescription>
+            <h2 className="text-xl font-semibold">Convite inválido</h2>
+            <p className="text-sm text-muted-foreground mt-1">
               O link do convite está incompleto ou inválido.
-              {token && !isValidUUID(token) && (
-                <span className="block mt-2 text-xs text-muted-foreground">Token recebido: {token.substring(0, 20)}...</span>
-              )}
-            </CardDescription>
+            </p>
           </CardHeader>
-          <CardContent className="flex justify-center">
+          <CardContent className="pb-8 flex justify-center">
             <Button onClick={() => navigate("/")}>Ir para página inicial</Button>
           </CardContent>
         </Card>
@@ -96,77 +140,24 @@ export default function InviteGate() {
     );
   }
 
-  // Still loading auth state
-  if (authLoading) {
+  if (authLoading || inviteLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 gradient-primary rounded-full flex items-center justify-center mb-4">
-              <Church className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <CardTitle>Carregando...</CardTitle>
-          </CardHeader>
-          <CardContent className="flex justify-center py-6">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-sm">Carregando convite...</p>
+        </div>
       </div>
     );
   }
 
-  // Not authenticated — show login/signup options
-  if (!user) {
-    const returnUrl = `/accept-invite?token=${encodeURIComponent(token)}`;
-    const redirectParam = encodeURIComponent(returnUrl);
-
-    sessionStorage.setItem("pending_invite_token", token);
-
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 gradient-primary rounded-full flex items-center justify-center mb-4">
-              <Church className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <CardTitle>Você foi convidado!</CardTitle>
-            <CardDescription>
-              Você recebeu um convite para entrar em uma igreja.
-              <br />
-              Faça login ou crie uma conta para aceitar.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center gap-3">
-            <Button className="w-full" onClick={() => navigate(`/login?redirect=${redirectParam}`)}>
-              <LogIn className="w-4 h-4 mr-2" />
-              Entrar
-            </Button>
-            <Button variant="outline" className="w-full" onClick={() => navigate(`/cadastrar?token=${encodeURIComponent(token)}`)}>
-              <UserPlus className="w-4 h-4 mr-2" />
-              Criar conta
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Processing
   if (status === "processing") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 gradient-primary rounded-full flex items-center justify-center mb-4">
-              <Church className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <CardTitle>Aceitando convite...</CardTitle>
-            <CardDescription>Aguarde enquanto processamos seu convite.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center py-6">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-sm">Aceitando convite...</p>
+        </div>
       </div>
     );
   }
@@ -174,15 +165,15 @@ export default function InviteGate() {
   if (status === "error") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
-              <AlertCircle className="w-6 h-6 text-destructive" />
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="text-center pt-8 pb-4">
+            <div className="mx-auto w-14 h-14 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
+              <AlertCircle className="w-7 h-7 text-destructive" />
             </div>
-            <CardTitle>Erro ao aceitar convite</CardTitle>
-            <CardDescription>{errorMsg}</CardDescription>
+            <h2 className="text-xl font-semibold">Erro ao aceitar convite</h2>
+            <p className="text-sm text-muted-foreground mt-1">{errorMsg}</p>
           </CardHeader>
-          <CardContent className="flex flex-col items-center gap-3">
+          <CardContent className="pb-8 flex flex-col gap-2">
             <Button onClick={() => { autoAcceptRan.current = false; handleAccept(); }}>Tentar novamente</Button>
             <Button variant="outline" onClick={handleSwitchAccount}>
               <LogOut className="w-4 h-4 mr-2" />
@@ -195,28 +186,122 @@ export default function InviteGate() {
     );
   }
 
-  // Fallback: manual accept with account confirmation
+  // Not authenticated — show welcome + login/signup options
+  if (!user) {
+    const returnUrl = `/accept-invite?token=${encodeURIComponent(token)}`;
+    const redirectParam = encodeURIComponent(returnUrl);
+    sessionStorage.setItem("pending_invite_token", token);
+
+    const roleLabel = inviteInfo ? (ROLE_LABELS[inviteInfo.role] ?? inviteInfo.role) : null;
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+        <div className="w-full max-w-md">
+          {/* Header card */}
+          <Card className="shadow-lg overflow-hidden">
+            {/* Colored banner */}
+            <div className="gradient-primary h-2 w-full" />
+
+            <CardHeader className="text-center pt-8 pb-4 px-8">
+              {/* Church icon */}
+              <div className="mx-auto w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mb-5 shadow-md">
+                <Church className="w-8 h-8 text-primary-foreground" />
+              </div>
+
+              {/* Welcome message */}
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  Você recebeu um convite
+                </p>
+                {inviteInfo ? (
+                  <>
+                    <h1 className="text-2xl font-bold text-foreground">
+                      {inviteInfo.churchName}
+                    </h1>
+                    {inviteInfo.fullName && (
+                      <p className="text-base text-muted-foreground">
+                        Olá, <span className="font-medium text-foreground">{inviteInfo.fullName}</span>!
+                      </p>
+                    )}
+                    {roleLabel && (
+                      <div className="pt-1">
+                        <Badge variant="secondary" className="text-sm px-3 py-0.5">
+                          {roleLabel}
+                        </Badge>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <h1 className="text-2xl font-bold text-foreground">
+                    Bem-vindo(a)!
+                  </h1>
+                )}
+              </div>
+            </CardHeader>
+
+            <CardContent className="px-8 pb-8">
+              <p className="text-sm text-muted-foreground text-center mb-6">
+                {inviteInfo
+                  ? `Para aceitar o convite e acessar o app da ${inviteInfo.churchName}, escolha uma opção abaixo.`
+                  : "Para aceitar o convite, faça login ou crie uma conta."}
+              </p>
+
+              <div className="space-y-3">
+                <Button
+                  className="w-full h-11 text-base"
+                  onClick={() => navigate(`/login?redirect=${redirectParam}`)}
+                >
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Já tenho conta — Entrar
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full h-11 text-base"
+                  onClick={() => navigate(`/cadastrar?token=${encodeURIComponent(token)}`)}
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Criar minha conta
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Footer note */}
+          {inviteInfo?.email && (
+            <p className="text-center text-xs text-muted-foreground mt-4">
+              Este convite foi enviado para <span className="font-medium">{inviteInfo.email}</span>
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Authenticated — manual accept confirmation
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 gradient-primary rounded-full flex items-center justify-center mb-4">
-            <Church className="w-6 h-6 text-primary-foreground" />
+      <Card className="w-full max-w-md shadow-lg overflow-hidden">
+        <div className="gradient-primary h-2 w-full" />
+        <CardHeader className="text-center pt-8 pb-4 px-8">
+          <div className="mx-auto w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mb-5 shadow-md">
+            <CheckCircle2 className="w-8 h-8 text-primary-foreground" />
           </div>
-          <CardTitle>Aceitar convite</CardTitle>
-          <CardDescription>
+          <h2 className="text-xl font-semibold">
+            {inviteInfo ? inviteInfo.churchName : "Aceitar convite"}
+          </h2>
+          <p className="text-sm text-muted-foreground mt-2">
             Você está logado como <strong>{user.email}</strong>.
             <br />
             Deseja aceitar o convite com esta conta?
-          </CardDescription>
+          </p>
         </CardHeader>
-        <CardContent className="flex flex-col items-center gap-3">
-          <Button className="w-full" onClick={handleAccept}>
+        <CardContent className="px-8 pb-8 flex flex-col gap-2">
+          <Button className="w-full h-11" onClick={handleAccept}>
             Aceitar convite
           </Button>
           <Button variant="outline" className="w-full" onClick={handleSwitchAccount}>
             <LogOut className="w-4 h-4 mr-2" />
-            Sair e entrar com outra conta
+            Entrar com outra conta
           </Button>
         </CardContent>
       </Card>
