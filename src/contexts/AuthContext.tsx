@@ -59,7 +59,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const PENDING_INVITE_KEY = "pending_invite_token";
-const INVITE_APPLYING_KEY = "pending_invite_applying";
+const INVITE_APPLYING_KEY = "pending_invite_applying"; // kept only to clear stale values
 
 function LoadingScreen() {
   return (
@@ -113,25 +113,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return null;
     }
 
+    // Clear any stale applying-lock left by a previous page lifecycle that was
+    // interrupted mid-flight by a window.location.href navigation.
+    sessionStorage.removeItem(INVITE_APPLYING_KEY);
+
     const token = sessionStorage.getItem(PENDING_INVITE_KEY);
-    console.log("TOKEN:", token);
-
     if (!token) return null;
-    if (inviteInFlightRef.current === token) return null;
-    if (sessionStorage.getItem(INVITE_APPLYING_KEY) === token) return null;
 
+    // Deduplicate concurrent calls within the same page lifecycle (in-memory only).
+    if (inviteInFlightRef.current === token) return null;
     inviteInFlightRef.current = token;
-    sessionStorage.setItem(INVITE_APPLYING_KEY, token);
 
     try {
       const result = await applyInvitationForUser(token, authUser);
       sessionStorage.removeItem(PENDING_INVITE_KEY);
+      console.log("[Auth] convite pendente aplicado:", result);
       return result;
     } catch (error) {
       console.error("[Auth] erro ao aplicar convite pendente:", error);
       return null;
     } finally {
-      sessionStorage.removeItem(INVITE_APPLYING_KEY);
       inviteInFlightRef.current = null;
     }
   };

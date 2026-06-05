@@ -5,8 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ensureUserProfile } from "@/lib/authProfile";
 import { syncSelfRegistrationProfile } from "@/lib/selfRegistration";
-import { fetchInvitationByToken } from "@/lib/authInvitation";
-import { isValidUUID } from "@/lib/getRoleBasedRedirect";
+import { fetchInvitationByToken, applyInvitationForUser } from "@/lib/authInvitation";
+import { isValidUUID, getRoleBasedRedirect } from "@/lib/getRoleBasedRedirect";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -155,10 +155,6 @@ export default function Cadastrar() {
     console.log("[Autocadastro] iniciado", { tipo: form.tipo, validToken, validChurch });
 
     try {
-      if (validToken && token) {
-        sessionStorage.setItem("pending_invite_token", token);
-      }
-
       const { error: authError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
@@ -181,12 +177,14 @@ export default function Cadastrar() {
         password: form.password,
       });
       if (signInError) {
+        // Could not auto sign-in — send to login keeping the token
+        if (validToken && token) sessionStorage.setItem("pending_invite_token", token);
         toast({ title: "Conta criada!", description: "Faça login para continuar." });
-        navigate("/login");
+        navigate(validToken && token ? `/login?redirect=${encodeURIComponent(`/accept-invite?token=${token}`)}` : "/login");
         return;
       }
 
-      // wait for session
+      // Wait for session to be available
       let user = null;
       for (let i = 0; i < 6; i++) {
         const { data: { user: u } } = await supabase.auth.getUser();
@@ -198,8 +196,22 @@ export default function Cadastrar() {
       await ensureUserProfile(user);
       console.log("[Autocadastro] profile criado/garantido");
 
+      if (validToken && token) {
+        // Apply the invite directly here — do NOT rely on AuthContext to pick it up
+        // later via sessionStorage, because a page reload mid-flight would leave a
+        // stale lock and silently skip the invitation.
+        console.log("[Autocadastro] aplicando convite diretamente");
+        sessionStorage.removeItem("pending_invite_token");
+        const inviteResult = await applyInvitationForUser(token, user);
+        console.log("[Autocadastro] convite aceito:", inviteResult);
+        await supabase.auth.refreshSession();
+        toast({ title: "Bem-vindo!", description: "Conta criada com sucesso. Você já está vinculado à igreja." });
+        window.location.href = getRoleBasedRedirect(inviteResult.roles);
+        return;
+      }
+
       // Self-registration: bind church_id, role membro, create pending_users entry
-      if (!validToken && validChurch && churchParam) {
+      if (validChurch && churchParam) {
         await syncSelfRegistrationProfile(user, {
           churchId: churchParam,
           fullName: form.fullName,
@@ -212,28 +224,19 @@ export default function Cadastrar() {
         console.log("[Autocadastro] church_id vinculado e role 'membro' atribuída");
       }
 
-      // Refresh session so AuthContext picks up new profile/roles immediately
       await supabase.auth.refreshSession();
-
-      toast({
-        title: "Bem-vindo!",
-        description: validToken
-          ? "Conta criada com sucesso. Você já está vinculado à igreja."
-          : "Conta criada. Aguarde aprovação da secretaria.",
-      });
-      console.log("[Autocadastro] redirecionando para /meu-app");
+      toast({ title: "Bem-vindo!", description: "Conta criada. Aguarde aprovação da secretaria." });
       window.location.href = "/meu-app";
     } catch (error: any) {
       console.error("[Autocadastro] ERRO:", error);
       const msg = String(error?.message || "");
       if (msg === "User already registered" || msg.toLowerCase().includes("already registered")) {
-        toast({
-          title: "Email já cadastrado",
-          description: "Faça login para continuar.",
-        });
-        const loginUrl = validChurch && churchParam
-          ? `/login?church=${churchParam}`
-          : "/login";
+        toast({ title: "Email já cadastrado", description: "Faça login para continuar." });
+        const loginUrl = validToken && token
+          ? `/login?redirect=${encodeURIComponent(`/accept-invite?token=${token}`)}`
+          : validChurch && churchParam
+            ? `/login?church=${churchParam}`
+            : "/login";
         navigate(loginUrl);
         return;
       }
