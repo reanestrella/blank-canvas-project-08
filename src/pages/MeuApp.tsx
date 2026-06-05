@@ -636,7 +636,7 @@ function ShortcutButton({ icon: Icon, label, onClick }: { icon: any; label: stri
 
 // ─── Main Page ──────────────────────────────────
 export default function MeuApp() {
-  const { profile, church, user } = useAuth();
+  const { profile, church, user, currentChurchId } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -652,17 +652,21 @@ export default function MeuApp() {
   const [heroGradient, setHeroGradient] = useState<string | null>(null);
   const [youtubeUrl, setYoutubeUrl] = useState<string | null>(null);
 
+  // Prefer churchId but fall back to currentChurchId derived from roles.
+  // This ensures the page works even before churchId is healed by AuthContext.
+  const churchId = profile?.church_id || currentChurchId || null;
+
   useEffect(() => {
-    if (profile?.church_id) fetchData();
-  }, [profile?.church_id]);
+    if (churchId) fetchData();
+  }, [churchId]);
 
   const fetchData = async () => {
-    if (!profile?.church_id) return;
+    if (!churchId) return;
     setIsLoading(true);
     try {
       // Fetch hero background from app_module_configs
       const { data: heroBgConfig } = await supabase.from("app_module_configs" as any)
-        .select("config").eq("church_id", profile.church_id).eq("module_key", "hero_bg").maybeSingle();
+        .select("config").eq("church_id", churchId).eq("module_key", "hero_bg").maybeSingle();
       const heroCfg = (heroBgConfig as any)?.config || {};
       if (heroCfg.bg_url) setHeroBgUrl(heroCfg.bg_url);
       if (heroCfg.video_url) setHeroVideoUrl(heroCfg.video_url);
@@ -670,18 +674,18 @@ export default function MeuApp() {
 
       // Fetch YouTube URL
       const { data: ytConfig } = await supabase.from("app_module_configs" as any)
-        .select("config").eq("church_id", profile.church_id).eq("module_key", "youtube").maybeSingle();
+        .select("config").eq("church_id", churchId).eq("module_key", "youtube").maybeSingle();
       const ytCfg = (ytConfig as any)?.config || {};
       if (ytCfg.channel_url) setYoutubeUrl(ytCfg.channel_url);
 
       const { data: announcementsData } = await supabase.from("announcements")
-        .select("id, title, content, created_at").eq("church_id", profile.church_id)
+        .select("id, title, content, created_at").eq("church_id", churchId)
         .eq("is_active", true).order("created_at", { ascending: false }).limit(5);
       setAnnouncements((announcementsData as Announcement[]) || []);
 
       // Load network announcements
       const { data: churchData } = await supabase.from("churches")
-        .select("ministry_network_id").eq("id", profile.church_id).maybeSingle();
+        .select("ministry_network_id").eq("id", churchId).maybeSingle();
       if ((churchData as any)?.ministry_network_id) {
         const today = new Date().toISOString().split("T")[0];
         const { data: netAnns } = await supabase.from("network_announcements" as any)
@@ -698,20 +702,20 @@ export default function MeuApp() {
       const currentMonth = (now.getMonth() + 1).toString().padStart(2, "0");
       
       const { data: birthdayData } = await supabase.from("members")
-        .select("id, full_name, birth_date, photo_url").eq("church_id", profile.church_id)
+        .select("id, full_name, birth_date, photo_url").eq("church_id", churchId)
         .eq("is_active", true).not("birth_date", "is", null);
       setBirthdays(((birthdayData || []) as BirthdayMember[]).filter(m => m.birth_date?.split("-")[1] === currentMonth)
         .sort((a, b) => parseInt(a.birth_date.split("-")[2]) - parseInt(b.birth_date.split("-")[2])));
 
       const { data: weddingData } = await supabase.from("members")
-        .select("id, full_name, wedding_date, photo_url").eq("church_id", profile.church_id)
+        .select("id, full_name, wedding_date, photo_url").eq("church_id", churchId)
         .eq("is_active", true).not("wedding_date", "is", null);
       setWeddingAnniversaries(((weddingData || []) as WeddingMember[]).filter(m => m.wedding_date?.split("-")[1] === currentMonth)
         .sort((a, b) => parseInt(a.wedding_date.split("-")[2]) - parseInt(b.wedding_date.split("-")[2])));
 
       const today = now.toISOString().split("T")[0];
       const { data: eventsData } = await supabase.from("events")
-        .select("id, title, event_date, event_time, location").eq("church_id", profile.church_id)
+        .select("id, title, event_date, event_time, location").eq("church_id", churchId)
         .gte("event_date", today).order("event_date", { ascending: true }).limit(5);
       setEvents((eventsData as UpcomingEvent[]) || []);
 
@@ -721,7 +725,7 @@ export default function MeuApp() {
       const emailToSearch = profile.email || user?.email;
       if (!memberId && emailToSearch) {
         const { data: memberByEmail } = await supabase.from("members").select("id")
-          .eq("church_id", profile.church_id!).ilike("email", emailToSearch.trim()).limit(1);
+          .eq("church_id", churchId!).ilike("email", emailToSearch.trim()).limit(1);
         if (memberByEmail?.length) {
           memberId = memberByEmail[0].id;
           // Auto-link for future lookups
@@ -731,7 +735,7 @@ export default function MeuApp() {
       // Fallback 2: use full_name
       if (!memberId && profile.full_name) {
         const { data: memberByName } = await supabase.from("members").select("id")
-          .eq("church_id", profile.church_id!).ilike("full_name", profile.full_name.trim()).limit(1);
+          .eq("church_id", churchId!).ilike("full_name", profile.full_name.trim()).limit(1);
         if (memberByName?.length) {
           memberId = memberByName[0].id;
           await supabase.from("profiles").update({ member_id: memberId } as any).eq("user_id", user!.id);
@@ -762,7 +766,7 @@ export default function MeuApp() {
             .from("ministries")
             .select("id, name")
             .in("id", ministryIds)
-            .eq("church_id", profile.church_id!);
+            .eq("church_id", churchId!);
           
           const ministryMap = new Map((ministriesData || []).map((m: any) => [m.id, m.name]));
           const schedMap = new Map((schedData || []).map((s: any) => [s.id, s]));
@@ -812,7 +816,6 @@ export default function MeuApp() {
   };
 
   const initials = profile?.full_name?.split(" ").map((n) => n[0]).join("").slice(0, 2) || "?";
-  const churchId = profile?.church_id;
 
   const renderContent = () => {
     switch (activeView) {
