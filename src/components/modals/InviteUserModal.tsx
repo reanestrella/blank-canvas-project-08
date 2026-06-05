@@ -294,6 +294,14 @@ export function InviteUserModal({
                           churchId={churchId}
                           value={field.value}
                           onChange={(id) => field.onChange(id || "")}
+                          onSelectMember={(member) => {
+                            if (member?.email) {
+                              form.setValue("email", member.email, { shouldValidate: true });
+                            }
+                            if (member?.full_name && !form.getValues("full_name")) {
+                              form.setValue("full_name", member.full_name);
+                            }
+                          }}
                           placeholder="Buscar membro cadastrado..."
                         />
                       </FormControl>

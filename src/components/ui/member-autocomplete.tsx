@@ -10,12 +10,15 @@ interface Member {
   id: string;
   full_name: string;
   phone: string | null;
+  email: string | null;
 }
 
 interface MemberAutocompleteProps {
   churchId: string;
   value?: string;
   onChange: (memberId: string | null) => void;
+  /** Called with the full member object when one is selected */
+  onSelectMember?: (member: Member | null) => void;
   placeholder?: string;
   className?: string;
   /** When true, shows "Create new member" action when no match is found */
@@ -26,6 +29,7 @@ export function MemberAutocomplete({
   churchId,
   value,
   onChange,
+  onSelectMember,
   placeholder = "Digite 3 letras para buscar...",
   className,
   allowCreate = false,
@@ -43,8 +47,11 @@ export function MemberAutocomplete({
     if (value && !selectedName) {
       const fetchMember = async () => {
         const { data } = await supabase
-          .from("members").select("id, full_name, phone").eq("id", value).single();
-        if (data) { setSelectedName(data.full_name); setQuery(data.full_name); }
+          .from("members").select("id, full_name, phone, email").eq("id", value).single();
+        if (data) {
+          setSelectedName(data.full_name);
+          setQuery(data.full_name);
+        }
       };
       fetchMember();
     } else if (!value) {
@@ -57,7 +64,7 @@ export function MemberAutocomplete({
       const search = async () => {
         setIsLoading(true);
         const { data } = await supabase
-          .from("members").select("id, full_name, phone")
+          .from("members").select("id, full_name, phone, email")
           .eq("church_id", churchId).ilike("full_name", `%${query}%`).limit(10);
         setMembers(data || []);
         setIsOpen(true);
@@ -80,11 +87,13 @@ export function MemberAutocomplete({
 
   const handleSelect = (m: Member) => {
     setQuery(m.full_name); setSelectedName(m.full_name);
-    onChange(m.id); setIsOpen(false);
+    onChange(m.id);
+    onSelectMember?.(m);
+    setIsOpen(false);
   };
 
   const handleClear = () => {
-    setQuery(""); setSelectedName(""); onChange(null); setIsOpen(false);
+    setQuery(""); setSelectedName(""); onChange(null); onSelectMember?.(null); setIsOpen(false);
   };
 
   const handleCreate = async () => {
@@ -97,7 +106,7 @@ export function MemberAutocomplete({
         full_name: name,
         spiritual_status: "visitante",
         is_active: true,
-      }).select("id, full_name, phone").single();
+      }).select("id, full_name, phone, email").single();
       if (error) throw error;
       toast({ title: "Dizimista criado", description: `${data.full_name} foi adicionado como visitante.` });
       handleSelect(data as Member);
