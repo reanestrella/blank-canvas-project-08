@@ -182,6 +182,16 @@ export default function Secretaria() {
     filterYear,
   });
 
+  // Visitantes count aligned with the "visitantes" tab: people currently with spiritual_status = visitante.
+  // usePeopleStats counts historical visitors (by first_visit_date), which diverges from the tab filter.
+  const visitantesCount = useMemo(() => {
+    return members.filter((m) => {
+      if (!m.is_active || m.spiritual_status !== "visitante") return false;
+      if (selectedCongregation && m.congregation_id && m.congregation_id !== selectedCongregation) return false;
+      return true;
+    }).length;
+  }, [members, selectedCongregation]);
+
   const handleCreateMember = async (data: CreateMemberData) => {
     if (!churchId) return { data: null, error: new Error("Igreja não identificada") };
     return createMember({ 
@@ -278,7 +288,7 @@ export default function Secretaria() {
                 <Eye className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.visitantes}</p>
+                <p className="text-2xl font-bold">{visitantesCount}</p>
                 <p className="text-sm text-muted-foreground">Visitantes</p>
               </div>
             </div>

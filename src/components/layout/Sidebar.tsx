@@ -28,7 +28,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { type ModuleKey } from "@/lib/permissions";
+import { type ModuleKey, pathAllowedByPermissions } from "@/lib/permissions";
 
 type AppRole =
   | "pastor"
@@ -156,7 +156,7 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { church, signOut, roles, profile } = useAuth();
+  const { church, signOut, roles, profile, currentChurchId } = useAuth();
 
   const loadingRoles = !roles;
 
@@ -165,6 +165,24 @@ export function Sidebar() {
 
     return roles.map((r: any) => r.role);
   }, [roles]);
+
+  // Aggregate granular permissions for the current church.
+  // If every matching role has permissions = null (legacy/unlimited), treat as unrestricted.
+  const userPermissions = useMemo(() => {
+    if (!roles || !currentChurchId) return null;
+    const churchRoles = roles.filter((r: any) => r.church_id === currentChurchId);
+    if (churchRoles.length === 0) return null;
+    // If any role has a non-null permissions array, collect all allowed modules
+    const hasGranular = churchRoles.some((r: any) => Array.isArray(r.permissions));
+    if (!hasGranular) return null;
+    const merged = new Set<string>();
+    for (const r of churchRoles as any[]) {
+      if (Array.isArray(r.permissions)) {
+        r.permissions.forEach((p: string) => merged.add(p));
+      }
+    }
+    return Array.from(merged);
+  }, [roles, currentChurchId]);
 
   // MOSTRA O BOTÃO DA REDE
  const hasNetworkAccess =
@@ -184,9 +202,16 @@ export function Sidebar() {
   const menuItems = allMenuItems.filter((item) => {
     if (!item.allowedRoles) return true;
 
-    return item.allowedRoles.some((role) =>
-      userRoles.includes(role)
-    );
+    const roleOk = item.allowedRoles.some((role) => userRoles.includes(role));
+    if (!roleOk) return false;
+
+    // Granular module permissions: if the user's role has an explicit permissions list,
+    // only show items whose path is covered by that list.
+    if (userPermissions !== null) {
+      return pathAllowedByPermissions(item.path, userPermissions);
+    }
+
+    return true;
   });
 
   const filteredMenuItems = hideFinancial
