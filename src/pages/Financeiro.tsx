@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -76,6 +76,21 @@ export default function Financeiro() {
   }
 
   const churchId = networkChurchId ?? profile?.church_id;
+
+  // Fetch the selected church name when coming from /rede
+  const [networkChurchName, setNetworkChurchName] = useState<string | null>(null);
+  useEffect(() => {
+    if (!networkChurchId) return;
+    setNetworkChurchName(null); // reset on id change
+    supabase
+      .from("churches")
+      .select("name")
+      .eq("id", networkChurchId)
+      .single()
+      .then(({ data }) => {
+        if (data) setNetworkChurchName((data as any).name);
+      });
+  }, [networkChurchId]);
 
   const {
     transactions,
@@ -302,10 +317,21 @@ export default function Financeiro() {
               </Button>
             )}
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold">Financeiro</h1>
-              <p className="text-muted-foreground">
-                {isReadOnly ? "Extrato financeiro da igreja (somente leitura)" : "Gestão financeira transparente da sua igreja"}
-              </p>
+              {isReadOnly ? (
+                <>
+                  {networkChurchName ? (
+                    <h1 className="text-2xl md:text-3xl font-bold">{networkChurchName}</h1>
+                  ) : (
+                    <div className="h-8 w-48 bg-muted animate-pulse rounded-md" />
+                  )}
+                  <p className="text-muted-foreground">Extrato financeiro · somente leitura</p>
+                </>
+              ) : (
+                <>
+                  <h1 className="text-2xl md:text-3xl font-bold">Financeiro</h1>
+                  <p className="text-muted-foreground">Gestão financeira transparente da sua igreja</p>
+                </>
+              )}
             </div>
           </div>
           {!isReadOnly && (
