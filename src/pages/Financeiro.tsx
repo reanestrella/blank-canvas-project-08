@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,7 @@ import {
 import {
   TrendingUp, TrendingDown, Plus, Download, ArrowUpRight, ArrowDownRight,
   PiggyBank, Target, Loader2, MoreHorizontal, Users, Heart, Upload,
-  DollarSign, Edit, Package,
+  DollarSign, Edit, Package, ArrowLeft,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFinancial, CreateTransactionData } from "@/hooks/useFinancial";
@@ -60,8 +61,21 @@ export default function Financeiro() {
   const [endDate, setEndDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [accountFilter, setAccountFilter] = useState("all");
 
-  const { profile, church } = useAuth();
-  const churchId = profile?.church_id;
+  const { profile, church, roles } = useAuth();
+  const navigate = useNavigate();
+  const params = useParams<{ churchId?: string }>();
+
+  // network_finance accessing via /rede/financeiro/:churchId
+  const networkChurchId = params.churchId ?? null;
+  const isNetworkFinance = roles.some((r: any) => r.role === "network_finance");
+  const isReadOnly = isNetworkFinance && !!networkChurchId;
+
+  // Guard: /rede/financeiro/:churchId is exclusively for network_finance
+  if (networkChurchId && !isNetworkFinance) {
+    return <Navigate to="/app" replace />;
+  }
+
+  const churchId = networkChurchId ?? profile?.church_id;
 
   const {
     transactions,
@@ -281,30 +295,39 @@ export default function Financeiro() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">Financeiro</h1>
-            <p className="text-muted-foreground">
-              Gestão financeira transparente da sua igreja
-            </p>
+          <div className="flex items-center gap-3">
+            {isReadOnly && (
+              <Button variant="ghost" size="sm" onClick={() => navigate("/rede")}>
+                <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
+              </Button>
+            )}
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold">Financeiro</h1>
+              <p className="text-muted-foreground">
+                {isReadOnly ? "Extrato financeiro da igreja (somente leitura)" : "Gestão financeira transparente da sua igreja"}
+              </p>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" className="flex-1 sm:flex-none min-w-[110px]" onClick={() => setImportModalOpen(true)}>
-              <Upload className="w-4 h-4 mr-2" />
-              Importar
-            </Button>
-            <Button variant="outline" size="sm" className="flex-1 sm:flex-none min-w-[140px]" onClick={() => handleOpenNewTransaction("despesa")}>
-              <ArrowDownRight className="w-4 h-4 mr-2" />
-              Nova Despesa
-            </Button>
-            <Button
-              size="sm"
-              className="flex-1 sm:flex-none min-w-[140px] gradient-accent text-secondary-foreground shadow-lg hover:shadow-xl transition-all"
-              onClick={() => handleOpenNewTransaction("receita")}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Nova Receita
-            </Button>
-          </div>
+          {!isReadOnly && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" className="flex-1 sm:flex-none min-w-[110px]" onClick={() => setImportModalOpen(true)}>
+                <Upload className="w-4 h-4 mr-2" />
+                Importar
+              </Button>
+              <Button variant="outline" size="sm" className="flex-1 sm:flex-none min-w-[140px]" onClick={() => handleOpenNewTransaction("despesa")}>
+                <ArrowDownRight className="w-4 h-4 mr-2" />
+                Nova Despesa
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1 sm:flex-none min-w-[140px] gradient-accent text-secondary-foreground shadow-lg hover:shadow-xl transition-all"
+                onClick={() => handleOpenNewTransaction("receita")}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Nova Receita
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Period Filters */}
@@ -383,14 +406,16 @@ export default function Financeiro() {
                     <p className="text-muted-foreground mb-4">
                       Nenhuma movimentação neste período.
                     </p>
-                    <div className="flex gap-2">
-                      <Button variant="outline" onClick={() => handleOpenNewTransaction("despesa")}>
-                        Nova Despesa
-                      </Button>
-                      <Button onClick={() => handleOpenNewTransaction("receita")}>
-                        Nova Receita
-                      </Button>
-                    </div>
+                    {!isReadOnly && (
+                      <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => handleOpenNewTransaction("despesa")}>
+                          Nova Despesa
+                        </Button>
+                        <Button onClick={() => handleOpenNewTransaction("receita")}>
+                          Nova Receita
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -497,6 +522,7 @@ export default function Financeiro() {
                           }`}>
                             {tx.type === "receita" ? "+" : "-"}R$ {Number(tx.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                           </TableCell>
+                          {!isReadOnly && (
                           <TableCell>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -517,6 +543,7 @@ export default function Financeiro() {
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>

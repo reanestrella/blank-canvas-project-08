@@ -227,6 +227,7 @@ const App = () => {
                       </Sub>
                     }
                   />
+                  <Route path="/rede/financeiro/:churchId" element={<Sub><Financeiro /></Sub>} />
 
                   <Route
                     path="/consolidacao"

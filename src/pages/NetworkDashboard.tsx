@@ -68,6 +68,7 @@ export default function NetworkDashboard() {
 
   const userRoles = roles.map(r => r.role);
   const isNetworkUser = userRoles.includes("network_admin" as any) || userRoles.includes("network_finance" as any);
+  const isNetworkFinance = userRoles.includes("network_finance" as any);
   const networkId = (profile as any)?.ministry_network_id;
   const hasAccess = isSuperAdmin || isNetworkUser;
 
@@ -477,7 +478,11 @@ export default function NetworkDashboard() {
                         const bal = c.income - c.expense;
                         const totalBal = c.all_time_income - c.all_time_expense;
                         return (
-                          <TableRow key={c.id} className={!c.is_active ? "opacity-50" : ""}>
+                          <TableRow
+                            key={c.id}
+                            className={`${!c.is_active ? "opacity-50" : ""}${isNetworkFinance ? " cursor-pointer hover:bg-muted/60" : ""}`}
+                            onClick={isNetworkFinance ? () => navigate(`/rede/financeiro/${c.id}`) : undefined}
+                          >
                             <TableCell className="font-medium">{c.name}</TableCell>
                             <TableCell className="text-right">{c.member_count}</TableCell>
                             <TableCell className="text-right">{c.cell_count}</TableCell>
