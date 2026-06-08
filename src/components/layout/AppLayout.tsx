@@ -64,7 +64,9 @@ export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
       const allPerms = Array.from(new Set(roles.flatMap((r: any) => r.permissions ?? defaultPermissionsFor(r.role))));
       const isNetworkPath = location.pathname === "/rede" || location.pathname.startsWith("/rede/");
       const hasNetworkAccess = roles.some((r: any) => ["network_admin", "network_finance"].includes(r.role));
-      if ((!isNetworkPath || !hasNetworkAccess) && !pathAllowedByPermissions(location.pathname, allPerms)) {
+      // Rotas /rede/* com acesso de rede sempre permitidas — sem checar pathAllowedByPermissions
+      const allowedByNetwork = isNetworkPath && hasNetworkAccess;
+      if (!allowedByNetwork && !pathAllowedByPermissions(location.pathname, allPerms)) {
         return <Navigate to="/meu-app" replace />;
       }
     }
