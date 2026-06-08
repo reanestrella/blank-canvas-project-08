@@ -65,13 +65,13 @@ export default function Financeiro() {
   const navigate = useNavigate();
   const params = useParams<{ churchId?: string }>();
 
-  // network_finance accessing via /rede/financeiro/:churchId
+  // network_admin or network_finance accessing via /rede/financeiro/:churchId
   const networkChurchId = params.churchId ?? null;
-  const isNetworkFinance = roles.some((r: any) => r.role === "network_finance");
-  const isReadOnly = isNetworkFinance && !!networkChurchId;
+  const isNetworkUser = roles.some((r: any) => r.role === "network_finance" || r.role === "network_admin");
+  const isReadOnly = isNetworkUser && !!networkChurchId;
 
-  // Guard: /rede/financeiro/:churchId is exclusively for network_finance
-  if (networkChurchId && !isNetworkFinance) {
+  // Guard: /rede/financeiro/:churchId is exclusively for network_admin / network_finance
+  if (networkChurchId && !isNetworkUser) {
     return <Navigate to="/app" replace />;
   }
 

@@ -480,8 +480,8 @@ export default function NetworkDashboard() {
                         return (
                           <TableRow
                             key={c.id}
-                            className={`${!c.is_active ? "opacity-50" : ""}${isNetworkFinance ? " cursor-pointer hover:bg-muted/60" : ""}`}
-                            onClick={isNetworkFinance ? () => navigate(`/rede/financeiro/${c.id}`) : undefined}
+                            className={`${!c.is_active ? "opacity-50" : ""}${isNetworkUser ? " cursor-pointer hover:bg-muted/60" : ""}`}
+                            onClick={isNetworkUser ? () => navigate(`/rede/financeiro/${c.id}`) : undefined}
                           >
                             <TableCell className="font-medium">{c.name}</TableCell>
                             <TableCell className="text-right">{c.member_count}</TableCell>
