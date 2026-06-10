@@ -202,16 +202,14 @@ export function Sidebar() {
   const menuItems = allMenuItems.filter((item) => {
     if (!item.allowedRoles) return true;
 
-    const roleOk = item.allowedRoles.some((role) => userRoles.includes(role));
-    if (!roleOk) return false;
-
-    // Granular module permissions: if the user's role has an explicit permissions list,
-    // only show items whose path is covered by that list.
+    // When granular permissions exist, they are the sole authority — skip the
+    // hardcoded allowedRoles gate so modules added via the permissions editor
+    // actually show up regardless of the role's original whitelist.
     if (userPermissions !== null) {
       return pathAllowedByPermissions(item.path, userPermissions);
     }
 
-    return true;
+    return item.allowedRoles.some((role) => userRoles.includes(role));
   });
 
   const filteredMenuItems = hideFinancial
