@@ -18,9 +18,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Calendar, Users, Heart, DollarSign, Pencil, Percent, Eye, Loader2, AlertCircle } from "lucide-react";
+import { Calendar, Users, Heart, DollarSign, Pencil, Percent, Eye, Loader2, AlertCircle, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -36,6 +41,7 @@ interface CellReportsOverviewProps {
   onEditReport?: (report: CellReport) => void;
   onReportUpdated?: () => void;
   isLeader?: boolean;
+  canDelete?: boolean;
 }
 
 function getMonthOptions() {
@@ -58,6 +64,7 @@ export function CellReportsOverview({
   onEditReport,
   onReportUpdated,
   isLeader = false,
+  canDelete = false,
 }: CellReportsOverviewProps) {
   const [selectedCellId, setSelectedCellId] = useState<string>("all");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
@@ -65,6 +72,8 @@ export function CellReportsOverview({
   const [correctingId, setCorrectingId] = useState<string | null>(null);
   const [correctingValue, setCorrectingValue] = useState<string>("");
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [deletingReport, setDeletingReport] = useState<CellReport | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleCorrigir = (report: CellReport) => {
@@ -91,6 +100,22 @@ export function CellReportsOverview({
       onReportUpdated?.();
     }
     setSavingId(null);
+  };
+
+  const handleDelete = async () => {
+    if (!deletingReport) return;
+    setDeletingId(deletingReport.id);
+    const { data, error } = await supabase.rpc("excluir_relatorio_celula", {
+      p_relatorio_id: deletingReport.id,
+    });
+    if (error || (data as any)?.error) {
+      toast({ title: "Erro ao excluir", description: error?.message ?? (data as any)?.error, variant: "destructive" });
+    } else {
+      toast({ title: "Relatório excluído" });
+      onReportUpdated?.();
+    }
+    setDeletingId(null);
+    setDeletingReport(null);
   };
 
   const filteredReports = useMemo(() => {
@@ -424,6 +449,16 @@ export function CellReportsOverview({
                                 <Pencil className="w-4 h-4" />
                               </Button>
                             )}
+                            {!isCorrecting && canDelete && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => setDeletingReport(report)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       )}
@@ -436,6 +471,30 @@ export function CellReportsOverview({
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!deletingReport} onOpenChange={(open) => { if (!open) setDeletingReport(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir relatório</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o relatório de{" "}
+              <strong>{deletingReport ? formatReportDate(deletingReport.report_date) : ""}</strong>
+              {" "}da célula <strong>{deletingReport ? getCellName(deletingReport.cell_id) : ""}</strong>?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={!!deletingId}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={!!deletingId}
+              onClick={handleDelete}
+            >
+              {deletingId ? <Loader2 className="w-4 h-4 animate-spin" /> : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

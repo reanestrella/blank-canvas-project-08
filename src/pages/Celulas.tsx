@@ -482,6 +482,7 @@ export default function Celulas() {
               onEditReport={setEditingReport}
               onReportUpdated={fetchReports}
               isLeader={isOnlyCellLeader}
+              canDelete={hasRole("pastor") || hasRole("secretario")}
             />
           </TabsContent>
 
