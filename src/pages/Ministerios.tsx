@@ -25,6 +25,7 @@ import { WorshipSetlist } from "@/components/worship/WorshipSetlist";
 import { WorshipDashboard } from "@/components/worship/WorshipDashboard";
 import { KidsStudiesSection } from "@/components/ministry/KidsStudiesSection";
 import { useAuth } from "@/contexts/AuthContext";
+import { defaultPermissionsFor } from "@/lib/permissions";
 import type { Ministry } from "@/hooks/useMinistries";
 
 const iconMap: Record<string, any> = {
@@ -51,12 +52,14 @@ export default function Ministerios() {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [selectedMinistry, setSelectedMinistry] = useState<Ministry | null>(null);
 
-  const { profile, hasRole, isAdmin } = useAuth();
+  const { profile, roles, hasRole, isAdmin } = useAuth();
   const churchId = profile?.church_id;
   const memberId = profile?.member_id;
 
-  const canCreateMinistry = isAdmin();
-  const isLeaderOnly = hasRole("lider_ministerio") && !isAdmin();
+  const allPerms = Array.from(new Set(roles.flatMap((r: any) => r.permissions ?? defaultPermissionsFor(r.role))));
+  const hasMinisteriosPermission = allPerms.includes("ministerios");
+  const canCreateMinistry = isAdmin() || hasMinisteriosPermission;
+  const isLeaderOnly = hasRole("lider_ministerio") && !canCreateMinistry;
 
   const { ministries: allMinistries, isLoading, createMinistry, updateMinistry, deleteMinistry } = useMinistries(churchId || undefined);
   const { members } = useMembers(churchId || undefined);
