@@ -181,7 +181,7 @@ export function useCells(churchId?: string, leaderUserId?: string | null) {
     try {
       let query = supabase
         .from("cell_reports")
-        .select("*, cell:cells!inner(church_id, leader_user_id)")
+        .select("id, cell_id, report_date, attendance, visitors, conversions, offering, notes, created_by, created_at, oferta_status, cell:cells!inner(church_id, leader_user_id)")
         .eq("cell.church_id", churchId)
         .order("report_date", { ascending: false });
       

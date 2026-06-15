@@ -483,6 +483,7 @@ export default function Celulas() {
               onReportUpdated={fetchReports}
               isLeader={isOnlyCellLeader}
               canDelete={hasRole("pastor") || hasRole("secretario")}
+              currentUserId={user?.id}
             />
           </TabsContent>
 

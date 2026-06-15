@@ -42,6 +42,7 @@ interface CellReportsOverviewProps {
   onReportUpdated?: () => void;
   isLeader?: boolean;
   canDelete?: boolean;
+  currentUserId?: string;
 }
 
 function getMonthOptions() {
@@ -65,6 +66,7 @@ export function CellReportsOverview({
   onReportUpdated,
   isLeader = false,
   canDelete = false,
+  currentUserId,
 }: CellReportsOverviewProps) {
   const [selectedCellId, setSelectedCellId] = useState<string>("all");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
@@ -373,13 +375,14 @@ export function CellReportsOverview({
                 <TableBody>
                   {filteredReports.map((report) => {
                     const isRejected = report.oferta_status === "rejeitada";
+                    const isOwner = !!currentUserId && report.created_by === currentUserId;
                     const isCorrecting = correctingId === report.id;
                     return (
                     <TableRow key={report.id} className={isRejected ? "bg-destructive/5" : undefined}>
                       <TableCell className="font-medium">
                         <div className="flex flex-col gap-1">
                           {formatReportDate(report.report_date)}
-                          {isLeader && isRejected && (
+                          {isRejected && isOwner && (
                             <Badge variant="destructive" className="w-fit gap-1 text-xs">
                               <AlertCircle className="w-3 h-3" /> Oferta rejeitada
                             </Badge>
@@ -406,7 +409,7 @@ export function CellReportsOverview({
                       {onEditReport && (
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            {isLeader && isRejected && !isCorrecting && (
+                            {isRejected && isOwner && !isCorrecting && (
                               <Button
                                 variant="outline"
                                 size="sm"
