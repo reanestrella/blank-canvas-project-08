@@ -27,15 +27,9 @@ export function OfertasCelulasTab({ churchId }: Props) {
 
   const fetchPending = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    const { data: reports, error } = await supabase
       .from("cell_reports")
-      .select(`
-        id,
-        report_date,
-        offering,
-        oferta_status,
-        cells ( name, cell_leaders ( profiles ( full_name ) ) )
-      `)
+      .select("id, report_date, offering, oferta_status, cell_id, created_by, cells ( name )")
       .eq("church_id", churchId)
       .eq("oferta_status", "pendente")
       .gt("offering", 0)
@@ -43,18 +37,31 @@ export function OfertasCelulasTab({ churchId }: Props) {
 
     if (error) {
       toast({ title: "Erro ao buscar ofertas", description: error.message, variant: "destructive" });
-    } else {
-      setItems(
-        (data ?? []).map((r: any) => ({
-          id: r.id,
-          report_date: r.report_date,
-          offering: Number(r.offering),
-          oferta_status: r.oferta_status,
-          cell_name: r.cells?.name ?? "—",
-          leader_name: r.cells?.cell_leaders?.[0]?.profiles?.full_name ?? null,
-        }))
-      );
+      setLoading(false);
+      return;
     }
+
+    // Fetch creator names via profiles.user_id
+    const creatorIds = [...new Set((reports ?? []).map((r: any) => r.created_by).filter(Boolean))];
+    const profileMap = new Map<string, string>();
+    if (creatorIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", creatorIds);
+      (profiles ?? []).forEach((p: any) => profileMap.set(p.user_id, p.full_name));
+    }
+
+    setItems(
+      (reports ?? []).map((r: any) => ({
+        id: r.id,
+        report_date: r.report_date,
+        offering: Number(r.offering),
+        oferta_status: r.oferta_status,
+        cell_name: (r.cells as any)?.name ?? "—",
+        leader_name: r.created_by ? (profileMap.get(r.created_by) ?? null) : null,
+      }))
+    );
     setLoading(false);
   }, [churchId, toast]);
 
