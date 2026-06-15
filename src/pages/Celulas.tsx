@@ -480,6 +480,7 @@ export default function Celulas() {
               getMemberName={getMemberName}
               cellMemberCounts={cellMemberCounts}
               onEditReport={setEditingReport}
+              onReportUpdated={fetchReports}
               isLeader={isOnlyCellLeader}
             />
           </TabsContent>

@@ -32,6 +32,7 @@ export interface CellReport {
   notes: string | null;
   created_by: string | null;
   created_at: string;
+  oferta_status?: string | null;
 }
 
 export interface CreateCellData {

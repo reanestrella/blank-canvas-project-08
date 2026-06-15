@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -17,7 +18,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Calendar, Users, Heart, TrendingUp, DollarSign, Pencil, Percent, Eye } from "lucide-react";
+import { Calendar, Users, Heart, DollarSign, Pencil, Percent, Eye, Loader2, AlertCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -31,6 +34,7 @@ interface CellReportsOverviewProps {
   getMemberName: (id: string | null) => string | null;
   cellMemberCounts: Record<string, number>;
   onEditReport?: (report: CellReport) => void;
+  onReportUpdated?: () => void;
   isLeader?: boolean;
 }
 
@@ -52,11 +56,42 @@ export function CellReportsOverview({
   getMemberName,
   cellMemberCounts,
   onEditReport,
+  onReportUpdated,
   isLeader = false,
 }: CellReportsOverviewProps) {
   const [selectedCellId, setSelectedCellId] = useState<string>("all");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
   const monthOptions = useMemo(() => getMonthOptions(), []);
+  const [correctingId, setCorrectingId] = useState<string | null>(null);
+  const [correctingValue, setCorrectingValue] = useState<string>("");
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const handleCorrigir = (report: CellReport) => {
+    setCorrectingId(report.id);
+    setCorrectingValue(report.offering ? String(report.offering) : "");
+  };
+
+  const handleSaveCorrecao = async (reportId: string) => {
+    const valor = parseFloat(correctingValue.replace(",", "."));
+    if (isNaN(valor) || valor < 0) {
+      toast({ title: "Valor inválido", variant: "destructive" });
+      return;
+    }
+    setSavingId(reportId);
+    const { data, error } = await supabase.rpc("corrigir_oferta_celula", {
+      p_relatorio_id: reportId,
+      p_novo_valor: valor,
+    });
+    if (error || (data as any)?.error) {
+      toast({ title: "Erro", description: error?.message ?? (data as any)?.error, variant: "destructive" });
+    } else {
+      toast({ title: "Oferta reenviada", description: "O valor foi atualizado e voltou para análise do tesoureiro." });
+      setCorrectingId(null);
+      onReportUpdated?.();
+    }
+    setSavingId(null);
+  };
 
   const filteredReports = useMemo(() => {
     let filtered = reports;
@@ -311,9 +346,21 @@ export function CellReportsOverview({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredReports.map((report) => (
-                    <TableRow key={report.id}>
-                      <TableCell className="font-medium">{formatReportDate(report.report_date)}</TableCell>
+                  {filteredReports.map((report) => {
+                    const isRejected = report.oferta_status === "rejeitada";
+                    const isCorrecting = correctingId === report.id;
+                    return (
+                    <TableRow key={report.id} className={isRejected ? "bg-destructive/5" : undefined}>
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col gap-1">
+                          {formatReportDate(report.report_date)}
+                          {isLeader && isRejected && (
+                            <Badge variant="destructive" className="w-fit gap-1 text-xs">
+                              <AlertCircle className="w-3 h-3" /> Oferta rejeitada
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell><Badge variant="outline">{getCellName(report.cell_id)}</Badge></TableCell>
                       <TableCell className="text-center"><span className="font-semibold text-success">{report.attendance}</span></TableCell>
                       <TableCell className="text-center"><span className="font-semibold text-secondary">{report.visitors}</span></TableCell>
@@ -333,13 +380,56 @@ export function CellReportsOverview({
                       <TableCell className="max-w-[200px] truncate text-muted-foreground">{report.notes || "-"}</TableCell>
                       {onEditReport && (
                         <TableCell>
-                          <Button variant="ghost" size="icon" onClick={() => onEditReport(report)}>
-                            <Pencil className="w-4 h-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            {isLeader && isRejected && !isCorrecting && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                                onClick={() => handleCorrigir(report)}
+                              >
+                                Corrigir oferta
+                              </Button>
+                            )}
+                            {isCorrecting && (
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">R$</span>
+                                <Input
+                                  className="h-7 w-24 text-xs"
+                                  value={correctingValue}
+                                  onChange={(e) => setCorrectingValue(e.target.value)}
+                                  placeholder="0,00"
+                                  autoFocus
+                                />
+                                <Button
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  disabled={savingId === report.id}
+                                  onClick={() => handleSaveCorrecao(report.id)}
+                                >
+                                  {savingId === report.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "Enviar"}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => setCorrectingId(null)}
+                                >
+                                  Cancelar
+                                </Button>
+                              </div>
+                            )}
+                            {!isCorrecting && (
+                              <Button variant="ghost" size="icon" onClick={() => onEditReport(report)}>
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       )}
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
