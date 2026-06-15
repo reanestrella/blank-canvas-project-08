@@ -66,7 +66,7 @@ const allMenuItems: MenuItem[] = [
     icon: Heart,
     label: "Ministérios",
     path: "/ministerios",
-    allowedRoles: ["pastor", "lider_ministerio"],
+    allowedRoles: ["pastor", "secretario", "lider_ministerio"],
   },
   {
     icon: Grid3X3,
