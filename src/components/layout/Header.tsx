@@ -117,10 +117,15 @@ export function Header({ onMenuClick }: HeaderProps) {
                   <DropdownMenuItem
                     key={n.id}
                     className={`flex flex-col items-start gap-1 p-3 cursor-pointer ${!n.is_read ? "bg-primary/5" : ""}`}
-                    onClick={() => markAsRead(n.id)}
+                    onClick={() => {
+                      markAsRead(n.id, n.source);
+                      if (n.action_url) navigate(n.action_url);
+                    }}
                   >
                     <div className="flex items-center gap-2 w-full">
-                      <span className="font-medium text-sm flex-1">{n.member_name}</span>
+                      <span className="font-medium text-sm flex-1">
+                        {n.title || n.member_name}
+                      </span>
                       {!n.is_read && <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />}
                     </div>
                     <span className="text-sm text-muted-foreground line-clamp-2">
