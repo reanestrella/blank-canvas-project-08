@@ -17,9 +17,10 @@ interface PendingOffering {
 
 interface Props {
   churchId: string;
+  onOfferingConfirmed?: () => void;
 }
 
-export function OfertasCelulasTab({ churchId }: Props) {
+export function OfertasCelulasTab({ churchId, onOfferingConfirmed }: Props) {
   const [items, setItems] = useState<PendingOffering[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
@@ -88,6 +89,7 @@ export function OfertasCelulasTab({ churchId }: Props) {
           : "A oferta foi descartada.",
       });
       setItems((prev) => prev.filter((i) => i.id !== id));
+      if (acao === "confirmar") onOfferingConfirmed?.();
     }
     setProcessing(null);
   };

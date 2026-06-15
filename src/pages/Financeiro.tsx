@@ -738,7 +738,7 @@ export default function Financeiro() {
 
           {canApproveOfferings && churchId && (
             <TabsContent value="ofertas-celulas" className="mt-6">
-              <OfertasCelulasTab churchId={churchId} />
+              <OfertasCelulasTab churchId={churchId} onOfferingConfirmed={fetchTransactions} />
             </TabsContent>
           )}
 
