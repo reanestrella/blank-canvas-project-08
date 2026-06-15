@@ -204,6 +204,9 @@ export function CellReportsOverview({
     }
   };
 
+  console.log('[CellReportsOverview] currentUserId:', currentUserId);
+  console.log('[CellReportsOverview] reports oferta_status/created_by:', reports?.map(r => ({ id: r.id, oferta_status: r.oferta_status, created_by: r.created_by })));
+
   return (
     <div className="space-y-6">
       {/* Filters */}
