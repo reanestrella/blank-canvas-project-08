@@ -56,7 +56,7 @@ export const MODULE_PATH: Record<ModuleKey, string> = {
 export const DEFAULT_PERMISSIONS: Record<string, ModuleKey[]> = {
   pastor: Object.keys(MODULE_LABELS) as ModuleKey[], // tudo
   tesoureiro: ["financeiro", "patrimonio", "tesouraria"],
-  secretario: ["secretaria", "consolidacao", "eventos", "lembretes", "ensino"],
+  secretario: ["secretaria", "ministerios", "consolidacao", "eventos", "lembretes", "ensino"],
   lider_celula: ["celulas"],
   vice_lider_celula: ["celulas"],
   lider_ministerio: ["ministerios"],
