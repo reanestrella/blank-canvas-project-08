@@ -299,9 +299,11 @@ export default function Celulas() {
   const handleCreateReport = async (data: CreateCellReportData) => {
     const result = await createReport(data);
     if (!result.error) {
-      // Register offering as transaction if account is set
-      if (data.offering && data.offering > 0 && offeringAccountId && offeringAccountId !== "none") {
-        await registerOfferingTransaction(data.cell_id, data.offering, data.report_date);
+      if (data.offering && data.offering > 0) {
+        toast({
+          title: "Relatório enviado",
+          description: "A oferta de R$ " + data.offering.toFixed(2) + " aguarda confirmação do tesoureiro.",
+        });
       }
       fetchReports();
     }

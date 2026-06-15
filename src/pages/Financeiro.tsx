@@ -30,6 +30,7 @@ import { FinancialFilters, PeriodMode } from "@/components/financial/FinancialFi
 import { ExtratoTab } from "@/components/financial/ExtratoTab";
 import { FinancialImportModal } from "@/components/financial/FinancialImportModal";
 import { PatrimonioTab } from "@/components/patrimonio/PatrimonioTab";
+import { OfertasCelulasTab } from "@/components/financial/OfertasCelulasTab";
 import { FinancialChartsTab } from "@/components/financial/FinancialChartsTab";
 import { FinancialSummaryTab } from "@/components/financial/FinancialSummaryTab";
 import { PercentagesTab } from "@/components/financial/PercentagesTab";
@@ -69,6 +70,9 @@ export default function Financeiro() {
   const networkChurchId = params.churchId ?? null;
   const isNetworkUser = roles.some((r: any) => r.role === "network_finance" || r.role === "network_admin");
   const isReadOnly = isNetworkUser && !!networkChurchId;
+  const canApproveOfferings = !isReadOnly && roles.some((r: any) =>
+    r.role === "tesoureiro" || r.role === "pastor" || r.role === "admin"
+  );
 
   // Guard: /rede/financeiro/:churchId is exclusively for network_admin / network_finance
   if (networkChurchId && !isNetworkUser) {
@@ -410,6 +414,9 @@ export default function Financeiro() {
             <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
             <TabsTrigger value="patrimonio">Patrimônio</TabsTrigger>
             <TabsTrigger value="categories">Categorias</TabsTrigger>
+            {canApproveOfferings && (
+              <TabsTrigger value="ofertas-celulas">Ofertas de Células</TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6 mt-6">
@@ -728,6 +735,12 @@ export default function Financeiro() {
               />
             )}
           </TabsContent>
+
+          {canApproveOfferings && churchId && (
+            <TabsContent value="ofertas-celulas" className="mt-6">
+              <OfertasCelulasTab churchId={churchId} />
+            </TabsContent>
+          )}
 
         </Tabs>
       </div>
