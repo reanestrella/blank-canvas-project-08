@@ -385,7 +385,7 @@ export function CellReportsOverview({
                       <TableCell className="font-medium">
                         <div className="flex flex-col gap-1">
                           {formatReportDate(report.report_date)}
-                          {isRejected && isOwner && (
+                          {isRejected && (
                             <Badge variant="destructive" className="w-fit gap-1 text-xs">
                               <AlertCircle className="w-3 h-3" /> Oferta rejeitada
                             </Badge>
@@ -412,7 +412,7 @@ export function CellReportsOverview({
                       {onEditReport && (
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            {isRejected && isOwner && !isCorrecting && (
+                            {isRejected && !isCorrecting && (
                               <Button
                                 variant="outline"
                                 size="sm"
