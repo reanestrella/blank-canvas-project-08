@@ -56,7 +56,7 @@ export function AppLayout({ children, requireChurch = false }: AppLayoutProps) {
   }
 
   // 🔒 PROTEÇÃO POR PERMISSIONS GRANULARES (não bloqueia rotas neutras)
-  const NEUTRAL_PATHS = ["/meu-app", "/perfil"];
+  const NEUTRAL_PATHS = ["/meu-app", "/perfil", "/configuracoes"];
   const isNeutral = NEUTRAL_PATHS.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"));
   if (!isSuperAdmin && !isNeutral && roles && roles.length > 0) {
     const hasPastor = roles.some((r: any) => r.role === "pastor");
