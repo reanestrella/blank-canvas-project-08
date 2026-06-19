@@ -318,8 +318,9 @@ export function Sidebar() {
       <div className="px-3 pb-4 pt-4 space-y-1 border-t border-sidebar-border">
         {bottomItems.filter((item) => {
           if (!item.allowedRoles) return true;
-          if (userPermissions !== null) return pathAllowedByPermissions(item.path, userPermissions);
-          return item.allowedRoles.some((role) => userRoles.includes(role));
+          const roleAllows = item.allowedRoles.some((role) => userRoles.includes(role));
+          if (userPermissions !== null) return pathAllowedByPermissions(item.path, userPermissions) || roleAllows;
+          return roleAllows;
         }).map((item) => (
           <Link
             key={item.path}

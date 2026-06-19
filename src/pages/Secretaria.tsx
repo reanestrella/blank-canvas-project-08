@@ -39,7 +39,9 @@ import {
 import {
   Search, Plus, Filter, MoreHorizontal, Users, UserPlus, Heart,
   Droplets, Download, Loader2, Eye, UserCheck, Baby, Upload, Smartphone, Trash2, AlertTriangle,
+  FileText, Printer, Cake, ChevronLeft, ChevronRight,
 } from "lucide-react";
+import { exportToPdf } from "@/lib/pdfExport";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAppUsersCount } from "@/hooks/useAppUsersCount";
@@ -91,8 +93,9 @@ export default function Secretaria() {
   
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [birthdayMonth, setBirthdayMonth] = useState(now.getMonth());
 
-  const { profile } = useAuth();
+  const { profile, church } = useAuth();
   const churchId = profile?.church_id;
   const { congregations, selectedCongregation, setSelectedCongregation } = useCongregations(churchId || undefined);
   const { members, isLoading, createMember, updateMember, deleteMember, fetchMembers } = useMembers(churchId || undefined);
@@ -175,6 +178,33 @@ export default function Secretaria() {
     });
   }, [members, searchTerm, activeTab, networkFilter, selectedCongregation, periodMode, filterMonth, filterYear]);
 
+  const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+  const birthdayList = useMemo(() => {
+    return members
+      .filter(m => m.is_active && m.birth_date)
+      .filter(m => new Date(m.birth_date! + "T12:00:00").getMonth() === birthdayMonth)
+      .sort((a, b) => new Date(a.birth_date! + "T12:00:00").getDate() - new Date(b.birth_date! + "T12:00:00").getDate());
+  }, [members, birthdayMonth]);
+
+  const handlePrintBirthdays = () => {
+    exportToPdf({
+      title: `Aniversariantes de ${MONTHS[birthdayMonth]} — ${church?.name ?? "Igreja"}`,
+      churchName: church?.name,
+      columns: [
+        { header: "Nome", dataKey: "name" },
+        { header: "Aniversário", dataKey: "date", align: "center" },
+        { header: "Telefone", dataKey: "phone" },
+      ],
+      rows: birthdayList.map(m => ({
+        name: m.full_name,
+        date: new Date(m.birth_date! + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+        phone: m.phone ?? "",
+      })),
+      filename: `aniversariantes_${MONTHS[birthdayMonth].toLowerCase()}.pdf`,
+    });
+  };
+
   // Stats by type — unified hook (single source of truth). Period filter aplicado.
   const stats = usePeopleStats(members as any, {
     congregationId: selectedCongregation,
@@ -226,6 +256,34 @@ export default function Secretaria() {
     a.download = `membros_export_${date}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleExportPDF = () => {
+    const statusLabels: Record<string, string> = {
+      visitante: "Visitante", novo_convertido: "Decidido", membro: "Membro",
+      lider: "Líder", discipulador: "Discipulador", crianca: "Criança",
+    };
+    exportToPdf({
+      title: `Lista de Membros — ${church?.name ?? "Igreja"}`,
+      churchName: church?.name,
+      columns: [
+        { header: "Nome", dataKey: "name" },
+        { header: "Telefone", dataKey: "phone" },
+        { header: "Bairro", dataKey: "neighborhood" },
+        { header: "Cidade", dataKey: "city" },
+        { header: "Status", dataKey: "status" },
+        { header: "Cadastro", dataKey: "created_at", align: "center" },
+      ],
+      rows: filteredMembers.map(m => ({
+        name: m.full_name,
+        phone: m.phone ?? "",
+        neighborhood: m.neighborhood ?? "",
+        city: m.city ?? "",
+        status: statusLabels[m.spiritual_status] ?? m.spiritual_status,
+        created_at: m.created_at ? new Date(m.created_at).toLocaleDateString("pt-BR") : "",
+      })),
+      filename: `membros_${new Date().toISOString().split("T")[0]}.pdf`,
+    });
   };
 
   const handleCreateMember = async (data: CreateMemberData) => {
@@ -398,6 +456,7 @@ export default function Secretaria() {
             <TabsTrigger value="decididos">Decididos ({stats.decididos})</TabsTrigger>
             <TabsTrigger value="visitantes">Visitantes ({stats.visitantes})</TabsTrigger>
             <TabsTrigger value="inativos">Inativos ({stats.inativos})</TabsTrigger>
+            <TabsTrigger value="aniversariantes">Aniversariantes</TabsTrigger>
             <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
             <TabsTrigger value="usuarios">Usuários do App</TabsTrigger>
           </TabsList>
@@ -430,6 +489,10 @@ export default function Secretaria() {
                     <Button variant="outline" size="sm" onClick={handleExportCSV}>
                       <Download className="w-4 h-4 mr-2" />
                       Exportar
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleExportPDF}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      PDF
                     </Button>
                   </div>
                 </div>
@@ -572,6 +635,66 @@ export default function Secretaria() {
               </div>
             </TabsContent>
           ))}
+
+          <TabsContent value="aniversariantes" className="mt-4">
+            <div className="card-elevated">
+              <div className="p-4 border-b flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Cake className="w-4 h-4 text-secondary" />
+                  <span className="font-medium text-sm">Aniversariantes de {MONTHS[birthdayMonth]}</span>
+                  <span className="text-xs text-muted-foreground">({birthdayList.length})</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setBirthdayMonth(m => (m - 1 + 12) % 12)}>
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <Select value={String(birthdayMonth)} onValueChange={v => setBirthdayMonth(Number(v))}>
+                    <SelectTrigger className="w-[130px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MONTHS.map((m, i) => (
+                        <SelectItem key={i} value={String(i)}>{m}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setBirthdayMonth(m => (m + 1) % 12)}>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handlePrintBirthdays} disabled={birthdayList.length === 0}>
+                    <Printer className="w-4 h-4 mr-1" /> Imprimir
+                  </Button>
+                </div>
+              </div>
+              {birthdayList.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <Cake className="w-8 h-8 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">Nenhum aniversariante em {MONTHS[birthdayMonth]}</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead className="w-32 text-center">Aniversário</TableHead>
+                      <TableHead>Telefone</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {birthdayList.map(m => (
+                      <TableRow key={m.id}>
+                        <TableCell className="font-medium">{m.full_name}</TableCell>
+                        <TableCell className="text-center">
+                          {new Date(m.birth_date! + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{m.phone ?? "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </TabsContent>
 
           <TabsContent value="pendentes" className="mt-4">
             {churchId && <PendingUsersTab churchId={churchId} />}

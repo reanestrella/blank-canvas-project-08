@@ -122,6 +122,7 @@ export default function Celulas() {
   const [cellMemberCounts, setCellMemberCounts] = useState<Record<string, number>>({});
   const [editingReport, setEditingReport] = useState<CellReport | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
+  const [reportCellFilter, setReportCellFilter] = useState<string>("all");
   const [offeringAccountId, setOfferingAccountId] = useState<string>("");
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
@@ -210,26 +211,36 @@ export default function Celulas() {
   };
 
   const filteredReports = useMemo(() => {
-    if (selectedMonth === "all") return reports;
-    return reports.filter(r => r.report_date.startsWith(selectedMonth));
-  }, [reports, selectedMonth]);
+    return reports.filter(r => {
+      if (selectedMonth !== "all" && !r.report_date.startsWith(selectedMonth)) return false;
+      if (reportCellFilter !== "all" && r.cell_id !== reportCellFilter) return false;
+      return true;
+    });
+  }, [reports, selectedMonth, reportCellFilter]);
 
   const handlePrintReports = () => {
     const periodLabel = selectedMonth === "all"
       ? "Todo o período"
       : new Date(selectedMonth + "-01T12:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    const cellName = reportCellFilter !== "all"
+      ? (cells.find(c => c.id === reportCellFilter)?.name ?? "")
+      : null;
+    const titleParts = ["Relatórios de Célula"];
+    if (cellName) titleParts.push(cellName);
+    titleParts.push(periodLabel);
+    const columns = [
+      { header: "Data", dataKey: "date" },
+      ...(cellName ? [] : [{ header: "Célula", dataKey: "cell" }]),
+      { header: "Presentes", dataKey: "attendance", align: "center" as const },
+      { header: "Visitantes", dataKey: "visitors", align: "center" as const },
+      { header: "Conversões", dataKey: "conversions", align: "center" as const },
+      { header: "Oferta (R$)", dataKey: "offering", align: "right" as const },
+      { header: "Observações", dataKey: "notes" },
+    ];
     exportToPdf({
-      title: `Relatórios de Célula — ${periodLabel}`,
+      title: titleParts.join(" — "),
       churchName: church?.name,
-      columns: [
-        { header: "Data", dataKey: "date" },
-        { header: "Célula", dataKey: "cell" },
-        { header: "Presentes", dataKey: "attendance", align: "center" },
-        { header: "Visitantes", dataKey: "visitors", align: "center" },
-        { header: "Conversões", dataKey: "conversions", align: "center" },
-        { header: "Oferta (R$)", dataKey: "offering", align: "right" },
-        { header: "Observações", dataKey: "notes" },
-      ],
+      columns,
       rows: filteredReports.map(r => ({
         date: new Date(r.report_date + "T12:00:00").toLocaleDateString("pt-BR"),
         cell: cells.find(c => c.id === r.cell_id)?.name ?? "",
@@ -239,7 +250,7 @@ export default function Celulas() {
         offering: r.offering ? r.offering.toFixed(2) : "0,00",
         notes: r.notes ?? "",
       })),
-      filename: `relatorios_celula_${selectedMonth === "all" ? "total" : selectedMonth}.pdf`,
+      filename: `relatorios_celula_${reportCellFilter !== "all" ? reportCellFilter.slice(0, 8) + "_" : ""}${selectedMonth === "all" ? "total" : selectedMonth}.pdf`,
     });
   };
 
@@ -504,7 +515,18 @@ export default function Celulas() {
           </TabsContent>
 
           <TabsContent value="reports" className="mt-4">
-            <div className="flex justify-end mb-3">
+            <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+              <Select value={reportCellFilter} onValueChange={setReportCellFilter}>
+                <SelectTrigger className="w-[200px] h-8 text-xs">
+                  <SelectValue placeholder="Filtrar por célula..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as células</SelectItem>
+                  {cells.filter(c => c.is_active).map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button variant="outline" size="sm" onClick={handlePrintReports} disabled={filteredReports.length === 0}>
                 <Printer className="w-4 h-4 mr-1" /> Imprimir Relatórios
               </Button>
