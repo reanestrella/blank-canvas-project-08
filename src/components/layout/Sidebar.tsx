@@ -146,7 +146,7 @@ const bottomItems: MenuItem[] = [
     icon: Settings,
     label: "Configurações",
     path: "/configuracoes",
-    allowedRoles: ["pastor"],
+    allowedRoles: ["pastor", "secretario"],
   },
 ];
 
@@ -316,7 +316,11 @@ export function Sidebar() {
 
       {/* FOOTER */}
       <div className="px-3 pb-4 pt-4 space-y-1 border-t border-sidebar-border">
-        {bottomItems.map((item) => (
+        {bottomItems.filter((item) => {
+          if (!item.allowedRoles) return true;
+          if (userPermissions !== null) return pathAllowedByPermissions(item.path, userPermissions);
+          return item.allowedRoles.some((role) => userRoles.includes(role));
+        }).map((item) => (
           <Link
             key={item.path}
             to={item.path}

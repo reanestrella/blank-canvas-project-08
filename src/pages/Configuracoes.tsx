@@ -98,7 +98,9 @@ export default function Configuracoes() {
   const [churchPhone, setChurchPhone] = useState("");
   const [churchAddress, setChurchAddress] = useState("");
   
-  const { profile, refreshChurch, user } = useAuth();
+  const { profile, refreshChurch, user, roles } = useAuth();
+  const isSecretario = (roles ?? []).some((r: any) => r.role === "secretario") &&
+    !(roles ?? []).some((r: any) => r.role === "pastor");
   const { toast } = useToast();
   const churchId = profile?.church_id;
   const { invitations, isLoading, createInvitation, deleteInvitation, getInviteLink } = useInvitations();
@@ -203,12 +205,14 @@ export default function Configuracoes() {
           <p className="text-muted-foreground">Gerencie sua igreja e preferências do sistema</p>
         </div>
 
-        <Tabs defaultValue="church">
+        <Tabs defaultValue={isSecretario ? "filiais" : "church"}>
           <TabsList className="w-full md:w-auto flex-wrap h-auto gap-1">
-            <TabsTrigger value="church" className="gap-2">
-              <Church className="w-4 h-4" />
-              <span className="hidden sm:inline">Igreja</span>
-            </TabsTrigger>
+            {!isSecretario && (
+              <TabsTrigger value="church" className="gap-2">
+                <Church className="w-4 h-4" />
+                <span className="hidden sm:inline">Igreja</span>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="filiais" className="gap-2">
               <Building className="w-4 h-4" />
               <span className="hidden sm:inline">Filiais</span>
@@ -221,20 +225,22 @@ export default function Configuracoes() {
               <Bell className="w-4 h-4" />
               <span className="hidden sm:inline">Notificações</span>
             </TabsTrigger>
-            <TabsTrigger value="plan" className="gap-2">
-              <Crown className="w-4 h-4" />
-              <span className="hidden sm:inline">Plano</span>
-            </TabsTrigger>
+            {!isSecretario && (
+              <TabsTrigger value="plan" className="gap-2">
+                <Crown className="w-4 h-4" />
+                <span className="hidden sm:inline">Plano</span>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="security" className="gap-2">
               <Shield className="w-4 h-4" />
               <span className="hidden sm:inline">Segurança</span>
             </TabsTrigger>
-            <TabsTrigger value="reset" className="gap-2 text-destructive data-[state=active]:text-destructive">
-              <AlertTriangle className="w-4 h-4" />
-              <span className="hidden sm:inline">Resetar Dados</span>
-            </TabsTrigger>
-
-
+            {!isSecretario && (
+              <TabsTrigger value="reset" className="gap-2 text-destructive data-[state=active]:text-destructive">
+                <AlertTriangle className="w-4 h-4" />
+                <span className="hidden sm:inline">Resetar Dados</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="church" className="space-y-6 mt-6">

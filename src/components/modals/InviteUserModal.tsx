@@ -35,6 +35,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { CreateInvitationData, Invitation } from "@/hooks/useInvitations";
 import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   MODULE_LABELS,
   defaultPermissionsFor,
@@ -77,14 +78,22 @@ interface InviteUserModalProps {
   churchId?: string;
 }
 
-export function InviteUserModal({ 
-  open, 
-  onOpenChange, 
-  onSubmit, 
+export function InviteUserModal({
+  open,
+  onOpenChange,
+  onSubmit,
   getInviteLink,
   congregations = [],
   churchId,
 }: InviteUserModalProps) {
+  const { roles: authRoles } = useAuth();
+  const isSecretario = (authRoles ?? []).some((r: any) => r.role === "secretario") &&
+    !(authRoles ?? []).some((r: any) => r.role === "pastor");
+
+  const availableRoles = Object.entries(roleLabels).filter(([value]) =>
+    !(isSecretario && value === "tesoureiro")
+  );
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -270,7 +279,7 @@ export function InviteUserModal({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.entries(roleLabels).map(([value, label]) => (
+                        {availableRoles.map(([value, label]) => (
                           <SelectItem key={value} value={value}>
                             {label}
                           </SelectItem>
