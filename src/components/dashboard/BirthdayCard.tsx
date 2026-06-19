@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { Cake, Gift } from "lucide-react";
+import { Cake, Gift, Printer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -11,17 +12,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { exportToPdf } from "@/lib/pdfExport";
 
 interface Member {
   id: string;
   full_name: string;
   birth_date: string | null;
   photo_url: string | null;
+  phone?: string | null;
 }
 
 interface BirthdayCardProps {
-  /** All active members with optional birth_date. Card filters internally. */
   members: Member[];
+  churchName?: string;
 }
 
 const MONTHS = [
@@ -35,9 +38,30 @@ function parseLocalDate(s: string): Date {
   return new Date(s.length === 10 ? s + "T12:00:00" : s);
 }
 
-export function BirthdayCard({ members }: BirthdayCardProps) {
+export function BirthdayCard({ members, churchName }: BirthdayCardProps) {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+
+  const handlePrintMonth = () => {
+    const list = members
+      .filter((m) => m.birth_date && parseLocalDate(m.birth_date).getMonth() === selectedMonth)
+      .sort((a, b) => parseLocalDate(a.birth_date!).getDate() - parseLocalDate(b.birth_date!).getDate());
+    exportToPdf({
+      title: `Aniversariantes de ${MONTHS[selectedMonth]}`,
+      churchName,
+      columns: [
+        { header: "Nome", dataKey: "name" },
+        { header: "Aniversário", dataKey: "date" },
+        { header: "Telefone", dataKey: "phone" },
+      ],
+      rows: list.map((m) => ({
+        name: m.full_name,
+        date: m.birth_date ? parseLocalDate(m.birth_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "",
+        phone: m.phone ?? "",
+      })),
+      filename: `aniversariantes_${MONTHS[selectedMonth].toLowerCase()}.pdf`,
+    });
+  };
 
   const formatDate = (dateStr: string) => {
     const date = parseLocalDate(dateStr);
@@ -108,16 +132,21 @@ export function BirthdayCard({ members }: BirthdayCardProps) {
             <Gift className="w-5 h-5 text-secondary" />
             Aniversariantes
           </CardTitle>
-          <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}>
-            <SelectTrigger className="w-[140px] h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {MONTHS.map((m, i) => (
-                <SelectItem key={i} value={String(i)}>{m}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}>
+              <SelectTrigger className="w-[130px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MONTHS.map((m, i) => (
+                  <SelectItem key={i} value={String(i)}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" onClick={handlePrintMonth} className="h-8 px-2">
+              <Printer className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>

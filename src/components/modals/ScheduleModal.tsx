@@ -20,7 +20,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Check, Loader2, Plus, Trash2, UserPlus, X, Music, ExternalLink, Pencil } from "lucide-react";
+import { Calendar, Check, Loader2, Plus, Trash2, UserPlus, X, Music, ExternalLink, Pencil, Printer } from "lucide-react";
+import { exportToPdf } from "@/lib/pdfExport";
 import { useMinistrySchedules, useScheduleVolunteers } from "@/hooks/useMinistrySchedules";
 import { useMinistryVolunteers } from "@/hooks/useMinistryVolunteers";
 import { useMinistryRoles } from "@/hooks/useMinistryRoles";
@@ -54,7 +55,7 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
   const [scheduleSongs, setScheduleSongs] = useState<Array<{ id: string; song_id: string; order_index: number; song?: WorshipSong }>>([]);
   const [loadingSongs, setLoadingSongs] = useState(false);
 
-  const { profile } = useAuth();
+  const { profile, church } = useAuth();
   const churchId = profile?.church_id;
 
   const isWorshipMinistry = /louvor|worship|music/i.test(ministryName);
@@ -199,6 +200,42 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
     return ministryRoles.filter(r => memberRoleIds.includes(r.id));
   };
 
+  const handlePrintSchedule = () => {
+    const rows: Record<string, string>[] = [];
+    schedules.forEach(s => {
+      const eventDate = new Date(s.event_date + "T12:00:00").toLocaleDateString("pt-BR");
+      const volList = s.volunteers ?? [];
+      if (volList.length === 0) {
+        rows.push({ event: s.event_name, date: eventDate, volunteer: "", role: "", confirmed: "", notes: s.notes ?? "" });
+      } else {
+        volList.forEach((v, idx) => {
+          rows.push({
+            event: idx === 0 ? s.event_name : "",
+            date: idx === 0 ? eventDate : "",
+            volunteer: v.member?.full_name ?? "",
+            role: v.role ?? "",
+            confirmed: v.confirmed ? "Sim" : "Não",
+            notes: idx === 0 ? (s.notes ?? "") : "",
+          });
+        });
+      }
+    });
+    exportToPdf({
+      title: `Escala — ${ministryName}`,
+      churchName: church?.name,
+      columns: [
+        { header: "Evento", dataKey: "event" },
+        { header: "Data", dataKey: "date" },
+        { header: "Voluntário", dataKey: "volunteer" },
+        { header: "Função", dataKey: "role" },
+        { header: "Confirmado", dataKey: "confirmed", align: "center" },
+        { header: "Observações", dataKey: "notes" },
+      ],
+      rows,
+      filename: `escala_${ministryName.toLowerCase().replace(/\s+/g, "_")}.pdf`,
+    });
+  };
+
   const upcomingSchedules = schedules.filter(
     (s) => new Date(s.event_date + "T12:00:00") >= new Date(new Date().toDateString())
   );
@@ -210,10 +247,19 @@ export function ScheduleModal({ open, onOpenChange, ministryId, ministryName }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Escalas - {ministryName}</DialogTitle>
-          <DialogDescription>
-            Gerencie as escalas e atribua voluntários aos eventos
-          </DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>Escalas - {ministryName}</DialogTitle>
+              <DialogDescription>
+                Gerencie as escalas e atribua voluntários aos eventos
+              </DialogDescription>
+            </div>
+            {schedules.length > 0 && (
+              <Button variant="outline" size="sm" onClick={handlePrintSchedule} className="shrink-0">
+                <Printer className="w-4 h-4 mr-1" /> Imprimir Escala
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">

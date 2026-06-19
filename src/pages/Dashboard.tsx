@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 
 function PastorDashboard() {
-  const { currentChurchId } = useAuth();
+  const { currentChurchId, church } = useAuth();
   const churchId = currentChurchId;
   const { congregations, selectedCongregation, setSelectedCongregation } = useCongregations(churchId || undefined);
   const { stats, isLoading, members } = useDashboardStats(selectedCongregation);
@@ -153,7 +153,7 @@ function PastorDashboard() {
 
       {/* Birthdays & Anniversaries */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <BirthdayCard members={members.filter(m => m.is_active && m.birth_date)} />
+        <BirthdayCard members={members.filter(m => m.is_active && m.birth_date)} churchName={church?.name} />
         <WeddingAnniversaryCard members={members.filter(m => m.is_active && m.wedding_date)} />
       </div>
 

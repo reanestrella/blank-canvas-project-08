@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, UserPlus, X, Loader2, Search } from "lucide-react";
+import { Plus, Trash2, UserPlus, X, Loader2, Search, Printer } from "lucide-react";
+import { exportToPdf } from "@/lib/pdfExport";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -51,9 +52,11 @@ interface MinistryRolesSectionProps {
   churchId: string;
   members: Member[];
   canEdit: boolean;
+  ministryName?: string;
+  churchName?: string;
 }
 
-export function MinistryRolesSection({ ministryId, churchId, members, canEdit }: MinistryRolesSectionProps) {
+export function MinistryRolesSection({ ministryId, churchId, members, canEdit, ministryName, churchName }: MinistryRolesSectionProps) {
   const { roles, roleMembers, isLoading, createRole, deleteRole, addMember, removeMember } = useMinistryRoles(ministryId, churchId);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
@@ -74,6 +77,32 @@ export function MinistryRolesSection({ ministryId, churchId, members, canEdit }:
     return members.find(m => m.id === memberId)?.full_name || "Desconhecido";
   };
 
+  const handlePrint = () => {
+    const rows: Record<string, string>[] = [];
+    roles.forEach(role => {
+      const membersInRole = roleMembers.filter(rm => rm.ministry_role_id === role.id);
+      membersInRole.forEach(rm => {
+        const member = members.find(m => m.id === rm.member_id);
+        rows.push({
+          name: member?.full_name ?? "Desconhecido",
+          role: `${role.icon} ${role.name}`,
+          phone: member?.phone ?? "",
+        });
+      });
+    });
+    exportToPdf({
+      title: `Membros — ${ministryName ?? "Ministério"}`,
+      churchName,
+      columns: [
+        { header: "Nome", dataKey: "name" },
+        { header: "Função", dataKey: "role" },
+        { header: "Telefone", dataKey: "phone" },
+      ],
+      rows,
+      filename: `membros_${(ministryName ?? "ministerio").toLowerCase().replace(/\s+/g, "_")}.pdf`,
+    });
+  };
+
   const handleAddMember = async () => {
     if (!addingToRoleId || !selectedMemberId) return;
     await addMember(addingToRoleId, selectedMemberId);
@@ -89,11 +118,18 @@ export function MinistryRolesSection({ ministryId, churchId, members, canEdit }:
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Funções do Ministério</h3>
-        {canEdit && (
-          <Button size="sm" onClick={() => setShowCreate(true)}>
-            <Plus className="w-4 h-4 mr-1" /> Nova Função
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {roleMembers.length > 0 && (
+            <Button variant="outline" size="sm" onClick={handlePrint}>
+              <Printer className="w-4 h-4 mr-1" /> Imprimir Membros
+            </Button>
+          )}
+          {canEdit && (
+            <Button size="sm" onClick={() => setShowCreate(true)}>
+              <Plus className="w-4 h-4 mr-1" /> Nova Função
+            </Button>
+          )}
+        </div>
       </div>
 
       {roles.length === 0 ? (

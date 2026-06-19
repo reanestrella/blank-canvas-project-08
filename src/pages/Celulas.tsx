@@ -9,8 +9,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   Plus, Grid3X3, Users, MapPin, Calendar, TrendingUp, Heart, Clock,
   MoreHorizontal, FileText, Loader2, UserPlus, BarChart3, Sparkles,
-  DollarSign, Percent, Eye,
+  DollarSign, Percent, Eye, Printer,
 } from "lucide-react";
+import { exportToPdf } from "@/lib/pdfExport";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -124,7 +125,7 @@ export default function Celulas() {
   const [offeringAccountId, setOfferingAccountId] = useState<string>("");
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
-  const { profile, hasRole, user } = useAuth();
+  const { profile, hasRole, user, church } = useAuth();
   const { toast } = useToast();
   const churchId = profile?.church_id;
 
@@ -212,6 +213,35 @@ export default function Celulas() {
     if (selectedMonth === "all") return reports;
     return reports.filter(r => r.report_date.startsWith(selectedMonth));
   }, [reports, selectedMonth]);
+
+  const handlePrintReports = () => {
+    const periodLabel = selectedMonth === "all"
+      ? "Todo o período"
+      : new Date(selectedMonth + "-01T12:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    exportToPdf({
+      title: `Relatórios de Célula — ${periodLabel}`,
+      churchName: church?.name,
+      columns: [
+        { header: "Data", dataKey: "date" },
+        { header: "Célula", dataKey: "cell" },
+        { header: "Presentes", dataKey: "attendance", align: "center" },
+        { header: "Visitantes", dataKey: "visitors", align: "center" },
+        { header: "Conversões", dataKey: "conversions", align: "center" },
+        { header: "Oferta (R$)", dataKey: "offering", align: "right" },
+        { header: "Observações", dataKey: "notes" },
+      ],
+      rows: filteredReports.map(r => ({
+        date: new Date(r.report_date + "T12:00:00").toLocaleDateString("pt-BR"),
+        cell: cells.find(c => c.id === r.cell_id)?.name ?? "",
+        attendance: r.attendance,
+        visitors: r.visitors,
+        conversions: r.conversions,
+        offering: r.offering ? r.offering.toFixed(2) : "0,00",
+        notes: r.notes ?? "",
+      })),
+      filename: `relatorios_celula_${selectedMonth === "all" ? "total" : selectedMonth}.pdf`,
+    });
+  };
 
   const totalAttendance = filteredReports.reduce((sum, r) => sum + r.attendance, 0);
   const totalVisitors = filteredReports.reduce((sum, r) => sum + r.visitors, 0);
@@ -474,6 +504,11 @@ export default function Celulas() {
           </TabsContent>
 
           <TabsContent value="reports" className="mt-4">
+            <div className="flex justify-end mb-3">
+              <Button variant="outline" size="sm" onClick={handlePrintReports} disabled={filteredReports.length === 0}>
+                <Printer className="w-4 h-4 mr-1" /> Imprimir Relatórios
+              </Button>
+            </div>
             <CellReportsOverview
               reports={filteredReports}
               cells={cells}

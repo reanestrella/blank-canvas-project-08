@@ -52,7 +52,7 @@ export default function Ministerios() {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [selectedMinistry, setSelectedMinistry] = useState<Ministry | null>(null);
 
-  const { profile, roles, hasRole, isAdmin } = useAuth();
+  const { profile, roles, hasRole, isAdmin, church } = useAuth();
   const churchId = profile?.church_id;
   const memberId = profile?.member_id;
 
@@ -180,6 +180,8 @@ export default function Ministerios() {
                     churchId={churchId!}
                     members={members}
                     canEdit={canEditMinistry}
+                    ministryName={selectedMinistry.name}
+                    churchName={church?.name}
                   />
                 </TabsContent>
                 <TabsContent value="schedule" className="mt-4">

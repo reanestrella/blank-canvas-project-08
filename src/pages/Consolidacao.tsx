@@ -20,8 +20,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Users, UserCheck, Heart, MoreHorizontal,
-  Phone, Mail, Eye, Droplets, ArrowDown, Sparkles, Loader2,
+  Phone, Mail, Eye, Droplets, ArrowDown, Sparkles, Loader2, Printer,
 } from "lucide-react";
+import { exportToPdf } from "@/lib/pdfExport";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConsolidation, ConsolidationRecord, ConsolidationStage } from "@/hooks/useConsolidation";
 import { useMembers } from "@/hooks/useMembers";
@@ -71,7 +72,7 @@ export default function Consolidacao() {
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
   const [filterYear, setFilterYear] = useState(now.getFullYear());
 
-  const { profile, currentChurchId } = useAuth();
+  const { profile, currentChurchId, church } = useAuth();
   const churchId = profile?.church_id || currentChurchId || null;
   const { ignoreImported } = useMetricsSettings();
   const { records, isLoading, createRecord, updateRecord, deleteRecord } = useConsolidation(churchId || undefined);
@@ -108,6 +109,48 @@ export default function Consolidacao() {
   const emConsolidacaoList = useMemo(() => recordsByStage("em_consolidacao"), [recordByMember]);
   const consolidadosList = useMemo(() => recordsByStage("consolidado"), [recordByMember]);
   const batizadosList = useMemo(() => recordsByStage("batizado"), [recordByMember]);
+
+  const stageTabMap: Record<string, { label: string; list: any[] }> = {
+    visitantes:      { label: "Visitantes",       list: visitorsList },
+    decididos:       { label: "Decididos",        list: decididosList },
+    em_consolidacao: { label: "Em Consolidação",  list: emConsolidacaoList },
+    consolidados:    { label: "Consolidados",     list: consolidadosList },
+    batizados:       { label: "Batizados",        list: batizadosList },
+  };
+
+  const handlePrintConsolidacao = () => {
+    const { label, list } = stageTabMap[activeTab] ?? { label: activeTab, list: [] };
+    const rows = list.map((item: any) => {
+      const member = memberById.get(item.member_id ?? item.id);
+      const record: ConsolidationRecord | undefined = item.member_id
+        ? (item as ConsolidationRecord)
+        : recordByMember.get(item.id);
+      return {
+        name: member?.full_name ?? item.full_name ?? "",
+        phone: member?.phone ?? item.phone ?? "",
+        stage: stageConfig[record?.stage ?? "visitante"]?.label ?? "",
+        consolidator: record?.consolidator?.full_name ?? "",
+        decision_date: record?.decision_date
+          ? new Date(record.decision_date + "T12:00:00").toLocaleDateString("pt-BR")
+          : "",
+        notes: record?.notes ?? "",
+      };
+    });
+    exportToPdf({
+      title: `Relatório de Consolidação — ${label}`,
+      churchName: church?.name,
+      columns: [
+        { header: "Nome", dataKey: "name" },
+        { header: "Telefone", dataKey: "phone" },
+        { header: "Etapa", dataKey: "stage" },
+        { header: "Consolidador", dataKey: "consolidator" },
+        { header: "Data Decisão", dataKey: "decision_date", align: "center" },
+        { header: "Observações", dataKey: "notes" },
+      ],
+      rows,
+      filename: `consolidacao_${activeTab}.pdf`,
+    });
+  };
 
   // Helper local — usado pelo VisitorContactDashboard
   const inPeriod = (dateStr?: string | null) => {
@@ -449,13 +492,18 @@ export default function Consolidacao() {
 
         {/* TABS POR STAGE */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="!grid h-auto w-full grid-cols-3 sm:grid-cols-5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <TabsList className="!grid h-auto grid-cols-3 sm:grid-cols-5 flex-1">
             <TabsTrigger value="visitantes"      className="min-w-0 whitespace-normal px-2 py-2 text-[10px] leading-tight sm:text-sm">Visitantes ({visitorsList.length})</TabsTrigger>
             <TabsTrigger value="decididos"       className="min-w-0 whitespace-normal px-2 py-2 text-[10px] leading-tight sm:text-sm">Decididos ({decididosList.length})</TabsTrigger>
             <TabsTrigger value="em_consolidacao" className="min-w-0 whitespace-normal px-2 py-2 text-[10px] leading-tight sm:text-sm">Em Consol. ({emConsolidacaoList.length})</TabsTrigger>
             <TabsTrigger value="consolidados"    className="min-w-0 whitespace-normal px-2 py-2 text-[10px] leading-tight sm:text-sm">Consolidados ({consolidadosList.length})</TabsTrigger>
             <TabsTrigger value="batizados"       className="min-w-0 whitespace-normal px-2 py-2 text-[10px] leading-tight sm:text-sm">Batizados ({batizadosList.length})</TabsTrigger>
-          </TabsList>
+            </TabsList>
+            <Button variant="outline" size="sm" onClick={handlePrintConsolidacao}>
+              <Printer className="w-4 h-4 mr-1" /> Exportar PDF
+            </Button>
+          </div>
 
           {/* VISITANTES (vem de members) */}
           <TabsContent value="visitantes" className="space-y-4">
