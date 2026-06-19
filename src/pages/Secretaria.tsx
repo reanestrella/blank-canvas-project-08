@@ -192,6 +192,41 @@ export default function Secretaria() {
     }).length;
   }, [members, selectedCongregation]);
 
+  const handleExportCSV = () => {
+    const statusLabels: Record<string, string> = {
+      visitante: "Visitante",
+      novo_convertido: "Decidido",
+      membro: "Membro",
+      lider: "Líder",
+      discipulador: "Discipulador",
+      crianca: "Criança",
+    };
+    const headers = ["Nome", "Email", "Telefone", "Data de Nascimento", "Endereço", "Bairro", "Cidade", "Estado", "Status Espiritual", "Data de Cadastro"];
+    const rows = filteredMembers.map(m => [
+      m.full_name,
+      m.email ?? "",
+      m.phone ?? "",
+      m.birth_date ? new Date(m.birth_date + "T12:00:00").toLocaleDateString("pt-BR") : "",
+      m.address ?? "",
+      (m as any).neighborhood ?? "",
+      m.city ?? "",
+      m.state ?? "",
+      statusLabels[m.spiritual_status] ?? m.spiritual_status,
+      m.created_at ? new Date(m.created_at).toLocaleDateString("pt-BR") : "",
+    ]);
+    const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const csv = [headers, ...rows].map(r => r.map(escape).join(",")).join("\r\n");
+    const bom = "﻿";
+    const blob = new Blob([bom + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const date = new Date().toISOString().split("T")[0];
+    a.href = url;
+    a.download = `membros_export_${date}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleCreateMember = async (data: CreateMemberData) => {
     if (!churchId) return { data: null, error: new Error("Igreja não identificada") };
     return createMember({ 
@@ -386,7 +421,7 @@ export default function Secretaria() {
                         Limpar filtro
                       </Button>
                     )}
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleExportCSV}>
                       <Download className="w-4 h-4 mr-2" />
                       Exportar
                     </Button>

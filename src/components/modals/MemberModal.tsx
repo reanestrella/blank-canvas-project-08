@@ -46,6 +46,7 @@ const memberSchema = z.object({
   phone: z.string().max(20).optional().or(z.literal("")),
   birth_date: z.string().optional().or(z.literal("")),
   address: z.string().max(200).optional().or(z.literal("")),
+  neighborhood: z.string().max(100).optional().or(z.literal("")),
   city: z.string().max(100).optional().or(z.literal("")),
   state: z.string().max(2).optional().or(z.literal("")),
   gender: z.enum(["M", "F"]).optional(),
@@ -88,6 +89,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
       phone: "",
       birth_date: "",
       address: "",
+      neighborhood: "",
       city: "",
       state: "",
       gender: undefined,
@@ -116,6 +118,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
         phone: member?.phone || "",
         birth_date: member?.birth_date || "",
         address: member?.address || "",
+        neighborhood: member?.neighborhood || "",
         city: member?.city || "",
         state: member?.state || "",
         gender: member?.gender as "M" | "F" | undefined,
@@ -148,6 +151,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
         phone: data.phone || undefined,
         birth_date: data.birth_date || undefined,
         address: data.address || undefined,
+        neighborhood: data.neighborhood || undefined,
         city: data.city || undefined,
         state: data.state || undefined,
         gender: data.gender,
@@ -378,6 +382,20 @@ export function MemberModal({ open, onOpenChange, member, onSubmit, selectedCong
                         <FormLabel>Endereço</FormLabel>
                         <FormControl>
                           <Input placeholder="Rua, número, bairro" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="neighborhood"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bairro</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ex: Centro, Jardim das Flores..." {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

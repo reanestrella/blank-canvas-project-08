@@ -2592,6 +2592,7 @@ export type Database = {
           is_baptized: boolean
           last_attendance_date: string | null
           marital_status: string | null
+          neighborhood: string | null
           network: string | null
           notes: string | null
           origin_type: string
@@ -2626,6 +2627,7 @@ export type Database = {
           is_baptized?: boolean
           last_attendance_date?: string | null
           marital_status?: string | null
+          neighborhood?: string | null
           network?: string | null
           notes?: string | null
           origin_type?: string
@@ -2660,6 +2662,7 @@ export type Database = {
           is_baptized?: boolean
           last_attendance_date?: string | null
           marital_status?: string | null
+          neighborhood?: string | null
           network?: string | null
           notes?: string | null
           origin_type?: string

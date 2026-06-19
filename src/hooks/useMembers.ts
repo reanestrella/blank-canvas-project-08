@@ -11,6 +11,7 @@ export interface Member {
   phone: string | null;
   birth_date: string | null;
   address: string | null;
+  neighborhood: string | null;
   city: string | null;
   state: string | null;
   gender: "M" | "F" | null;
@@ -40,6 +41,7 @@ export interface CreateMemberData {
   phone?: string;
   birth_date?: string;
   address?: string;
+  neighborhood?: string;
   city?: string;
   state?: string;
   gender?: "M" | "F";
@@ -73,7 +75,7 @@ export function useMembers(churchId?: string) {
       setIsLoading(true);
       const { data, error } = await supabase
         .from("members")
-        .select("*")
+        .select("id,church_id,congregation_id,full_name,email,phone,birth_date,address,neighborhood,city,state,gender,marital_status,spiritual_status,baptism_date,baptism_location,conversion_date,notes,photo_url,is_active,network,age_group,wedding_date,pastoral_notes,last_attendance_date,inactivity_reason,first_visit_date,origin_type,created_at,updated_at,user_id")
         .eq("church_id", churchId)
         .order("full_name");
       
