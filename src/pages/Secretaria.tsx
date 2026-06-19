@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
@@ -38,7 +39,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Search, Plus, Filter, MoreHorizontal, Users, UserPlus, Heart,
-  Droplets, Download, Loader2, Eye, UserCheck, Baby, Upload, Smartphone, Trash2, AlertTriangle,
+  Droplets, Download, Loader2, Eye, UserCheck, Baby, Upload, Smartphone, Trash2, AlertTriangle, MapPin,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -192,6 +193,15 @@ export default function Secretaria() {
     }).length;
   }, [members, selectedCongregation]);
 
+  const neighborhoodStats = useMemo(() => {
+    const counts: Record<string, number> = {};
+    members.filter(m => m.is_active).forEach(m => {
+      const bairro = m.neighborhood?.trim() || "Não informado";
+      counts[bairro] = (counts[bairro] ?? 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [members]);
+
   const handleExportCSV = () => {
     const statusLabels: Record<string, string> = {
       visitante: "Visitante",
@@ -208,7 +218,7 @@ export default function Secretaria() {
       m.phone ?? "",
       m.birth_date ? new Date(m.birth_date + "T12:00:00").toLocaleDateString("pt-BR") : "",
       m.address ?? "",
-      (m as any).neighborhood ?? "",
+      m.neighborhood ?? "",
       m.city ?? "",
       m.state ?? "",
       statusLabels[m.spiritual_status] ?? m.spiritual_status,
@@ -391,6 +401,7 @@ export default function Secretaria() {
         {/* Tabs by Person Type */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="flex-wrap h-auto gap-1">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="todos">Todos ({stats.total})</TabsTrigger>
             <TabsTrigger value="membros">Membros ({stats.membros})</TabsTrigger>
             <TabsTrigger value="decididos">Decididos ({stats.decididos})</TabsTrigger>
@@ -399,6 +410,56 @@ export default function Secretaria() {
             <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
             <TabsTrigger value="usuarios">Usuários do App</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="dashboard" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  Membros por Bairro
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {neighborhoodStats.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-6">Nenhum membro ativo cadastrado.</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Bairro</TableHead>
+                        <TableHead className="text-right">Membros</TableHead>
+                        <TableHead className="w-[40%]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {neighborhoodStats.map(([bairro, count]) => {
+                        const max = neighborhoodStats[0][1];
+                        const pct = Math.round((count / max) * 100);
+                        return (
+                          <TableRow key={bairro}>
+                            <TableCell className="font-medium">
+                              {bairro === "Não informado"
+                                ? <span className="text-muted-foreground italic">{bairro}</span>
+                                : bairro}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">{count}</TableCell>
+                            <TableCell>
+                              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-primary transition-all"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {["todos", "membros", "decididos", "visitantes", "inativos"].map(tab => (
             <TabsContent key={tab} value={tab} className="mt-4">
