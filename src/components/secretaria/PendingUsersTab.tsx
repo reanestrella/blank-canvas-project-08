@@ -10,6 +10,7 @@ import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface PendingUser {
   id: string;
@@ -43,6 +44,8 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [existingMember, setExistingMember] = useState<ExistingMember | null>(null);
   const [mergeFields, setMergeFields] = useState<Record<string, boolean>>({});
+  const [approvingUser, setApprovingUser] = useState<PendingUser | null>(null);
+  const [approvalSpiritualStatus, setApprovalSpiritualStatus] = useState<string>("membro");
   const { toast } = useToast();
 
   const fetchPending = async () => {
@@ -94,7 +97,9 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
     fetchMember();
   }, [selectedMemberId, churchId]);
 
-  const handleApprove = async (pu: PendingUser) => {
+  const handleApprove = async () => {
+    const pu = approvingUser;
+    if (!pu) return;
     setProcessing(pu.id);
     try {
       const { data: newMember, error: memberErr } = await supabase.from("members").insert({
@@ -103,7 +108,7 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
         email: pu.email,
         phone: pu.phone,
         birth_date: pu.birth_date,
-        spiritual_status: pu.tipo === "visitante" ? "visitante" : "membro",
+        spiritual_status: approvalSpiritualStatus,
         user_id: (pu as any).user_id ?? null,
         congregation_id: pu.congregation_id || null,
         is_active: true,
@@ -116,7 +121,9 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
         .eq("id", pu.id);
       if (puErr) throw puErr;
 
-      toast({ title: "Cadastro aprovado!", description: `${pu.full_name} adicionado como ${pu.tipo}.` });
+      const statusLabel = approvalSpiritualStatus === "visitante" ? "Visitante" : approvalSpiritualStatus === "novo_convertido" ? "Decidido" : "Membro";
+      toast({ title: "Cadastro aprovado!", description: `${pu.full_name} adicionado como ${statusLabel}.` });
+      setApprovingUser(null);
       fetchPending();
     } catch (err: any) {
       toast({ title: "Erro ao aprovar", description: err.message, variant: "destructive" });
@@ -272,7 +279,7 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
                           <Button size="sm" variant="outline" disabled={!!processing} onClick={() => { setLinkingUser(pu); setSelectedMemberId(null); setExistingMember(null); }} title="Vincular a membro existente">
                             <Link2 className="w-3 h-3" />
                           </Button>
-                          <Button size="sm" variant="default" disabled={!!processing} onClick={() => handleApprove(pu)} title="Aprovar como novo membro">
+                          <Button size="sm" variant="default" disabled={!!processing} onClick={() => { setApprovingUser(pu); setApprovalSpiritualStatus(pu.tipo === "visitante" ? "visitante" : "membro"); }} title="Aprovar como novo membro">
                             {processing === pu.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                           </Button>
                           <Button size="sm" variant="destructive" disabled={!!processing} onClick={() => handleReject(pu.id)}>
@@ -326,6 +333,46 @@ export function PendingUsersTab({ churchId }: { churchId: string }) {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={!!approvingUser} onOpenChange={(open) => { if (!open) setApprovingUser(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5" />
+              Aprovar Cadastro
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-muted/50 border border-border text-sm space-y-1">
+              <p><span className="text-muted-foreground">Nome:</span> <span className="font-medium">{approvingUser?.full_name}</span></p>
+              {approvingUser?.email && <p><span className="text-muted-foreground">Email:</span> {approvingUser.email}</p>}
+              {approvingUser?.phone && <p><span className="text-muted-foreground">Telefone:</span> {approvingUser.phone}</p>}
+              {approvingUser?.birth_date && <p><span className="text-muted-foreground">Nascimento:</span> {new Date(approvingUser.birth_date + "T12:00:00").toLocaleDateString("pt-BR")}</p>}
+              <p><span className="text-muted-foreground">Autodeclarado:</span> {approvingUser?.tipo === "visitante" ? "Visitante" : "Membro"}</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Classificar como</Label>
+              <Select value={approvalSpiritualStatus} onValueChange={setApprovalSpiritualStatus}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="visitante">Visitante</SelectItem>
+                  <SelectItem value="novo_convertido">Decidido (novo convertido)</SelectItem>
+                  <SelectItem value="membro">Membro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApprovingUser(null)}>Cancelar</Button>
+            <Button onClick={handleApprove} disabled={processing === approvingUser?.id}>
+              {processing === approvingUser?.id && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Confirmar Aprovação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!linkingUser} onOpenChange={(open) => { if (!open) { setLinkingUser(null); setExistingMember(null); } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
