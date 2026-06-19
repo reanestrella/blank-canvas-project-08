@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  XAxis, YAxis, CartesianGrid,
   LineChart, Line,
 } from "recharts";
 import { Users, Heart, Eye, TrendingUp, MapPin, Layers } from "lucide-react";
@@ -108,7 +108,7 @@ export function SecretariaDashboard({ members, churchId }: Props) {
       .sort((a, b) => b.value - a.value);
   }, [activeMembers]);
 
-  // Bar: by neighborhood (top 10)
+  // Donut: by neighborhood (all)
   const neighborhoodData = useMemo(() => {
     const counts: Record<string, number> = {};
     activeMembers.forEach(m => {
@@ -117,8 +117,7 @@ export function SecretariaDashboard({ members, churchId }: Props) {
     });
     return Object.entries(counts)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([bairro, total]) => ({ bairro, total }));
+      .map(([name, value]) => ({ name, value }));
   }, [activeMembers]);
 
   // Line: monthly growth (last 12 months, cumulative additions)
@@ -243,7 +242,7 @@ export function SecretariaDashboard({ members, churchId }: Props) {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <MapPin className="w-4 h-4 text-primary" />
-              Membros por Bairro (top 10)
+              Membros por Bairro
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -252,20 +251,33 @@ export function SecretariaDashboard({ members, churchId }: Props) {
                 Nenhum bairro cadastrado ainda.
               </p>
             ) : (
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={neighborhoodData} margin={{ bottom: 40 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis
-                    dataKey="bairro"
-                    tick={{ ...TICK_STYLE, fontSize: 10 }}
-                    angle={-35}
-                    textAnchor="end"
-                    interval={0}
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie
+                    data={neighborhoodData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={95}
+                    dataKey="value"
+                    nameKey="name"
+                    paddingAngle={2}
+                  >
+                    {neighborhoodData.map((_, i) => (
+                      <Cell key={i} fill={MINISTRY_COLORS[i % MINISTRY_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={TOOLTIP_STYLE}
+                    formatter={(value: number, name: string) => {
+                      const total = neighborhoodData.reduce((s, d) => s + d.value, 0);
+                      return [`${value} (${total ? Math.round((value / total) * 100) : 0}%)`, name];
+                    }}
                   />
-                  <YAxis allowDecimals={false} tick={TICK_STYLE} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  <Bar dataKey="total" name="Membros" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
+                  <Legend
+                    formatter={(value) => <span style={{ fontSize: 12, color: "hsl(var(--foreground))" }}>{value}</span>}
+                  />
+                </PieChart>
               </ResponsiveContainer>
             )}
           </CardContent>
