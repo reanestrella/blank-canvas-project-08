@@ -255,7 +255,7 @@ const App = () => {
                     path="/configuracoes"
                     element={
                       <Sub>
-                        <RequireAnyRole allowedRoles={["pastor", "secretario"]}>
+                        <RequireAnyRole allowedRoles={["pastor", "secretario", "tesoureiro"]}>
                           <Configuracoes />
                         </RequireAnyRole>
                       </Sub>

@@ -99,7 +99,7 @@ export default function Configuracoes() {
   const [churchAddress, setChurchAddress] = useState("");
   
   const { profile, refreshChurch, user, roles } = useAuth();
-  const isSecretario = (roles ?? []).some((r: any) => r.role === "secretario") &&
+  const isSecretario = (roles ?? []).some((r: any) => ["secretario", "tesoureiro"].includes(r.role)) &&
     !(roles ?? []).some((r: any) => r.role === "pastor");
   const { toast } = useToast();
   const churchId = profile?.church_id;
