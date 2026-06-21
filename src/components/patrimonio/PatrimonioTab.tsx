@@ -8,8 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Package, Loader2, Trash2, Edit2 } from "lucide-react";
+import { Plus, Package, Loader2, Trash2, Edit2, Printer } from "lucide-react";
 import { useChurchAssets, type CreateAssetData, type ChurchAsset } from "@/hooks/useChurchAssets";
+import { exportToPdf } from "@/lib/pdfExport";
+import { useAuth } from "@/contexts/AuthContext";
 
 const CATEGORIES = [
   "Mobiliário", "Som e Mídia", "Instrumentos", "Informática",
@@ -29,6 +31,7 @@ interface Props {
 
 export function PatrimonioTab({ churchId }: Props) {
   const { assets, isLoading, createAsset, updateAsset, deleteAsset } = useChurchAssets(churchId);
+  const { church } = useAuth();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ChurchAsset | null>(null);
   const [form, setForm] = useState<CreateAssetData>({
@@ -66,11 +69,60 @@ export function PatrimonioTab({ churchId }: Props) {
   const totalValue = assets.reduce((s, a) => s + (a.estimated_value || 0) * a.quantity, 0);
   const totalItems = assets.reduce((s, a) => s + a.quantity, 0);
 
+  const conditionLabel: Record<string, string> = { novo: "Novo", bom: "Bom", regular: "Regular", ruim: "Ruim" };
+
   // Group by category
   const grouped = assets.reduce<Record<string, ChurchAsset[]>>((acc, a) => {
     (acc[a.category] = acc[a.category] || []).push(a);
     return acc;
   }, {});
+
+  const hasAnyValue = assets.some(a => a.estimated_value && a.estimated_value > 0);
+
+  const handlePrintAssets = () => {
+    const columns: { header: string; dataKey: string; align?: "left" | "center" | "right" }[] = [
+      { header: "Item", dataKey: "name" },
+      { header: "Qtd", dataKey: "qty", align: "center" },
+      { header: "Estado", dataKey: "condition", align: "center" },
+      { header: "Localização", dataKey: "location" },
+      ...(hasAnyValue ? [{ header: "Valor Estimado", dataKey: "value", align: "right" as const }] : []),
+    ];
+
+    const rows: Record<string, string>[] = [];
+    CATEGORIES.forEach(cat => {
+      const items = grouped[cat];
+      if (!items?.length) return;
+      rows.push({ name: `── ${cat} ──`, qty: "", condition: "", location: "", value: "" });
+      items.forEach(a => {
+        rows.push({
+          name: a.name,
+          qty: String(a.quantity),
+          condition: conditionLabel[a.condition || ""] || (a.condition || "—"),
+          location: a.location || "—",
+          value: a.estimated_value
+            ? `R$ ${(a.estimated_value * a.quantity).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+            : "—",
+        });
+      });
+      const catQty = items.reduce((s, a) => s + a.quantity, 0);
+      const catVal = items.reduce((s, a) => s + (a.estimated_value || 0) * a.quantity, 0);
+      rows.push({
+        name: `Total ${cat}`,
+        qty: String(catQty),
+        condition: "",
+        location: "",
+        value: hasAnyValue ? `R$ ${catVal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "",
+      });
+    });
+
+    exportToPdf({
+      title: `Inventário de Patrimônio — ${church?.name ?? "Igreja"}`,
+      churchName: church?.name,
+      columns,
+      rows,
+      filename: "inventario_patrimonio.pdf",
+    });
+  };
 
   if (isLoading) {
     return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
@@ -86,9 +138,14 @@ export function PatrimonioTab({ churchId }: Props) {
             <span>Valor estimado: R$ {totalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
           </div>
         </div>
-        <Button onClick={openNew}>
-          <Plus className="w-4 h-4 mr-2" /> Novo Item
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handlePrintAssets} disabled={assets.length === 0}>
+            <Printer className="w-4 h-4 mr-1" /> Imprimir Inventário
+          </Button>
+          <Button onClick={openNew}>
+            <Plus className="w-4 h-4 mr-2" /> Novo Item
+          </Button>
+        </div>
       </div>
 
       {assets.length === 0 ? (

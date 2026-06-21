@@ -180,12 +180,23 @@ export default function Secretaria() {
 
   const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
+  const [birthdaySubTab, setBirthdaySubTab] = useState<"nascimento" | "casamento">("nascimento");
+
   const birthdayList = useMemo(() => {
     return members
       .filter(m => m.is_active && m.birth_date)
       .filter(m => new Date(m.birth_date! + "T12:00:00").getMonth() === birthdayMonth)
       .sort((a, b) => new Date(a.birth_date! + "T12:00:00").getDate() - new Date(b.birth_date! + "T12:00:00").getDate());
   }, [members, birthdayMonth]);
+
+  const weddingList = useMemo(() => {
+    return members
+      .filter(m => m.is_active && m.wedding_date)
+      .filter(m => new Date(m.wedding_date! + "T12:00:00").getMonth() === birthdayMonth)
+      .sort((a, b) => new Date(a.wedding_date! + "T12:00:00").getDate() - new Date(b.wedding_date! + "T12:00:00").getDate());
+  }, [members, birthdayMonth]);
+
+  const currentYear = new Date().getFullYear();
 
   const handlePrintBirthdays = () => {
     exportToPdf({
@@ -202,6 +213,29 @@ export default function Secretaria() {
         phone: m.phone ?? "",
       })),
       filename: `aniversariantes_${MONTHS[birthdayMonth].toLowerCase()}.pdf`,
+    });
+  };
+
+  const handlePrintWeddings = () => {
+    exportToPdf({
+      title: `Aniversários de Casamento — ${MONTHS[birthdayMonth]} — ${church?.name ?? "Igreja"}`,
+      churchName: church?.name,
+      columns: [
+        { header: "Nome", dataKey: "name" },
+        { header: "Data de Casamento", dataKey: "date", align: "center" },
+        { header: "Anos", dataKey: "years", align: "center" },
+        { header: "Telefone", dataKey: "phone" },
+      ],
+      rows: weddingList.map(m => {
+        const wDate = new Date(m.wedding_date! + "T12:00:00");
+        return {
+          name: m.full_name,
+          date: wDate.toLocaleDateString("pt-BR"),
+          years: String(currentYear - wDate.getFullYear()),
+          phone: m.phone ?? "",
+        };
+      }),
+      filename: `aniversarios_casamento_${MONTHS[birthdayMonth].toLowerCase()}.pdf`,
     });
   };
 
@@ -641,10 +675,28 @@ export default function Secretaria() {
               <div className="p-4 border-b flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-2">
                   <Cake className="w-4 h-4 text-secondary" />
-                  <span className="font-medium text-sm">Aniversariantes de {MONTHS[birthdayMonth]}</span>
-                  <span className="text-xs text-muted-foreground">({birthdayList.length})</span>
+                  <span className="font-medium text-sm">
+                    {birthdaySubTab === "nascimento" ? "Aniversariantes" : "Aniversários de Casamento"} de {MONTHS[birthdayMonth]}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    ({birthdaySubTab === "nascimento" ? birthdayList.length : weddingList.length})
+                  </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex rounded-md border text-xs">
+                    <button
+                      className={`px-3 py-1 rounded-l-md transition-colors ${birthdaySubTab === "nascimento" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                      onClick={() => setBirthdaySubTab("nascimento")}
+                    >
+                      Nascimento
+                    </button>
+                    <button
+                      className={`px-3 py-1 rounded-r-md transition-colors ${birthdaySubTab === "casamento" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                      onClick={() => setBirthdaySubTab("casamento")}
+                    >
+                      Casamento
+                    </button>
+                  </div>
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setBirthdayMonth(m => (m - 1 + 12) % 12)}>
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
@@ -661,37 +713,81 @@ export default function Secretaria() {
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setBirthdayMonth(m => (m + 1) % 12)}>
                     <ChevronRight className="w-4 h-4" />
                   </Button>
-                  <Button variant="outline" size="sm" onClick={handlePrintBirthdays} disabled={birthdayList.length === 0}>
-                    <Printer className="w-4 h-4 mr-1" /> Imprimir
-                  </Button>
+                  {birthdaySubTab === "nascimento" ? (
+                    <Button variant="outline" size="sm" onClick={handlePrintBirthdays} disabled={birthdayList.length === 0}>
+                      <Printer className="w-4 h-4 mr-1" /> Imprimir
+                    </Button>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={handlePrintWeddings} disabled={weddingList.length === 0}>
+                      <Printer className="w-4 h-4 mr-1" /> Imprimir
+                    </Button>
+                  )}
                 </div>
               </div>
-              {birthdayList.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <Cake className="w-8 h-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">Nenhum aniversariante em {MONTHS[birthdayMonth]}</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead className="w-32 text-center">Aniversário</TableHead>
-                      <TableHead>Telefone</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {birthdayList.map(m => (
-                      <TableRow key={m.id}>
-                        <TableCell className="font-medium">{m.full_name}</TableCell>
-                        <TableCell className="text-center">
-                          {new Date(m.birth_date! + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{m.phone ?? "—"}</TableCell>
+
+              {birthdaySubTab === "nascimento" ? (
+                birthdayList.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <Cake className="w-8 h-8 text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">Nenhum aniversariante em {MONTHS[birthdayMonth]}</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead className="w-32 text-center">Aniversário</TableHead>
+                        <TableHead>Telefone</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {birthdayList.map(m => (
+                        <TableRow key={m.id}>
+                          <TableCell className="font-medium">{m.full_name}</TableCell>
+                          <TableCell className="text-center">
+                            {new Date(m.birth_date! + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{m.phone ?? "—"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )
+              ) : (
+                weddingList.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <Heart className="w-8 h-8 text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">Nenhum aniversário de casamento em {MONTHS[birthdayMonth]}</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead className="w-40 text-center">Data de Casamento</TableHead>
+                        <TableHead className="w-24 text-center">Anos</TableHead>
+                        <TableHead>Telefone</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {weddingList.map(m => {
+                        const wDate = new Date(m.wedding_date! + "T12:00:00");
+                        return (
+                          <TableRow key={m.id}>
+                            <TableCell className="font-medium">{m.full_name}</TableCell>
+                            <TableCell className="text-center">
+                              {wDate.toLocaleDateString("pt-BR")}
+                            </TableCell>
+                            <TableCell className="text-center text-muted-foreground">
+                              {currentYear - wDate.getFullYear()} anos
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{m.phone ?? "—"}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )
               )}
             </div>
           </TabsContent>
