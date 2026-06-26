@@ -84,7 +84,14 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
-  const expenseCategories = useMemo(() => categories.filter((c) => c.type === "despesa"), [categories]);
+  const filteredCategories = useMemo(() => {
+    const entryType = form.entry_type;
+    return categories.filter((c) => {
+      if (c.type === "ambos") return true;
+      if (entryType === "pagar") return c.type === "despesa";
+      return c.type === "receita";
+    });
+  }, [categories, form.entry_type]);
   const today = new Date().toISOString().slice(0, 10);
 
   const useExternal = hideInternalPeriod === true;
@@ -171,9 +178,9 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
     return "Pagas";
   }, [statusFilter]);
 
-  const openNew = () => {
+  const openNew = (entry_type: PayableEntryType = "pagar") => {
     setEditing(null);
-    setForm(buildEmpty());
+    setForm({ ...buildEmpty(), entry_type });
     setEditScope("single");
     setOpen(true);
   };
@@ -318,8 +325,11 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
               <Button variant="outline" size="sm" onClick={handleExportPdf}>
                 <Download className="w-4 h-4 mr-2" /> PDF
               </Button>
-              <Button size="sm" onClick={openNew}>
-                <Plus className="w-4 h-4 mr-2" /> Nova Conta
+              <Button size="sm" variant="outline" onClick={() => openNew("receber")}>
+                <Plus className="w-4 h-4 mr-2" /> Nova Receita
+              </Button>
+              <Button size="sm" onClick={() => openNew("pagar")}>
+                <Plus className="w-4 h-4 mr-2" /> Nova Despesa
               </Button>
             </div>
           </div>
@@ -585,7 +595,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">— Nenhuma —</SelectItem>
-                    {expenseCategories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                    {filteredCategories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
@@ -663,7 +673,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Marcar como pago</DialogTitle>
-            <DialogDescription>Será gerada uma despesa na conta selecionada.</DialogDescription>
+            <DialogDescription>{payOpen?.entry_type === "receber" ? "Será gerada uma receita na conta selecionada." : "Será gerada uma despesa na conta selecionada."}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">

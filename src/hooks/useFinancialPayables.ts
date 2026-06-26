@@ -218,11 +218,12 @@ export function useFinancialPayables(churchId?: string) {
     }
     const { data: u } = await supabase.auth.getUser();
 
+    const txType = payable.entry_type === "receber" ? "receita" : "despesa";
     const { data: tx, error: txErr } = await supabase
       .from("financial_transactions")
       .insert({
         church_id: churchId,
-        type: "despesa",
+        type: txType,
         amount: payable.amount,
         description: payable.description,
         transaction_date: paidDate,
@@ -286,7 +287,7 @@ export function useFinancialPayables(churchId?: string) {
       }
     }
 
-    toast({ title: "Conta paga", description: "Saída registrada e saldo atualizado." });
+    toast({ title: "Conta paga", description: txType === "receita" ? "Receita registrada e saldo atualizado." : "Saída registrada e saldo atualizado." });
     await fetchPayables();
     return { error: null };
   };
