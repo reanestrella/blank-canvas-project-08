@@ -188,6 +188,10 @@ export function ExtratoTab({
         pay: tx.payment_method ? (PAYMENT_LABELS[tx.payment_method] || tx.payment_method) : "—",
         amount: `${tx.type === "receita" ? "+" : "-"} R$ ${formatBRL(Number(tx.amount))}`,
       })),
+      colorColumn: "amount",
+      rowColors: filtered.map((tx) =>
+        tx.type === "receita" ? [22, 163, 74] : [220, 38, 38]
+      ) as [number, number, number][],
       totals: [
         { label: "Entradas", value: `R$ ${formatBRL(periodIncome)}` },
         { label: "Saídas", value: `R$ ${formatBRL(periodExpense)}` },

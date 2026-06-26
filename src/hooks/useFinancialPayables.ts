@@ -198,6 +198,20 @@ export function useFinancialPayables(churchId?: string) {
   };
 
   const deletePayable = async (id: string) => {
+    // If the payable was already paid, remove the linked transaction first
+    const { data: payable } = await supabase
+      .from("financial_payables")
+      .select("status, paid_transaction_id")
+      .eq("id", id)
+      .single();
+
+    if (payable?.status === "pago" && payable?.paid_transaction_id) {
+      await supabase
+        .from("financial_transactions")
+        .delete()
+        .eq("id", payable.paid_transaction_id);
+    }
+
     const { error } = await supabase.from("financial_payables").delete().eq("id", id);
     if (error) {
       toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });

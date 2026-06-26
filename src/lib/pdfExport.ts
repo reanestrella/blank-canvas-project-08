@@ -15,6 +15,10 @@ export interface PdfExportOptions {
   rows: Record<string, string | number>[];
   totals?: { label: string; value: string }[];
   filename: string;
+  /** dataKey of the column where per-row text colors should be applied */
+  colorColumn?: string;
+  /** RGB color per row for colorColumn; null means default color */
+  rowColors?: ([number, number, number] | null)[];
 }
 
 const BRAND = { r: 10, g: 15, b: 44 }; // navy
@@ -48,6 +52,10 @@ export function exportToPdf(opts: PdfExportOptions) {
   );
   y += 4;
 
+  const colorColIndex = opts.colorColumn
+    ? opts.columns.findIndex((c) => c.dataKey === opts.colorColumn)
+    : -1;
+
   autoTable(doc, {
     startY: y,
     head: [opts.columns.map((c) => c.header)],
@@ -63,6 +71,20 @@ export function exportToPdf(opts: PdfExportOptions) {
       {},
     ),
     margin: { left: 10, right: 10 },
+    didParseCell: (data) => {
+      if (
+        colorColIndex >= 0 &&
+        data.section === "body" &&
+        data.column.index === colorColIndex &&
+        opts.rowColors
+      ) {
+        const color = opts.rowColors[data.row.index];
+        if (color) {
+          data.cell.styles.textColor = color;
+          data.cell.styles.fontStyle = "bold";
+        }
+      }
+    },
   });
 
   if (opts.totals && opts.totals.length) {
