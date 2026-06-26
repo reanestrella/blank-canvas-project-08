@@ -119,8 +119,13 @@ export function TransactionModal({
     }
   }, [open, transaction, defaultType]);
 
-  // Persistência só para criação (não interferir em edição)
-  useRhfFormPersistence(PERSIST_KEY, form, { enabled: open && !transaction });
+  // Persistência só para criação (não interferir em edição).
+  // `type` e `transaction_date` são excluídos para que o defaultType e a data
+  // de hoje sempre sejam respeitados ao abrir o modal.
+  useRhfFormPersistence(PERSIST_KEY, form, {
+    enabled: open && !transaction,
+    excludeFields: ["type", "transaction_date"],
+  });
 
   const selectedType = form.watch("type");
   const filteredCategories = categories.filter((c) => c.type === selectedType || c.type === "ambos");

@@ -4,6 +4,8 @@ import type { UseFormReturn } from "react-hook-form";
 interface Options {
   ttlMs?: number;
   enabled?: boolean;
+  /** Fields to never restore from sessionStorage (always keep the value from form.reset) */
+  excludeFields?: string[];
 }
 
 /**
@@ -14,7 +16,7 @@ interface Options {
 export function useRhfFormPersistence<T extends Record<string, any>>(
   key: string,
   form: UseFormReturn<T>,
-  { ttlMs = 120_000, enabled = true }: Options = {},
+  { ttlMs = 120_000, enabled = true, excludeFields = [] }: Options = {},
 ) {
   const storageKey = `__form_persist__:${key}`;
   const restoredRef = useRef(false);
@@ -30,7 +32,13 @@ export function useRhfFormPersistence<T extends Record<string, any>>(
       if (raw) {
         const parsed = JSON.parse(raw) as { ts: number; data: T };
         if (Date.now() - parsed.ts <= ttlMs) {
-          form.reset(parsed.data as any);
+          // Preserve current form values for excluded fields so they aren't overwritten
+          const currentValues = form.getValues();
+          const restored = { ...parsed.data } as any;
+          excludeFields.forEach((f) => {
+            restored[f] = currentValues[f];
+          });
+          form.reset(restored);
         } else {
           sessionStorage.removeItem(storageKey);
         }
