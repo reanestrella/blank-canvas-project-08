@@ -28,6 +28,8 @@ interface PayablesTabProps {
   externalLabel?: string;
   /** When true, hides the internal period selector (mode/month/year/custom) */
   hideInternalPeriod?: boolean;
+  /** Fired after an action here writes/removes a financial_transactions row (pay/delete), so the parent can refetch balances. */
+  onChanged?: () => void;
 }
 
 type StatusFilter = "all" | "pendente" | "vencida" | "pago";
@@ -63,7 +65,7 @@ const buildEmpty = (): FormState => ({
   entry_type: "pagar",
 });
 
-export function PayablesTab({ churchId, accounts, categories, churchName, externalRange, externalLabel, hideInternalPeriod }: PayablesTabProps) {
+export function PayablesTab({ churchId, accounts, categories, churchName, externalRange, externalLabel, hideInternalPeriod, onChanged }: PayablesTabProps) {
   const { payables, isLoading, createPayable, updatePayable, updateGroupFuture, deletePayable, markAsPaid } = useFinancialPayables(churchId);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialPayable | null>(null);
@@ -247,7 +249,18 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
   const handleConfirmPay = async () => {
     if (!payOpen) return;
     const res = await markAsPaid(payOpen, payDate, payAccount);
-    if (!res.error) setPayOpen(null);
+    if (!res.error) {
+      setPayOpen(null);
+      // A transação de saída/entrada foi gravada — avisa o pai para recarregar saldos.
+      onChanged?.();
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Excluir esta conta?")) return;
+    const res = await deletePayable(id);
+    // Excluir uma conta paga também remove a transação vinculada — recarrega saldos.
+    if (!res.error) onChanged?.();
   };
 
   const handleExportPdf = () => {
@@ -492,7 +505,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
                               <Edit className="w-4 h-4" />
                             </Button>
                             <Button size="icon" variant="ghost" title="Excluir"
-                              onClick={() => { if (confirm("Excluir esta conta?")) deletePayable(p.id); }}>
+                              onClick={() => handleDelete(p.id)}>
                               <Trash2 className="w-4 h-4 text-destructive" />
                             </Button>
                           </div>

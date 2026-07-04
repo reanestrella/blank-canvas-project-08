@@ -597,6 +597,7 @@ export default function Financeiro() {
                 externalRange={globalRange}
                 externalLabel={periodLabel}
                 hideInternalPeriod
+                onChanged={fetchTransactions}
               />
             )}
           </TabsContent>
