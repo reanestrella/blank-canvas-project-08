@@ -29,6 +29,10 @@ interface ExtratoTabProps {
   year: number;
   month: number;
   mode: "month" | "year" | "all" | "custom";
+  /** Conta selecionada no filtro global ("all" ou um account_id). */
+  accountFilter?: string;
+  /** Fim do período filtrado (YYYY-MM-DD, inclusive). null = sem corte (modo "all" ou custom sem range completo). */
+  periodEnd?: string | null;
   churchName?: string;
 }
 
@@ -80,6 +84,8 @@ export function ExtratoTab({
   year,
   month,
   mode,
+  accountFilter = "all",
+  periodEnd = null,
   churchName,
 }: ExtratoTabProps) {
   const [typeFilter, setTypeFilter] = useState<"all" | "receita" | "despesa">("all");
@@ -150,18 +156,35 @@ export function ExtratoTab({
   const periodExpense = filtered.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0);
   const periodBalance = periodIncome - periodExpense;
 
-  const totalBalance = allTransactions.reduce(
-    (s, t) => s + (t.type === "receita" ? Number(t.amount) : -Number(t.amount)),
-    0,
-  );
+  // Filtros usados nos saldos acumulados (Saldo Total / Saldo Mês Anterior):
+  // respeitam a conta selecionada e um corte de data no fim do período filtrado.
+  // account_id nulo continua incluído quando o filtro é "todas as contas".
+  const inSelectedAccount = (t: FinancialTransaction) =>
+    accountFilter === "all" || t.account_id === accountFilter;
+  // Comparação lexicográfica em ISO (YYYY-MM-DD); slice(0,10) ignora hora eventual.
+  const onOrBefore = (t: FinancialTransaction, cutoff: string) =>
+    t.transaction_date.slice(0, 10) <= cutoff;
+
+  // Saldo Total = saldo acumulado (receitas - despesas) da conta selecionada
+  // (ou de todas) ATÉ o fim do período filtrado. periodEnd === null (modo "all"
+  // ou custom sem range completo) → soma todo o histórico.
+  // Invariante — com apenas os filtros de período+conta ativos (sem type/
+  // categoria/forma/busca): Saldo Total (fim do mês) === Saldo Mês Anterior + Saldo do Período.
+  const totalBalance = allTransactions
+    .filter(inSelectedAccount)
+    .filter((t) => periodEnd === null || onOrBefore(t, periodEnd))
+    .reduce((s, t) => s + (t.type === "receita" ? Number(t.amount) : -Number(t.amount)), 0);
 
   const previousMonthBalance = useMemo(() => {
     if (mode !== "month") return null;
-    const prevDate = new Date(year, month, 0);
+    // Último dia do mês anterior ao filtro (trata virada de ano automaticamente).
+    const d = new Date(year, month, 0);
+    const prevEnd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     return allTransactions
-      .filter((t) => new Date(t.transaction_date) <= prevDate)
+      .filter(inSelectedAccount)
+      .filter((t) => onOrBefore(t, prevEnd))
       .reduce((s, t) => s + (t.type === "receita" ? Number(t.amount) : -Number(t.amount)), 0);
-  }, [allTransactions, year, month, mode]);
+  }, [allTransactions, year, month, mode, accountFilter]);
 
   const periodLabel = mode === "month"
     ? `${["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"][month]}/${year}`

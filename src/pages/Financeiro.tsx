@@ -613,6 +613,8 @@ export default function Financeiro() {
               year={filterYear}
               month={filterMonth}
               mode={periodMode}
+              accountFilter={accountFilter}
+              periodEnd={globalRange?.end ?? null}
               churchName={church?.name}
             />
           </TabsContent>
