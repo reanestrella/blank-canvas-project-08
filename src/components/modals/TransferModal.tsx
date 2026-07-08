@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, ArrowRightLeft } from "lucide-react";
 import { useFinancialTransfers } from "@/hooks/useFinancialTransfers";
 import type { FinancialAccount } from "@/hooks/useFinancialAccounts";
+import { todayISO } from "@/lib/dateUtils";
 
 interface TransferModalProps {
   open: boolean;
@@ -24,13 +25,13 @@ export function TransferModal({ open, onOpenChange, accounts, churchId, onDone }
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(todayISO());
   const [desc, setDesc] = useState("");
 
   useEffect(() => {
     if (open) {
       setFrom(""); setTo(""); setAmount(""); setDesc("");
-      setDate(new Date().toISOString().slice(0, 10));
+      setDate(todayISO());
     }
   }, [open]);
 

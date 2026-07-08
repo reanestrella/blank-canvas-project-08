@@ -42,6 +42,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { exportToPdf, formatBRL } from "@/lib/pdfExport";
 import type { FinancialTransaction } from "@/hooks/useFinancial";
+import { todayISO } from "@/lib/dateUtils";
 
 // Contribuição App moved to Gestão App page
 export default function Financeiro() {
@@ -59,7 +60,7 @@ export default function Financeiro() {
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
   const [filterYear, setFilterYear] = useState(now.getFullYear());
   const [startDate, setStartDate] = useState<string>(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`);
-  const [endDate, setEndDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState<string>(todayISO());
   const [accountFilter, setAccountFilter] = useState("all");
 
   const { profile, church, roles } = useAuth();

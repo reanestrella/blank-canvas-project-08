@@ -31,6 +31,7 @@ import {
 import { Loader2 } from "lucide-react";
 import type { Cell, CellReport, CreateCellReportData } from "@/hooks/useCells";
 import { useRhfFormPersistence, clearRhfFormPersistence } from "@/hooks/useRhfFormPersistence";
+import { todayISO } from "@/lib/dateUtils";
 
 const PERSIST_KEY = "cell-report-modal";
 
@@ -67,7 +68,7 @@ export function CellReportModal({
     resolver: zodResolver(reportSchema),
     defaultValues: {
       cell_id: defaultCellId || "",
-      report_date: new Date().toISOString().split("T")[0],
+      report_date: todayISO(),
       attendance: "",
       visitors: "",
       conversions: "0",

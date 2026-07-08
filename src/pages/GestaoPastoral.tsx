@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDiscipleships } from "@/hooks/useDiscipleships";
 import { usePastoralVisits } from "@/hooks/usePastoralVisits";
 import { usePastoralCounseling } from "@/hooks/usePastoralCounseling";
+import { todayISO } from "@/lib/dateUtils";
 
 // ─── Esboços ────────────────────────────────────────────────
 function EsbocosTab({ churchId }: { churchId: string }) {
@@ -440,7 +441,7 @@ function DiscipuladoTab({ churchId }: { churchId: string }) {
 function VisitasTab({ churchId }: { churchId: string }) {
   const { visits, isLoading, createVisit, deleteVisit } = usePastoralVisits(churchId);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ member_id: "", visit_date: new Date().toISOString().split("T")[0], reason: "", notes: "" });
+  const [form, setForm] = useState({ member_id: "", visit_date: todayISO(), reason: "", notes: "" });
 
   const handleCreate = async () => {
     if (!form.member_id) return;
@@ -450,7 +451,7 @@ function VisitasTab({ churchId }: { churchId: string }) {
       reason: form.reason || undefined,
       notes: form.notes || undefined,
     });
-    setForm({ member_id: "", visit_date: new Date().toISOString().split("T")[0], reason: "", notes: "" });
+    setForm({ member_id: "", visit_date: todayISO(), reason: "", notes: "" });
     setShowForm(false);
   };
 
@@ -528,7 +529,7 @@ function VisitasTab({ churchId }: { churchId: string }) {
 function GabineteTab({ churchId }: { churchId: string }) {
   const { sessions, isLoading, createSession, deleteSession } = usePastoralCounseling(churchId);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ member_id: "", session_date: new Date().toISOString().split("T")[0], session_type: "aconselhamento", notes: "" });
+  const [form, setForm] = useState({ member_id: "", session_date: todayISO(), session_type: "aconselhamento", notes: "" });
 
   const handleCreate = async () => {
     await createSession({
@@ -537,7 +538,7 @@ function GabineteTab({ churchId }: { churchId: string }) {
       session_type: form.session_type,
       notes: form.notes || undefined,
     });
-    setForm({ member_id: "", session_date: new Date().toISOString().split("T")[0], session_type: "aconselhamento", notes: "" });
+    setForm({ member_id: "", session_date: todayISO(), session_type: "aconselhamento", notes: "" });
     setShowForm(false);
   };
 

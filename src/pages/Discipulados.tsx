@@ -21,6 +21,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
 import { supabase } from "@/integrations/supabase/client";
+import { todayISO } from "@/lib/dateUtils";
 
 const statusLabels: Record<string, string> = {
   ativo: "Ativo",
@@ -47,7 +48,7 @@ export default function Discipulados() {
   const [modalOpen, setModalOpen] = useState(false);
   const [disciplerId, setDisciplerId] = useState("");
   const [discipleId, setDiscipleId] = useState("");
-  const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
+  const [startDate, setStartDate] = useState(todayISO());
   const [status, setStatus] = useState("ativo");
   const [notes, setNotes] = useState("");
 
@@ -55,7 +56,7 @@ export default function Discipulados() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [logs, setLogs] = useState<DiscipleshipLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
-  const [logForm, setLogForm] = useState({ log_date: new Date().toISOString().split("T")[0], description: "" });
+  const [logForm, setLogForm] = useState({ log_date: todayISO(), description: "" });
 
   const { profile, user } = useAuth();
   const { toast } = useToast();
@@ -122,7 +123,7 @@ export default function Discipulados() {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Registro adicionado!" });
-      setLogForm({ log_date: new Date().toISOString().split("T")[0], description: "" });
+      setLogForm({ log_date: todayISO(), description: "" });
       loadLogs(selectedId);
     }
   };

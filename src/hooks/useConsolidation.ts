@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { todayISO } from "@/lib/dateUtils";
 
 export type ConsolidationStage =
   | "visitante"
@@ -155,7 +156,7 @@ export function useConsolidation(churchId?: string) {
   const updateStatus = async (id: string, status: ConsolidationRecord["status"]) => {
     const updates: any = { status };
     if (status === "integracao") {
-      updates.cell_integration_date = new Date().toISOString().split("T")[0];
+      updates.cell_integration_date = todayISO();
     }
     return updateRecord(id, updates);
   };

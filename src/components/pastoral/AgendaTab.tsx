@@ -21,6 +21,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { ptBR } from "date-fns/locale";
 import { isSameDay } from "date-fns";
+import { todayISO } from "@/lib/dateUtils";
 
 
 
@@ -58,7 +59,7 @@ const statusLabels: Record<string, { label: string; color: string }> = {
 };
 
 const emptyForm = {
-  title: "", description: "", appointment_date: new Date().toISOString().split("T")[0],
+  title: "", description: "", appointment_date: todayISO(),
   appointment_time: "", end_time: "", appointment_type: "reuniao", status: "agendado",
   responsible_id: "", member_id: "", notes: "",
 };

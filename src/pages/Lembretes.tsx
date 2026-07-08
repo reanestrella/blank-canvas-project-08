@@ -18,6 +18,7 @@ import { useReminders } from "@/hooks/useReminders";
 import { useMembers } from "@/hooks/useMembers";
 import { useAuth } from "@/contexts/AuthContext";
 import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
+import { todayISO } from "@/lib/dateUtils";
 
 const typeLabels: Record<string, string> = {
   geral: "Geral",
@@ -68,7 +69,7 @@ export default function Lembretes() {
 
   const isOverdue = (date: string | null) => {
     if (!date) return false;
-    return new Date(date) < new Date(new Date().toISOString().split("T")[0]);
+    return new Date(date) < new Date(todayISO());
   };
 
   return (

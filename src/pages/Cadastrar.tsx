@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Church, User, Mail, Lock, Phone, Calendar, CheckCircle2 } from "lucide-react";
+import { todayISO } from "@/lib/dateUtils";
 
 const ROLE_LABELS: Record<string, string> = {
   pastor: "Pastor",
@@ -81,7 +82,7 @@ export default function Cadastrar() {
     if (fieldErrors[k]) setFieldErrors((p) => ({ ...p, [k]: undefined }));
   };
 
-  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const today = useMemo(() => todayISO(), []);
 
   // Fetch invite details (for ?token=UUID invite flow)
   useEffect(() => {

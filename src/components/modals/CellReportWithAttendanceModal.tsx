@@ -37,6 +37,7 @@ import { AttendanceList } from "@/components/cells/AttendanceList";
 import { batchUpsertAttendance } from "@/services/attendance";
 import type { Cell, CellReport, CreateCellReportData } from "@/hooks/useCells";
 import { buildVisitorIdentityKey, dedupeVisitorEntries } from "@/lib/cellVisitors";
+import { todayISO } from "@/lib/dateUtils";
 
 const reportSchema = z.object({
   cell_id: z.string().min(1, "Selecione uma célula"),
@@ -92,7 +93,7 @@ export function CellReportWithAttendanceModal({
     resolver: zodResolver(reportSchema),
     defaultValues: {
       cell_id: defaultCellId || "",
-      report_date: new Date().toISOString().split("T")[0],
+      report_date: todayISO(),
       offering: "",
       notes: "",
     },

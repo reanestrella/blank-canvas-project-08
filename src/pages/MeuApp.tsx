@@ -24,6 +24,7 @@ import { useNavigate } from "react-router-dom";
 import { ptBR } from "date-fns/locale";
 import { format, isSameDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { todayISO } from "@/lib/dateUtils";
 
 interface Announcement {
   id: string;
@@ -687,7 +688,7 @@ export default function MeuApp() {
       const { data: churchData } = await supabase.from("churches")
         .select("ministry_network_id").eq("id", churchId).maybeSingle();
       if ((churchData as any)?.ministry_network_id) {
-        const today = new Date().toISOString().split("T")[0];
+        const today = todayISO();
         const { data: netAnns } = await supabase.from("network_announcements" as any)
           .select("id, title, content, start_date, end_date, image_url, created_at")
           .eq("network_id", (churchData as any).ministry_network_id)

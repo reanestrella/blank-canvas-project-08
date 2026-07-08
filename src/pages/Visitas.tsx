@@ -14,12 +14,13 @@ import { usePastoralVisits } from "@/hooks/usePastoralVisits";
 import { useMembers } from "@/hooks/useMembers";
 import { useAuth } from "@/contexts/AuthContext";
 import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
+import { todayISO } from "@/lib/dateUtils";
 
 export default function Visitas() {
   const [modalOpen, setModalOpen] = useState(false);
   const [memberId, setMemberId] = useState("");
   const [visitorId, setVisitorId] = useState("");
-  const [visitDate, setVisitDate] = useState(new Date().toISOString().split("T")[0]);
+  const [visitDate, setVisitDate] = useState(todayISO());
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
 

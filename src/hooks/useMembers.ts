@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { todayISO } from "@/lib/dateUtils";
 
 export interface Member {
   id: string;
@@ -108,7 +109,7 @@ export function useMembers(churchId?: string) {
       // Auto-create consolidation record para visitante OU novo convertido.
       // Cadastros como membro/líder/discipulador NÃO entram no funil.
       const status = data.spiritual_status || "membro";
-      const today = new Date().toISOString().split("T")[0];
+      const today = todayISO();
       try {
         if (status === "visitante") {
           await supabase.from("consolidation_records").insert([{

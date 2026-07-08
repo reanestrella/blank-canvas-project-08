@@ -17,6 +17,7 @@ import { useFinancialPayables, type FinancialPayable, type PayableRecurrence, ty
 import type { FinancialAccount } from "@/hooks/useFinancialAccounts";
 import type { FinancialCategory } from "@/hooks/useFinancial";
 import { exportToPdf, formatBRL } from "@/lib/pdfExport";
+import { todayISO } from "@/lib/dateUtils";
 
 interface PayablesTabProps {
   churchId: string;
@@ -55,7 +56,7 @@ const buildEmpty = (): FormState => ({
   mode: "single",
   description: "",
   amount: 0,
-  due_date: new Date().toISOString().slice(0, 10),
+  due_date: todayISO(),
   category_id: null,
   account_id: null,
   recurrence: "nenhuma",
@@ -74,7 +75,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
   const [submitting, setSubmitting] = useState(false);
 
   const [payOpen, setPayOpen] = useState<FinancialPayable | null>(null);
-  const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10));
+  const [payDate, setPayDate] = useState(todayISO());
   const [payAccount, setPayAccount] = useState<string>("");
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -94,7 +95,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
       return c.type === "receita";
     });
   }, [categories, form.entry_type]);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
 
   const useExternal = hideInternalPeriod === true;
 
@@ -242,7 +243,7 @@ export function PayablesTab({ churchId, accounts, categories, churchName, extern
 
   const openPay = (p: FinancialPayable) => {
     setPayOpen(p);
-    setPayDate(new Date().toISOString().slice(0, 10));
+    setPayDate(todayISO());
     setPayAccount(p.account_id || (accounts[0]?.id ?? ""));
   };
 

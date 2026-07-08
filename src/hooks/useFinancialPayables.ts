@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { todayISO } from "@/lib/dateUtils";
 
 export type PayableStatus = "pendente" | "pago";
 export type PayableRecurrence = "nenhuma" | "semanal" | "mensal" | "anual" | "personalizada";
@@ -63,7 +64,7 @@ export function addToDate(
 
 /** Returns true if payable is overdue based on today (date string YYYY-MM-DD). */
 export function isOverdue(p: { status: PayableStatus; due_date: string }, today?: string): boolean {
-  const t = today || new Date().toISOString().slice(0, 10);
+  const t = today || todayISO();
   return p.status === "pendente" && p.due_date < t;
 }
 

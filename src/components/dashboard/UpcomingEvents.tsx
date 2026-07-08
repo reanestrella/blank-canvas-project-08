@@ -1,6 +1,7 @@
 import { Calendar, Clock, MapPin, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEvents } from "@/hooks/useEvents";
+import { todayISO } from "@/lib/dateUtils";
 
 export function UpcomingEvents() {
   const { profile } = useAuth();
@@ -8,7 +9,7 @@ export function UpcomingEvents() {
   const { events, isLoading } = useEvents(churchId || undefined);
 
   // Only future events
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayISO();
   const upcoming = events
     .filter(e => e.event_date >= today)
     .sort((a, b) => a.event_date.localeCompare(b.event_date))

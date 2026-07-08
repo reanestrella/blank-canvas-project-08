@@ -33,6 +33,7 @@ import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
 import type { FinancialTransaction, FinancialCategory, CreateTransactionData } from "@/hooks/useFinancial";
 import type { FinancialAccount } from "@/hooks/useFinancialAccounts";
 import { useRhfFormPersistence, clearRhfFormPersistence } from "@/hooks/useRhfFormPersistence";
+import { todayISO } from "@/lib/dateUtils";
 
 const PERSIST_KEY = "transaction-modal";
 
@@ -78,7 +79,7 @@ export function TransactionModal({
     defaultValues: {
       type: defaultType,
       amount: "",
-      transaction_date: new Date().toISOString().split("T")[0],
+      transaction_date: todayISO(),
       category_id: "",
       member_id: "",
       account_id: accounts.length === 1 ? accounts[0].id : "",
@@ -95,7 +96,7 @@ export function TransactionModal({
         form.reset({
           type: transaction.type,
           amount: transaction.amount?.toString() || "",
-          transaction_date: transaction.transaction_date || new Date().toISOString().split("T")[0],
+          transaction_date: transaction.transaction_date || todayISO(),
           category_id: transaction.category_id || "",
           member_id: transaction.member_id || "",
           account_id: (transaction as any).account_id || (accounts.length === 1 ? accounts[0].id : ""),
@@ -107,7 +108,7 @@ export function TransactionModal({
         form.reset({
           type: defaultType,
           amount: "",
-          transaction_date: new Date().toISOString().split("T")[0],
+          transaction_date: todayISO(),
           category_id: "",
           member_id: "",
           account_id: accounts.length === 1 ? accounts[0].id : "",

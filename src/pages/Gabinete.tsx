@@ -17,6 +17,7 @@ import { usePastoralCounseling } from "@/hooks/usePastoralCounseling";
 import { useMembers } from "@/hooks/useMembers";
 import { useAuth } from "@/contexts/AuthContext";
 import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
+import { todayISO } from "@/lib/dateUtils";
 
 const typeLabels: Record<string, string> = {
   aconselhamento: "Aconselhamento",
@@ -30,7 +31,7 @@ export default function Gabinete() {
   const [modalOpen, setModalOpen] = useState(false);
   const [memberId, setMemberId] = useState("");
   const [counselorId, setCounselorId] = useState("");
-  const [sessionDate, setSessionDate] = useState(new Date().toISOString().split("T")[0]);
+  const [sessionDate, setSessionDate] = useState(todayISO());
   const [sessionType, setSessionType] = useState("aconselhamento");
   const [notes, setNotes] = useState("");
 

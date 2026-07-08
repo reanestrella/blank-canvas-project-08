@@ -15,6 +15,7 @@ import { Plus, UserPlus, Loader2, Eye, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Cell } from "@/hooks/useCells";
 import { buildCellVisitorKey } from "@/lib/cellVisitors";
+import { todayISO } from "@/lib/dateUtils";
 
 interface CellVisitorRecord {
   id: string;
@@ -126,7 +127,7 @@ export function CellVisitorsTab({ cells, churchId }: CellVisitorsTabProps) {
         phone: newVisitor.phone || null,
         cell_id: newVisitor.cell_id,
         church_id: churchId,
-        visit_date: new Date().toISOString().split("T")[0],
+        visit_date: todayISO(),
       }]);
       if (error) throw error;
       toast({ title: "Visitante cadastrado!" });

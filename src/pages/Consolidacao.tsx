@@ -33,6 +33,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { VisitorContactDashboard } from "@/components/consolidation/VisitorContactDashboard";
 import { getConsolidationMetrics } from "@/lib/consolidationMetrics";
 import { useMetricsSettings } from "@/hooks/useMetricsSettings";
+import { todayISO as today } from "@/lib/dateUtils";
 
 const stageConfig: Record<ConsolidationStage, { label: string; color: string }> = {
   visitante:       { label: "Visitante",        color: "bg-chart-visitante text-white" },
@@ -41,8 +42,6 @@ const stageConfig: Record<ConsolidationStage, { label: string; color: string }> 
   consolidado:     { label: "Consolidado",      color: "bg-chart-discipulado text-white" },
   batizado:        { label: "Batizado",         color: "bg-chart-batizado text-white" },
 };
-
-const today = () => new Date().toISOString().split("T")[0];
 
 type ActionKind = "decidiu" | "iniciar" | "finalizar" | "batizar";
 

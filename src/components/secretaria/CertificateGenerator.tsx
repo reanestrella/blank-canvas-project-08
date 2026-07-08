@@ -13,6 +13,7 @@ import { MemberAutocomplete } from "@/components/ui/member-autocomplete";
 import { Download, Printer, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Member } from "@/hooks/useMembers";
+import { todayISO } from "@/lib/dateUtils";
 
 interface CertificateGeneratorProps {
   open: boolean;
@@ -40,7 +41,7 @@ export function CertificateGenerator({ open, onOpenChange, members, churchId }: 
   const [certType, setCertType] = useState<CertType>("batismo");
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [customName, setCustomName] = useState("");
-  const [eventDate, setEventDate] = useState(new Date().toISOString().split("T")[0]);
+  const [eventDate, setEventDate] = useState(todayISO());
   const [pastorName, setPastorName] = useState("");
   const [extraInfo, setExtraInfo] = useState("");
 
