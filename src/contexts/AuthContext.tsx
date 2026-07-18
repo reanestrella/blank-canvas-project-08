@@ -7,6 +7,7 @@ import { APP_BRAND_LOGO, APP_BRAND_NAME } from "@/lib/brand";
 import { applyInvitationForUser } from "@/lib/authInvitation";
 import { clearAuthBrowserCache, createFallbackProfile, ensureUserProfile } from "@/lib/authProfile";
 import { getRoleBasedRedirect } from "@/lib/getRoleBasedRedirect";
+import { registerPush } from "@/lib/push";
 
 interface Profile {
   id: string;
@@ -322,7 +323,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(nextSession.user);
       setSession(nextSession);
       // Só mostra loading em SIGNED_IN; TOKEN_REFRESHED/USER_UPDATED rodam em background.
-      if (event === "SIGNED_IN") setIsLoading(true);
+      if (event === "SIGNED_IN") {
+        setIsLoading(true);
+        registerPush(supabase);
+      }
 
       window.setTimeout(() => {
         void loadCurrentUser(event, nextSession);

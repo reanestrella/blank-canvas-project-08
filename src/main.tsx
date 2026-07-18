@@ -25,7 +25,11 @@ const isPreviewHost =
   window.location.hostname.includes("lovableproject.com");
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker?.getRegistrations().then((regs) =>
-    regs.forEach((r) => r.unregister())
-  );
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.getRegistration("/sw.js").then((existing) => {
+      if (!existing) {
+        navigator.serviceWorker.register("/sw.js");
+      }
+    });
+  });
 }
