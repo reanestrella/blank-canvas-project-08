@@ -130,10 +130,20 @@ function PastorDashboard() {
                   })
                   alert('Subscription: ' + JSON.stringify(sub).substring(0, 100))
 
-                  const { data, error } = await supabase.functions.invoke('save-push-subscription', {
-                    body: { subscription: sub },
+                  const session = await supabase.auth.getSession()
+                  const token = session.data.session?.access_token
+                  alert('Token: ' + (token ? token.substring(0, 20) + '...' : 'NULO'))
+
+                  const res = await fetch('https://ycaiusoyqoeccmmixgrf.supabase.co/functions/v1/save-push-subscription', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': 'Bearer ' + token,
+                    },
+                    body: JSON.stringify({ subscription: sub }),
                   })
-                  alert('Resultado: ' + JSON.stringify({ data, error }))
+                  const text = await res.text()
+                  alert('Status: ' + res.status + ' Body: ' + text.substring(0, 200))
                 } catch (e) {
                   alert('ERRO: ' + (e as Error).message)
                 }
