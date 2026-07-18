@@ -1,6 +1,8 @@
 import InstallButton from "@/components/InstallButton";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { registerPush } from "@/lib/push";
 import { useCongregations } from "@/hooks/useCongregations";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -102,6 +104,20 @@ function PastorDashboard() {
 
           <div className="flex flex-wrap items-center gap-2">
             <InstallButton />
+
+            {/* TEMP: debug de push notification */}
+            <button
+              onClick={async () => {
+                try {
+                  await registerPush(supabase);
+                  alert("Push registrado com sucesso!");
+                } catch (e) {
+                  alert("Erro: " + (e as Error).message);
+                }
+              }}
+            >
+              Testar Push
+            </button>
 
             {congregations.length > 1 && (
               <CongregationSelector
