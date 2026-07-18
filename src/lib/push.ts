@@ -36,8 +36,11 @@ export async function registerPush(supabase: any) {
   console.log('[Push] Subscription criada:', JSON.stringify(subscription))
 
   console.log('[Push] Salvando no Supabase...')
+  const { data: { session } } = await supabase.auth.getSession()
+  const user_id = session?.user?.id
+
   const { data, error } = await supabase.functions.invoke('save-push-subscription', {
-    body: { subscription },
+    body: { subscription, user_id },
   })
   console.log('[Push] Resultado:', data, error)
 }
