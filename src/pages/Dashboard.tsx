@@ -109,10 +109,29 @@ function PastorDashboard() {
             <button
               onClick={async () => {
                 try {
-                  await registerPush(supabase);
-                  alert("Push registrado com sucesso!");
+                  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                    alert('PushManager não suportado')
+                    return
+                  }
+                  const permission = await Notification.requestPermission()
+                  alert('Permissão: ' + permission)
+
+                  const sw = await navigator.serviceWorker.ready
+                  alert('SW pronto: ' + sw.scope)
+
+                  const sub = await sw.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: 'BAAR7kOxan0oiNBTFrLC3h0jdTLqmJBMg7Yg_mFWE8Dfsc9MwPNyZm0bAJ6PVfisu7zgUSZHFuLy8ru7Fwbd9LM'
+                      .replace(/-/g, '+').replace(/_/g, '/'),
+                  })
+                  alert('Subscription: ' + JSON.stringify(sub).substring(0, 100))
+
+                  const { data, error } = await supabase.functions.invoke('save-push-subscription', {
+                    body: { subscription: sub },
+                  })
+                  alert('Resultado: ' + JSON.stringify({ data, error }))
                 } catch (e) {
-                  alert("Erro: " + (e as Error).message);
+                  alert('ERRO: ' + (e as Error).message)
                 }
               }}
             >
