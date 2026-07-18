@@ -130,15 +130,18 @@ function PastorDashboard() {
                   })
                   alert('Subscription: ' + JSON.stringify(sub).substring(0, 100))
 
+                  const { data: { session } } = await supabase.auth.getSession()
+                  const user_id = session?.user?.id
+                  alert('user_id: ' + user_id)
+
                   const { data, error } = await supabase.functions.invoke('save-push-subscription', {
-                    body: { subscription: sub },
+                    body: { subscription: sub, user_id },
                   })
 
                   if (error) {
-                    const errMsg = error.message + ' | ' + (error.context ? await error.context.text().catch(() => 'sem body') : 'sem context')
-                    alert('ERRO invoke: ' + errMsg)
+                    alert('ERRO: ' + error.message)
                   } else {
-                    alert('Sucesso: ' + JSON.stringify(data))
+                    alert('Sucesso!')
                   }
                 } catch (e) {
                   alert('ERRO: ' + (e as Error).message)
