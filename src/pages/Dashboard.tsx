@@ -1,5 +1,5 @@
 import InstallButton from "@/components/InstallButton";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { registerPush } from "@/lib/push";
@@ -36,6 +36,15 @@ function PastorDashboard() {
   const [aiOpen, setAiOpen] = useState(false);
   const [isRequestingPermission, setIsRequestingPermission] = useState(false);
   const [notificationResult, setNotificationResult] = useState<string | null>(null);
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushPermission, setPushPermission] = useState<NotificationPermission>("default");
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator && "PushManager" in window) {
+      setPushSupported(true);
+      setPushPermission(Notification.permission);
+    }
+  }, []);
 
   const notificationPermission =
     typeof Notification === "undefined" ? "unsupported" : Notification.permission;
@@ -105,51 +114,18 @@ function PastorDashboard() {
           <div className="flex flex-wrap items-center gap-2">
             <InstallButton />
 
-            {/* TEMP: debug de push notification */}
-            <button
-              onClick={async () => {
-                try {
-                  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                    alert('PushManager não suportado')
-                    return
-                  }
-                  const permission = await Notification.requestPermission()
-                  alert('Permissão: ' + permission)
-
-                  const sw = await navigator.serviceWorker.ready
-                  alert('SW pronto: ' + sw.scope)
-
-                  const vapid = 'BAAR7kOxan0oiNBTFrLC3h0jdTLqmJBMg7Yg_mFWE8Dfsc9MwPNyZm0bAJ6PVfisu7zgUSZHFuLy8ru7Fwbd9LM'
-                  const padding = '='.repeat((4 - (vapid.length % 4)) % 4)
-                  const b64 = (vapid + padding).replace(/-/g, '+').replace(/_/g, '/')
-                  const applicationServerKey = Uint8Array.from([...atob(b64)].map(c => c.charCodeAt(0)))
-
-                  const sub = await sw.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey,
-                  })
-                  alert('Subscription: ' + JSON.stringify(sub).substring(0, 100))
-
-                  const { data: { session } } = await supabase.auth.getSession()
-                  const user_id = session?.user?.id
-                  alert('user_id: ' + user_id)
-
-                  const { data, error } = await supabase.functions.invoke('save-push-subscription', {
-                    body: { subscription: sub, user_id },
-                  })
-
-                  if (error) {
-                    alert('ERRO: ' + error.message)
-                  } else {
-                    alert('Sucesso!')
-                  }
-                } catch (e) {
-                  alert('ERRO: ' + (e as Error).message)
-                }
-              }}
-            >
-              Testar Push
-            </button>
+            {pushSupported && pushPermission !== "granted" && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={async () => {
+                  await registerPush(supabase);
+                  setPushPermission(Notification.permission);
+                }}
+              >
+                🔔 Ativar Notificações
+              </Button>
+            )}
 
             {congregations.length > 1 && (
               <CongregationSelector
