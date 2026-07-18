@@ -119,10 +119,14 @@ function PastorDashboard() {
                   const sw = await navigator.serviceWorker.ready
                   alert('SW pronto: ' + sw.scope)
 
+                  const vapid = 'BAAR7kOxan0oiNBTFrLC3h0jdTLqmJBMg7Yg_mFWE8Dfsc9MwPNyZm0bAJ6PVfisu7zgUSZHFuLy8ru7Fwbd9LM'
+                  const padding = '='.repeat((4 - (vapid.length % 4)) % 4)
+                  const b64 = (vapid + padding).replace(/-/g, '+').replace(/_/g, '/')
+                  const applicationServerKey = Uint8Array.from([...atob(b64)].map(c => c.charCodeAt(0)))
+
                   const sub = await sw.pushManager.subscribe({
                     userVisibleOnly: true,
-                    applicationServerKey: 'BAAR7kOxan0oiNBTFrLC3h0jdTLqmJBMg7Yg_mFWE8Dfsc9MwPNyZm0bAJ6PVfisu7zgUSZHFuLy8ru7Fwbd9LM'
-                      .replace(/-/g, '+').replace(/_/g, '/'),
+                    applicationServerKey,
                   })
                   alert('Subscription: ' + JSON.stringify(sub).substring(0, 100))
 
